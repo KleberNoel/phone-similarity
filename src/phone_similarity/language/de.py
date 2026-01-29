@@ -1,5 +1,29 @@
 VOWELS_SET = {
-    "a", "aː", "e", "eː", "ɛ", "ɛː", "i", "iː", "o", "oː", "ɔ", "u", "uː", "y", "yː", "ø", "øː", "œ", "ə", "ɐ", "aɪ̯", "aʊ̯", "ɔʏ̯"
+    "a",
+    "aː",
+    "e",
+    "eː",
+    "ɛ",
+    "ɛː",
+    "ɪ",
+    "i",
+    "iː",
+    "o",
+    "oː",
+    "ɔ",
+    "ʊ",
+    "u",
+    "uː",
+    "y",
+    "yː",
+    "ø",
+    "øː",
+    "œ",
+    "ə",
+    "ɐ",
+    "aɪ̯",
+    "aʊ̯",
+    "ɔʏ̯",
 }
 
 PHONEME_FEATURES = {
@@ -10,6 +34,7 @@ PHONEME_FEATURES = {
     "d": {"voiced": True, "place": "alveolar", "manner": "plosive"},
     "k": {"voiced": False, "place": "velar", "manner": "plosive"},
     "g": {"voiced": True, "place": "velar", "manner": "plosive"},
+    "ɡ": {"voiced": True, "place": "velar", "manner": "plosive"},
     "f": {"voiced": False, "labial": True, "dental": True, "manner": "fricative"},
     "v": {"voiced": True, "labial": True, "dental": True, "manner": "fricative"},
     "s": {"voiced": False, "place": "alveolar", "manner": "fricative"},
@@ -23,8 +48,10 @@ PHONEME_FEATURES = {
     "n": {"voiced": True, "place": "alveolar", "manner": "nasal"},
     "ŋ": {"voiced": True, "place": "velar", "manner": "nasal"},
     "l": {"voiced": True, "place": "alveolar", "manner": "lateral_approximant"},
-    "r": {"voiced": True, "place": "alveolar", "manner": "trill"},
+    "r": {"voiced": True, "place": "alveolar", "manner": "trill"},  # TODO: check
+    "ɾ": {"voiced": True, "place": "alveolar", "manner": "trill"},  # TODO: check
     "ʀ": {"voiced": True, "place": "uvular", "manner": "trill"},
+    "ʁ": {"voiced": True, "place": "uvular", "manner": "trill"},
     "j": {"voiced": True, "place": "palatal", "manner": "approximant"},
     "ts": {"voiced": False, "place": "alveolar", "manner": "affricate"},
     "tʃ": {"voiced": False, "place": "post-alveolar", "manner": "affricate"},
@@ -41,6 +68,7 @@ PHONEME_FEATURES = {
     "i": {"high": True, "front": True, "round": False, "long": False},
     "y": {"high": True, "front": True, "round": True, "long": False},
     "u": {"high": True, "back": True, "round": True, "long": False},
+    "ʊ": {"high": True, "back": True, "round": True, "long": False},
     "e": {"mid-high": True, "front": True, "round": False, "long": False},
     "ø": {"mid-high": True, "front": True, "round": True, "long": False},
     "o": {"mid-high": True, "back": True, "round": True, "long": False},
@@ -50,6 +78,7 @@ PHONEME_FEATURES = {
     "a": {"low": True, "front": True, "round": False, "long": False},
     "ə": {"mid": True, "central": True, "round": False},
     "ɐ": {"low": True, "central": True, "round": False},
+    "ɪ": {"high": True, "front": True, "round": False, "tense": False, "long": False},
     # Diphthongs
     "aɪ̯": {"diphthong": True, "start": "a", "end": "i"},
     "aʊ̯": {"diphthong": True, "start": "a", "end": "u"},
@@ -57,14 +86,38 @@ PHONEME_FEATURES = {
 }
 
 CONSONANT_COLUMNS = {
-    "voiced", "labial", "dental", "alveolar", "post-alveolar", "palatal", "velar", "glottal", "uvular",
-    "plosive", "fricative", "nasal", "lateral_approximant", "trill", "approximant", "affricate"
+    "voiced",
+    "labial",
+    "dental",
+    "alveolar",
+    "post-alveolar",
+    "palatal",
+    "velar",
+    "glottal",
+    "uvular",
+    "plosive",
+    "fricative",
+    "nasal",
+    "lateral_approximant",
+    "trill",
+    "approximant",
+    "affricate",
 }
 
 VOWEL_COLUMNS = {
-    "high", "mid-high", "mid", "mid-low", "low",
-    "front", "central", "back",
-    "round", "long", "diphthong", "start", "end"
+    "high",
+    "mid-high",
+    "mid",
+    "mid-low",
+    "low",
+    "front",
+    "central",
+    "back",
+    "round",
+    "long",
+    "diphthong",
+    "start",
+    "end",
 }
 
 FEATURES = {"consonant": CONSONANT_COLUMNS, "vowel": VOWEL_COLUMNS}

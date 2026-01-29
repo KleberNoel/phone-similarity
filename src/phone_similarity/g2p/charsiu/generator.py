@@ -7,7 +7,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-
 import torch
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 from transformers.generation.utils import LogitsProcessorList
@@ -198,7 +197,6 @@ class CharsiuGraphemeToPhonemeGenerator:
         logging.error(error_message)
         raise ValueError(error_message)
 
-    @lru_cache(maxsize=2048)
     @lru_cache(maxsize=2048)
     def get_phones_for_word(
         self,

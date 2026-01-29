@@ -1,6 +1,7 @@
 from phone_similarity.g2p.charsiu.load_dictionary import load_dictionary_tsv
 from phone_similarity.raw_phone_features import RAW_FEATURES, VOWELS
 
+
 def get_lang_data(lang_code):
     """
     Get language data for a given language code.
@@ -13,11 +14,15 @@ def get_lang_data(lang_code):
 
     lang_vowels = VOWELS.intersection(all_phonemes)
     lang_phoneme_features = {p: f for p, f in RAW_FEATURES.items() if p in all_phonemes}
-    lang_features = set(f for features in lang_phoneme_features.values() for f in features)
-    
+    lang_features = set(
+        f for features in lang_phoneme_features.values() for f in features
+    )
+
     return lang_vowels, lang_phoneme_features, lang_features
 
+
 def print_feature_vector(columns):
+    """TODO FIXME"""
     print()
     new_columns = [feat for feat in columns]
     for char_idx in range(max([len(n) for n in new_columns])):
@@ -34,6 +39,7 @@ def print_feature_vector(columns):
 def print_syl_verbose(
     syl, cons_columns, vowel_columns, print_zeros: bool = True
 ) -> None:
+    """TODO FIXME"""
     print(" " * 10, "=== ONSET ===")
     for i in range(len(syl["onset"])):
         if print_zeros:
