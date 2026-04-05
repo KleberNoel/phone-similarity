@@ -7,7 +7,7 @@ from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.clean_phones import clean_phones
 from phone_similarity.entropy_analyzer import PhonemeEntropyAnalyzer, SyllableEncoding
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
-from phone_similarity.language.fr import FEATURES, PHONEME_FEATURES, VOWELS_SET
+from phone_similarity.language.fra import FEATURES, PHONEME_FEATURES, VOWELS_SET
 
 ISO_689_3_LANGUAGE = "fra"
 ISO_3166_1_ALPHA_2 = ""

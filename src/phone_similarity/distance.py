@@ -3,14 +3,14 @@ from typing import Dict, Tuple
 
 from bitarray import bitarray
 
-from phone_similarity.bit_array_generator import BitArrayGenerator
-from phone_similarity.g2p.charisu.generator import CharisuGraphemeToPhonemeGenerator
+from phone_similarity.bit_array_specification import BitArraySpecification
+from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 
 
 class Distance:
-    def __init__(self, a: BitArrayGenerator, b: BitArrayGenerator):
+    def __init__(self, a: BitArraySpecification, b: BitArraySpecification):
         self.a = a
-        self.g2p_a = CharisuGraphemeToPhonemeGenerator(language="eng-us")
+        self.g2p_a = CharsiuGraphemeToPhonemeGenerator(language="eng-us")
 
     def pdict_bitarray(self) -> Dict[str, Tuple[bitarray]]:
         newpdict = defaultdict(list)

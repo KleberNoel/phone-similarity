@@ -1,26 +1,3 @@
-from phone_similarity.g2p.charsiu.load_dictionary import load_dictionary_tsv
-from phone_similarity.raw_phone_features import RAW_FEATURES, VOWELS
-
-
-def get_lang_data(lang_code):
-    """
-    Get language data for a given language code.
-    This includes the vowel set, phoneme features, and features.
-    """
-    pdict = load_dictionary_tsv(lang_code)
-    all_phonemes = set()
-    for phones in pdict.values():
-        all_phonemes.update(phones.split())
-
-    lang_vowels = VOWELS.intersection(all_phonemes)
-    lang_phoneme_features = {p: f for p, f in RAW_FEATURES.items() if p in all_phonemes}
-    lang_features = set(
-        f for features in lang_phoneme_features.values() for f in features
-    )
-
-    return lang_vowels, lang_phoneme_features, lang_features
-
-
 def print_feature_vector(columns):
     """TODO FIXME"""
     print()

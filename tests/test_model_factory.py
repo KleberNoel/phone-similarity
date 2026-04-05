@@ -3,7 +3,7 @@ import unittest
 from bitarray import bitarray
 
 from phone_similarity.bit_array_specification import BitArraySpecification
-from phone_similarity.language.en_gb import FEATURES
+from phone_similarity.language.eng_uk import FEATURES
 from phone_similarity.model_factory import ModelFactory
 
 model_factory = ModelFactory()

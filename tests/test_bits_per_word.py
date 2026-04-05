@@ -1,7 +1,7 @@
 from bitarray import bitarray
 
 from phone_similarity.bit_array_specification import BitArraySpecification
-from phone_similarity.language.en_gb import FEATURES, PHONEME_FEATURES, VOWELS_SET
+from phone_similarity.language.eng_uk import FEATURES, PHONEME_FEATURES, VOWELS_SET
 
 MAX_SYLLABLES = 6
 

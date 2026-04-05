@@ -1,2 +1,6 @@
+import re
+import unicodedata
+
 def clean_phones(x: str):
-    return x.replace("ˌ", "").replace("ˈ", "")
+    x = unicodedata.normalize('NFKD', x)
+    return re.sub(r"[ˈˌːˑ‿]", "", x)

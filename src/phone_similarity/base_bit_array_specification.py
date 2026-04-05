@@ -1,7 +1,7 @@
 import abc
 import logging
 from functools import lru_cache
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from bitarray import bitarray
 
@@ -63,7 +63,7 @@ class BaseBitArraySpecification(
         return _features
 
     @lru_cache(maxsize=128)
-    def get_phoneme_features(self, phoneme: str) -> Tuple[Tuple[str, bool]]:
+    def get_phoneme_features(self, phoneme: str) -> Tuple:
         """Retrieves the feature set for a given phoneme.
 
         Parameters
@@ -73,8 +73,8 @@ class BaseBitArraySpecification(
 
         Returns
         -------
-        Tuple[Tuple[str, bool]]
-            A tuple of tuples, where each inner tuple contains a feature name and its boolean value.
+        Tuple
+            A tuple of (feature_name, value) pairs.
 
         Raises
         ------
@@ -83,20 +83,18 @@ class BaseBitArraySpecification(
 
         """
         if phoneme in self._phoneme_features:
-            return tuple(  # type: ignore
-                tuple([k, v]) for k, v in self._phoneme_features[phoneme].items()
-            )
+            return tuple(self._phoneme_features[phoneme].items())
         raise ValueError(f"Unknown Phoneme input '{phoneme}'")
 
     @lru_cache(128)
     def features_to_bitarray(
-        self, feature_dict: Dict[str, bool], columns: Tuple[str]
+        self, feature_dict: Union[Tuple[Tuple[str, bool]], Dict[str, bool]], columns: Tuple[str]
     ) -> "bitarray":
         """Converts a feature dictionary to a bitarray.
 
         Parameters
         ----------
-        feature_dict : Dict[str, bool]
+        feature_dict : Union[Tuple[Tuple[str, bool]], Dict[str, bool]]
             A dictionary of feature names to their boolean values.
         columns : Tuple[str]
             An ordered tuple of feature names that determines the bitarray structure.
@@ -107,8 +105,7 @@ class BaseBitArraySpecification(
             The resulting bitarray representation of the phoneme's features.
 
         """
-        if isinstance(feature_dict, tuple):
-            feature_dict = dict(feature_dict)
+        fd = feature_dict if isinstance(feature_dict, dict) else dict(feature_dict)
         bits: List[int] = []
 
         for _, col in enumerate(columns, start=0):
@@ -116,9 +113,13 @@ class BaseBitArraySpecification(
             if "=" in col:
                 # e.g. "place=alveolar", "height=low"..
                 attr, val = col.split("=")
-                bit = bool(feature_dict.get(attr) == val)
+                bit = bool(fd.get(attr) == val)
             else:
-                bit = int(feature_dict.get(col, False) or col in feature_dict.values())
+                val = fd.get(col, False)
+                if isinstance(val, str):
+                    bit = int(col in fd.values())
+                else:
+                    bit = int(val or col in fd.values())
             bits.append(bit)
 
         return bitarray(bits)
@@ -173,16 +174,15 @@ class BaseBitArraySpecification(
         """
         tokens = []
         start = 0
-        while start <= len(ipa_str):
-            phoneme = self.search_phonemes(
-                ipa_str[start : start + min(self._max_phoneme_size, len(ipa_str) - 1)]
-            )
+        while start < len(ipa_str):
+            end_idx = min(start + self._max_phoneme_size, len(ipa_str))
+            phoneme = self.search_phonemes(ipa_str[start:end_idx])
             if phoneme is None:
                 logging.warning(
                     (
                         f"IPA string contains phonemes outside usual range {ipa_str} "
                         f"(max phoneme length = {self._max_phoneme_size}) "
-                        f"Searched: {ipa_str[start : self._max_phoneme_size]}"
+                        f"Searched: {ipa_str[start:end_idx]}"
                     )
                 )
                 start += 1

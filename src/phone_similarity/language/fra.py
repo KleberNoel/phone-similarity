@@ -24,7 +24,7 @@ PHONEME_FEATURES = {
     "t": {"voiced": False, "place": "alveolar", "manner": "plosive"},
     "d": {"voiced": True, "place": "alveolar", "manner": "plosive"},
     "k": {"voiced": False, "place": "velar", "manner": "plosive"},
-    "g": {"voiced": True, "place": "velar", "manner": "plosive"},
+    "ɡ": {"voiced": True, "place": "velar", "manner": "plosive"},
     "f": {"voiced": False, "labial": True, "dental": True, "manner": "fricative"},
     "v": {"voiced": True, "labial": True, "dental": True, "manner": "fricative"},
     "s": {"voiced": False, "place": "alveolar", "manner": "fricative"},
@@ -59,10 +59,21 @@ PHONEME_FEATURES = {
     "ɑ": {"low": True, "back": True, "round": False, "long": False},
     "ə": {"mid": True, "central": True, "round": True, "long": False},
     # Nasal Vowels
-    "ɛ̃": {"nasal": True, "mid-low": True, "front": True, "round": False, "long": False},
+    "ɛ̃": {
+        "nasal": True,
+        "mid-low": True,
+        "front": True,
+        "round": False,
+        "long": False,
+    },
     "œ̃": {"nasal": True, "mid-low": True, "front": True, "round": True, "long": False},
     "ɔ̃": {"nasal": True, "mid-low": True, "back": True, "round": True, "long": False},
-    "ɑ̃": {"nasal": True, "low": True, "back": True, "round": False, "long": False},
+     "ɑ̃": {"nasal": True, "low": True, "back": True, "round": False, "long": False},
+    "x": {"voiced": False, "place": "velar", "manner": "fricative"},
+    "ɪ": {"high": True, "front": True, "round": False, "tense": False, "long": False},
+    "ʊ": {"high": True, "back": True, "round": True, "long": False},
+    "ʼ": {"marker": True},
+    "ː": {"long": True},
 }
 
 

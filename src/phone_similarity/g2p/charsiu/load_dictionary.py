@@ -1,5 +1,7 @@
+import argparse
 import csv
 import os
+from pathlib import Path
 from typing import Dict
 
 import requests
@@ -7,7 +9,9 @@ import requests
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU
 
 
-def load_dictionary_tsv(lang_code: str, folder="dicts") -> Dict[str, str]:
+def load_dictionary_tsv(
+    lang_code: str, folder: Path = Path(__file__).parents[3] / "dicts"
+) -> Dict[str, str]:
     """
     Fetch or load a Charsiu TSV dictionary.
 
@@ -32,9 +36,9 @@ def load_dictionary_tsv(lang_code: str, folder="dicts") -> Dict[str, str]:
         raise ValueError(f"{lang_code} must be in {LANGUAGE_CODES_CHARSIU}")
 
     url = f"https://raw.githubusercontent.com/lingjzhu/CharsiuG2P/main/dicts/{lang_code}.tsv"
-    local_path = os.path.join(folder, f"{lang_code}.tsv")
+    local_path = folder / f"{lang_code}.tsv"
 
-    if not os.path.exists(local_path):
+    if not local_path.exists():
         try:
             r = requests.get(url, timeout=15)
             r.raise_for_status()
@@ -50,7 +54,11 @@ def load_dictionary_tsv(lang_code: str, folder="dicts") -> Dict[str, str]:
         with open(local_path, "r", encoding="utf-8") as tsvfile:
             reader = csv.reader(tsvfile, delimiter="\t")
             for row in reader:
-                if len(row) < 2:
+                if (
+                    len(row) < 2
+                    or "CONSONANTUNACCOUNTEDFOR" in row[1]
+                    or "QNOU" in row[1]
+                ):
                     continue
                 word = row[0].strip().lower()
                 phones = row[1].strip()
@@ -59,3 +67,14 @@ def load_dictionary_tsv(lang_code: str, folder="dicts") -> Dict[str, str]:
         raise exception
 
     return dict_map
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser()
+    p.add_argument("--lang", "-l", required=True)
+    args = p.parse_args()
+
+    if args.lang:
+        load_dictionary_tsv(args.lang)
+    else:
+        raise ValueError("Problem with language arg (it should be --lang)")

@@ -51,6 +51,8 @@ PHONEME_FEATURES = {
     "j": {"voiced": True, "place": "palatal", "manner": "approximant"},
     "w": {"voiced": True, "labial": True, "place": "velar", "manner": "approximant"},
     "ɡ": {"voiced": True, "place": "velar", "manner": "plosive"},
+    "c": {"voiced": False, "place": "palatal", "manner": "plosive"},  # palatal plosive
+    "ɣ": {"voiced": True, "place": "velar", "manner": "fricative"},  # velar fricative
     "ð": {"voiced": True, "dental": True, "manner": "fricative"},
     "ɪ": {"high": True, "front": True, "round": False, "long": False},
     "ɐ": {"low": True, "central": True, "round": False, "long": False},
@@ -59,7 +61,6 @@ PHONEME_FEATURES = {
     "ʏ": {"high": True, "front": True, "round": True, "long": False},
     "ɘ": {"mid-high": True, "central": True, "round": False, "long": False},
     "ɜ": {"mid-low": True, "central": True, "round": False, "long": False},
-    "ɔ": {"mid-low": True, "back": True, "round": True, "long": False},
     "ɒ": {"low": True, "back": True, "round": True, "long": False},
     "ɶ": {"low": True, "front": True, "round": True, "long": False},
     "ɾ": {"voiced": True, "place": "alveolar", "manner": "tap"},
@@ -87,8 +88,6 @@ PHONEME_FEATURES = {
     "ˢ": {"superscript_s": True},
     "ˀ": {"glottalization": True},
     "̊": {"voiceless": True},
-    "̝": {"raised": True},
-    "̞": {"lowered": True},
     "ʌ": {"mid-low": True, "back": True, "round": False, "long": False},
     # Vowels
     "iː": {"high": True, "front": True, "round": False, "long": True},

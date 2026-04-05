@@ -1,8 +1,8 @@
 VOWELS_SET = {
+    "a",  # open front unrounded (as in TRAP)
     "e",
     "u",
     "æ",
-    "ɑ",
     "ɑ",
     "ɒ",
     "ɔ",
@@ -50,7 +50,7 @@ PHONEME_FEATURES = {
     "ð": {"voiced": True, "place": "alveolar", "dental": True, "manner": "fricative"},
     "d": {"voiced": True, "place": "alveolar", "manner": "plosive"},
     "k": {"voiced": False, "place": "velar", "manner": "plosive"},
-    "g": {"voiced": True, "place": "velar", "manner": "plosive"},
+    "ɡ": {"voiced": True, "place": "velar", "manner": "plosive"},
     "s": {"voiced": False, "place": "alveolar", "manner": "fricative"},
     "z": {"voiced": True, "place": "alveolar", "manner": "fricative"},
     "ʃ": {"voiced": False, "place": "post-alveolar", "manner": "fricative"},
@@ -63,7 +63,6 @@ PHONEME_FEATURES = {
     "w": {"voiced": True, "labial": True, "place": "velar", "manner": "approximant"},
     "j": {"voiced": True, "place": "palatal", "manner": "approximant"},
     "tʃ": {"voiced": False, "place": "post-alveolar", "manner": "affricate"},
-     "ɡ": {"voiced": True, "place": "velar", "manner": "plosive"},
     "dʒ": {"voiced": True, "place": "post-alveolar", "manner": "affricate"},
     "h": {"voiced": False, "place": "glottal", "manner": "fricative"},
     "ɹ": {"voiced": True, "place": "alveolar", "manner": "approximant"},
@@ -93,6 +92,7 @@ PHONEME_FEATURES = {
     "ɜː": {"mid": True, "central": True, "round": False, "tense": False, "long": True},
     "ɔː": {"mid": True, "back": True, "round": True, "tense": False, "long": True},
     "ɑː": {"low": True, "back": True, "round": False, "tense": False, "long": True},
+    "a": {"low": True, "front": True, "round": False, "tense": False, "long": False},
     # -- Diphthongs --
     "eɪ": {
         "mid": True,
