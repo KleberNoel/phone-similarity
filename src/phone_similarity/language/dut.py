@@ -1,7 +1,39 @@
 VOWELS_SET = {
-    "a", "aː", "e", "eː", "ɛ", "i", "iː", "o", "oː", "ɔ", "u", "uː", "y", "yː", "ø", "øː", "ə",
-    "ɑ", "ɑː", "au", "ɛi", "øi", "ou"
+    "a",
+    "aː",
+    "e",
+    "eː",
+    "ɛ",
+    "i",
+    "iː",
+    "o",
+    "oː",
+    "ɔ",
+    "u",
+    "uː",
+    "y",
+    "yː",
+    "ø",
+    "øː",
+    "ə",
+    "ɑ",
+    "ɑː",
+    "ɑu",
+    "ɛi",
+    "øi",
 }
+
+CODA_ENDINGS = [
+    "mps",
+    "nps",
+    "mpz",
+    "npz",
+    "ŋ",
+    "ŋs",
+    "ŋgs",
+    "ŋz",
+    "ŋgz",
+]
 
 PHONEME_FEATURES = {
     # Consonants
@@ -10,24 +42,30 @@ PHONEME_FEATURES = {
     "t": {"voiced": False, "place": "alveolar", "manner": "plosive"},
     "d": {"voiced": True, "place": "alveolar", "manner": "plosive"},
     "k": {"voiced": False, "place": "velar", "manner": "plosive"},
-    "g": {"voiced": True, "place": "velar", "manner": "plosive"},
     "f": {"voiced": False, "labial": True, "dental": True, "manner": "fricative"},
     "v": {"voiced": True, "labial": True, "dental": True, "manner": "fricative"},
     "s": {"voiced": False, "place": "alveolar", "manner": "fricative"},
     "z": {"voiced": True, "place": "alveolar", "manner": "fricative"},
     "ʃ": {"voiced": False, "place": "post-alveolar", "manner": "fricative"},
-    "ʒ": {"voiced": True, "place": "post-alveolar", "manner": "fricative"},
     "x": {"voiced": False, "place": "velar", "manner": "fricative"},
     "ɣ": {"voiced": True, "place": "velar", "manner": "fricative"},
-    "h": {"voiced": False, "place": "glottal", "manner": "fricative"},
     "m": {"voiced": True, "labial": True, "manner": "nasal"},
     "n": {"voiced": True, "place": "alveolar", "manner": "nasal"},
     "ŋ": {"voiced": True, "place": "velar", "manner": "nasal"},
     "l": {"voiced": True, "place": "alveolar", "manner": "lateral_approximant"},
     "r": {"voiced": True, "place": "alveolar", "manner": "trill"},
     "j": {"voiced": True, "place": "palatal", "manner": "approximant"},
-    "w": {"voiced": True, "labial": True, "place": "velar", "manner": "approximant"},
+    "ɡ": {"voiced": True, "place": "velar", "manner": "plosive"},
+    "ʒ": {"voiced": True, "place": "post-alveolar", "manner": "fricative"},
+    "ʋ": {"voiced": True, "labial": True, "dental": True, "manner": "approximant"},
+    "ɦ": {"voiced": True, "place": "glottal", "manner": "fricative"},
+
     # Vowels
+    "ɪ": {"high": True, "front": True, "round": False, "long": False},
+    "ʏ": {"high": True, "front": True, "round": True, "long": False},
+    "ʌ": {"mid-low": True, "back": True, "round": False, "long": False},
+    "œ": {"mid-low": True, "front": True, "round": True, "long": False},
+    "̯": {"non-syllabic": True},
     "iː": {"high": True, "front": True, "round": False, "long": True},
     "yː": {"high": True, "front": True, "round": True, "long": True},
     "uː": {"high": True, "back": True, "round": True, "long": True},
@@ -48,21 +86,43 @@ PHONEME_FEATURES = {
     "ɑ": {"low": True, "back": True, "round": False, "long": False},
     "ə": {"mid": True, "central": True, "round": False},
     # Diphthongs
-    "au": {"diphthong": True, "start": "a", "end": "u"},
     "ɛi": {"diphthong": True, "start": "ɛ", "end": "i"},
     "øi": {"diphthong": True, "start": "ø", "end": "i"},
-    "ou": {"diphthong": True, "start": "o", "end": "u"},
+    "ɑu": {"diphthong": True, "start": "ɑ", "end": "u"},
 }
 
 CONSONANT_COLUMNS = {
-    "voiced", "labial", "dental", "alveolar", "post-alveolar", "palatal", "velar", "glottal",
-    "plosive", "fricative", "nasal", "lateral_approximant", "trill", "approximant"
+    "voiced",
+    "labial",
+    "dental",
+    "alveolar",
+    "post-alveolar",
+    "palatal",
+    "velar",
+    "glottal",
+    "plosive",
+    "fricative",
+    "nasal",
+    "lateral_approximant",
+    "trill",
+    "approximant",
+    "affricate",
 }
 
 VOWEL_COLUMNS = {
-    "high", "mid-high", "mid", "mid-low", "low",
-    "front", "central", "back",
-    "round", "long", "diphthong", "start", "end"
+    "high",
+    "mid-high",
+    "mid",
+    "mid-low",
+    "low",
+    "front",
+    "central",
+    "back",
+    "round",
+    "long",
+    "diphthong",
+    "start",
+    "end",
 }
 
 FEATURES = {"consonant": CONSONANT_COLUMNS, "vowel": VOWEL_COLUMNS}
