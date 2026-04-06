@@ -21,7 +21,7 @@ The library supports 15 languages with BCP-47 language codes:
 - `es-ES` (Spanish)
 - `sq-AL` (Albanian)
 
-Use `phone_similarity.language.combined` for multi-language projects.
+Each language module provides `FEATURES`, `PHONEME_FEATURES`, and `VOWELS_SET` for phonetic analysis.
 
 ## Phonetic Processing Pipeline
 
@@ -41,8 +41,10 @@ The following symbols are intentionally ignored during similarity calculations:
 ## Installation
 
 ```bash
-python -m pip install -e . pytest --extra-index-url "https://download.pytorch.org/whl/cpu"
+python -m pip install -e . pytest
 ```
+
+> **Note**: This library uses ONNX Runtime (via HuggingFace Optimum) instead of PyTorch for G2P inference, so no PyTorch installation or `--extra-index-url` is needed.
 
 ## Example Usage
 
@@ -60,11 +62,19 @@ spec = BitArraySpecification(
 bitarray = spec.generate("strɪŋz")
 ```
 
+## G2P Model
+
+The grapheme-to-phoneme (G2P) backend uses an ONNX-exported version of the multilingual ByT5-tiny model from [CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P), hosted at [`klebster/g2p_multilingual_byT5_tiny_onnx`](https://huggingface.co/klebster/g2p_multilingual_byT5_tiny_onnx) on HuggingFace Hub.
+
+The model is loaded **lazily** — it is only downloaded and initialized on the first call to `.generate()`. Dictionary-only usage (`.pdict`) does not require the ML runtime.
+
 ## Attribution
 
 This project uses the [CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P) project for:
 - Underlying G2P (grapheme-to-phoneme) models
 - Language-specific phonetic dictionaries
+
+> Zhu, J., Zhang, C., & Jurgens, D. (2022). ByT5 model for massively multilingual grapheme-to-phoneme conversion. *Proceedings of INTERSPEECH 2022*. [GitHub](https://github.com/lingjzhu/CharsiuG2P)
 
 ## Resources
 

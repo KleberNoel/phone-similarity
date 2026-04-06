@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import pickle
 import sys
@@ -7,9 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-import torch
-from transformers import AutoTokenizer, T5ForConditionalGeneration
-from transformers.generation.utils import LogitsProcessorList
+from transformers import AutoTokenizer
 
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
 
@@ -24,6 +23,10 @@ class CharsiuGraphemeToPhonemeGenerator:
 
     A class that uses the Charsiu models defined in [1] to perform
     grapheme-to-phoneme conversion.
+
+    The model is loaded lazily -- only when `.generate()` is first called.
+    Dictionary-only usage (via `.pdict`) does not require the model to be loaded,
+    and does not require `optimum` or `onnxruntime` to be installed.
 
     Parameters
     ----------
@@ -48,13 +51,14 @@ class CharsiuGraphemeToPhonemeGenerator:
     References
     ----------
     [1] J. Zhu, C. Zhang, and D. Jurgens,
-        “Byt5 model for massively multilingual grapheme-to-phoneme conversion,” 2022.
+        "Byt5 model for massively multilingual grapheme-to-phoneme conversion," 2022.
         [Online]. Available: https://arxiv.org/abs/2204.03067
+        GitHub: https://github.com/lingjzhu/CharsiuG2P
 
     """
 
     DEFAULT_TOKENIZER_MODEL_NAME: str = "google/byt5-small"
-    DEFAULT_T5_G2P_MODEL_NAME: str = "charsiu/g2p_multilingual_byT5_tiny_16_layers_100"
+    DEFAULT_ONNX_MODEL_NAME: str = "klebster/g2p_multilingual_byT5_tiny_onnx"
 
     def __init__(self, language: str, use_cache: bool = True):
         """Initializes the CharsiuGraphemeToPhonemeGenerator.
@@ -86,17 +90,35 @@ class CharsiuGraphemeToPhonemeGenerator:
                 with open(cache_file, "wb") as f:
                     pickle.dump(self._pdict, f)
 
-        self._model = T5ForConditionalGeneration.from_pretrained(
-            self.DEFAULT_T5_G2P_MODEL_NAME
-        )
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            self.DEFAULT_TOKENIZER_MODEL_NAME
-        )
+        # Lazy loading: model and tokenizer are loaded on first .generate() call
+        self._model = None
+        self._tokenizer = None
+
         self._available_g2p_resources: Set[GraphemeToPhonemeResourceType] = set(
             [
                 GraphemeToPhonemeResourceType.G2P_GENERATOR,
                 GraphemeToPhonemeResourceType.DICT,
             ]
+        )
+
+    def _ensure_model_loaded(self):
+        """Load the ONNX model and tokenizer on first use.
+
+        This method is called automatically by `.generate()`. It defers
+        the import of `optimum.onnxruntime` and the model download until
+        inference is actually needed, keeping dictionary-only usage fast
+        and lightweight.
+        """
+        if self._model is not None:
+            return
+
+        from optimum.onnxruntime import ORTModelForSeq2SeqLM
+
+        self._model = ORTModelForSeq2SeqLM.from_pretrained(
+            self.DEFAULT_ONNX_MODEL_NAME
+        )
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            self.DEFAULT_TOKENIZER_MODEL_NAME
         )
 
     @property
@@ -121,8 +143,8 @@ class CharsiuGraphemeToPhonemeGenerator:
     ) -> Union[List[str], List[List[str]]]:
         """Generate phonemes for a list of words.
 
-        This method uses the Charsiu model to generate phonemic representations
-        for a given list of words.
+        This method uses the Charsiu ONNX model to generate phonemic
+        representations for a given list of words.
 
         Please note that while the original authors state
         "We do not find beam search helpful. Greedy decoding is enough."
@@ -144,6 +166,8 @@ class CharsiuGraphemeToPhonemeGenerator:
             is returned, where each tuple contains multiple phonemic
             representations for a single word.
         """
+        self._ensure_model_loaded()
+
         _words = []
         for word in words:
             _words.append(
@@ -157,17 +181,23 @@ class CharsiuGraphemeToPhonemeGenerator:
 
         num_return_sequences_active = bool("num_return_sequences" in generation_kwargs)
 
-        preds = self._model.generate(
-            **out, logits_processor=LogitsProcessorList(), **generation_kwargs
-        )
-        if not isinstance(preds, dict):
+        preds = self._model.generate(**out, **generation_kwargs)
+        if not isinstance(preds, dict) and not hasattr(preds, "sequences"):
             sequences_preds = preds
             sequences_probs = [1]
         else:
-            sequences_preds = preds["sequences"]  # type: ignore
-            sequences_probs = [torch.exp(sc) for sc in preds["sequences_scores"]]  # type: ignore
-
-        assert isinstance(sequences_preds, torch.LongTensor)
+            sequences_preds = (
+                preds["sequences"] if isinstance(preds, dict) else preds.sequences
+            )
+            if (
+                hasattr(preds, "sequences_scores")
+                and preds.sequences_scores is not None
+            ):
+                sequences_probs = [
+                    math.exp(float(sc)) for sc in preds.sequences_scores
+                ]
+            else:
+                sequences_probs = [1]
 
         if num_return_sequences_active:
             sequences_preds = sequences_preds.reshape(
