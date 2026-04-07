@@ -13,28 +13,22 @@ from phone_similarity.clean_phones import clean_phones
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 
 
-IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?"
+IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?\u201c\u201d\u0022"
 
 # Known combining diacritics that should be ignored
 IGNORE_DIACRITICS = {"̯", "̩", "̥", "͡", "ː", "ʼ", "ç", "̈", "̇", "̊", "̋", "́", "̂", "̌", "̄", "̑", "̛", "̔", "̕", "̝", "̞", "̘", "̙", "̜", "̟", "̠", "̢", "̼", "̴", "̵", "̷", "̹", "̺", "̻", "̽", "̾", "̿", "̀", "͝", "͞", "͟", "͠", "͡", "͢", "ɫ"}
 
 
-LANGUAGE_MODULES = [
-    "dan",
-    "dut",
-    "eng_uk",
-    "eng_us",
-    "fra",
-    "ger",
-    "gre",
-    "ita",
-    "lat_clas",
-    "por_bz",
-    "por_po",
-    "rus",
-    "spa",
-    "sqi",
-]
+import os
+
+_LANG_DIR = os.path.join(
+    os.path.dirname(__file__), "..", "src", "phone_similarity", "language"
+)
+LANGUAGE_MODULES = sorted(
+    f[:-3]
+    for f in os.listdir(_LANG_DIR)
+    if f.endswith(".py") and f != "__init__.py"
+)
 
 
 def get_charsiu_code(module_name: str) -> str:
@@ -177,14 +171,21 @@ def test_consonants_have_manner(lang_module):
         "ʲ", "‿", "ˑ", "͡", "̃", "⁾", "⁽", "ɑ", "ɪ", "æ", "ʏ", "ɨ", "ʊ"
     }
 
+    # Feature keys that indicate modifier/suprasegmental entries (not consonants)
+    modifier_keys = {
+        "marker", "stress", "modifier", "ejective", "syllable_break",
+        "tone", "breathy", "release", "labialized", "pre-nasal",
+        "rhotic", "unaspirated", "dental", "half_long",
+    }
+
     missing_manner = []
     for phone, features in phoneme_features.items():
         if phone in vowels_set:
             continue
         if phone in skip_entries:
             continue
-        # Skip non-consonant entries
-        if "marker" in features or "stress" in features:
+        # Skip non-consonant entries (modifiers, suprasegmentals)
+        if any(k in features for k in modifier_keys):
             continue
         if "diphthong" in features:
             continue
@@ -219,14 +220,21 @@ def test_consonants_have_voicedness(lang_module):
         "ʲ", "‿", "ˑ", "͡", "̃", "⁾", "⁽", "ɑ", "ɪ", "æ", "ʏ", "ɨ", "ʊ"
     }
 
+    # Feature keys that indicate modifier/suprasegmental entries (not consonants)
+    modifier_keys = {
+        "marker", "stress", "modifier", "ejective", "syllable_break",
+        "tone", "breathy", "release", "labialized", "pre-nasal",
+        "rhotic", "unaspirated", "dental", "half_long",
+    }
+
     missing_voiced = []
     for phone, features in phoneme_features.items():
         if phone in vowels_set:
             continue
         if phone in skip_entries:
             continue
-        # Skip non-consonant entries
-        if "marker" in features or "stress" in features:
+        # Skip non-consonant entries (modifiers, suprasegmentals)
+        if any(k in features for k in modifier_keys):
             continue
         if "diphthong" in features:
             continue

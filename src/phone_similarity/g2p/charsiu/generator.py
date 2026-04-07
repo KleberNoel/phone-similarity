@@ -8,8 +8,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from transformers import AutoTokenizer
-
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
 
 
@@ -24,22 +22,24 @@ class CharsiuGraphemeToPhonemeGenerator:
     A class that uses the Charsiu models defined in [1] to perform
     grapheme-to-phoneme conversion.
 
-    The model is loaded lazily -- only when `.generate()` is first called.
-    Dictionary-only usage (via `.pdict`) does not require the model to be loaded,
-    and does not require `optimum` or `onnxruntime` to be installed.
+    Both the ONNX model and the pronunciation dictionary are loaded lazily —
+    the dictionary on first access of ``.pdict``, and the model on first
+    ``.generate()`` call.  This keeps ``import phone_similarity`` fast and
+    avoids downloading resources that are never used.
 
     Parameters
     ----------
     language : str
         The language for which to generate phonemes. Must be a valid
         language code from `phone_similarity.g2p.charsiu.LANGUAGE_CODES_CHARSIU`.
+    use_cache : bool
+        Whether to pickle the parsed dictionary for faster subsequent loads.
 
     Attributes
     ----------
     pdict : Dict[str, str]
         A dictionary mapping words to their phonemic representations for the
-        specified language. This is used as a cache to speed up phoneme
-        lookup.
+        specified language.  Loaded lazily on first access.
 
     Methods
     -------
@@ -62,35 +62,24 @@ class CharsiuGraphemeToPhonemeGenerator:
 
     def __init__(self, language: str, use_cache: bool = True):
         """Initializes the CharsiuGraphemeToPhonemeGenerator.
+
         Parameters
         ----------
         language : str
             The language for which to generate phonemes. Must be a valid
             language code from `phone_similarity.g2p.charsiu.LANGUAGE_CODES_CHARSIU`.
-        use_cache: bool
-            Whether to use a cache for the phoneme dictionary.
+        use_cache : bool
+            Whether to use a pickle cache for the phoneme dictionary.
         """
         assert (
             language in LANGUAGE_CODES_CHARSIU
         ), "Language not in Charsiu language codes"
 
         self._language = language
+        self._use_cache = use_cache
 
-        cache_dir = Path(os.path.expanduser("~/.cache/phono-sim"))
-        cache_dir.mkdir(exist_ok=True)
-        py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
-        cache_file = cache_dir / f"{language}_{py_version}.pkl"
-
-        if use_cache and cache_file.exists():
-            with open(cache_file, "rb") as f:
-                self._pdict = pickle.load(f)
-        else:
-            self._pdict: Dict[str, str] = load_dictionary.load_dictionary_tsv(language)
-            if use_cache:
-                with open(cache_file, "wb") as f:
-                    pickle.dump(self._pdict, f)
-
-        # Lazy loading: model and tokenizer are loaded on first .generate() call
+        # All heavy resources are loaded lazily
+        self._pdict: Optional[Dict[str, str]] = None
         self._model = None
         self._tokenizer = None
 
@@ -101,11 +90,39 @@ class CharsiuGraphemeToPhonemeGenerator:
             ]
         )
 
-    def _ensure_model_loaded(self):
+    # ------------------------------------------------------------------
+    # Lazy resource loading
+    # ------------------------------------------------------------------
+
+    def _ensure_dict_loaded(self) -> None:
+        """Load the pronunciation dictionary on first use.
+
+        The dictionary is downloaded from the CharsiuG2P GitHub repo (if
+        not already cached) and optionally pickled for faster subsequent
+        loads.
+        """
+        if self._pdict is not None:
+            return
+
+        cache_dir = Path(os.path.expanduser("~/.cache/phono-sim"))
+        cache_dir.mkdir(exist_ok=True)
+        py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
+        cache_file = cache_dir / f"{self._language}_{py_version}.pkl"
+
+        if self._use_cache and cache_file.exists():
+            with open(cache_file, "rb") as f:
+                self._pdict = pickle.load(f)
+        else:
+            self._pdict = load_dictionary.load_dictionary_tsv(self._language)
+            if self._use_cache:
+                with open(cache_file, "wb") as f:
+                    pickle.dump(self._pdict, f)
+
+    def _ensure_model_loaded(self) -> None:
         """Load the ONNX model and tokenizer on first use.
 
         This method is called automatically by `.generate()`. It defers
-        the import of `optimum.onnxruntime` and the model download until
+        the import of ``optimum.onnxruntime`` and ``transformers`` until
         inference is actually needed, keeping dictionary-only usage fast
         and lightweight.
         """
@@ -113,6 +130,7 @@ class CharsiuGraphemeToPhonemeGenerator:
             return
 
         from optimum.onnxruntime import ORTModelForSeq2SeqLM
+        from transformers import AutoTokenizer
 
         self._model = ORTModelForSeq2SeqLM.from_pretrained(
             self.DEFAULT_ONNX_MODEL_NAME
@@ -121,20 +139,25 @@ class CharsiuGraphemeToPhonemeGenerator:
             self.DEFAULT_TOKENIZER_MODEL_NAME
         )
 
+    # ------------------------------------------------------------------
+    # Properties
+    # ------------------------------------------------------------------
+
     @property
     def pdict(self) -> Dict[str, str]:
         """A dictionary mapping words to their phonemic representations.
 
+        The dictionary is loaded lazily on first access — it will be
+        downloaded from CharsiuG2P GitHub if not already cached locally.
+
         Returns
         -------
         Dict[str, str]
-            The phoneme dictionary mapping words to comma-separated pronunciations
-
-        Raises
-        ------
-        ValueError
-            If the phoneme dictionary was not defined during initialization.
+            The phoneme dictionary mapping words to comma-separated
+            pronunciations.
         """
+        self._ensure_dict_loaded()
+        assert self._pdict is not None
         return self._pdict
 
     @lru_cache(maxsize=2048)
