@@ -59,7 +59,6 @@ PHONEME_FEATURES = {
     "ʒ": {"voiced": True, "place": "post-alveolar", "manner": "fricative"},
     "ʋ": {"voiced": True, "labial": True, "dental": True, "manner": "approximant"},
     "ɦ": {"voiced": True, "place": "glottal", "manner": "fricative"},
-
     # Vowels
     "ɪ": {"high": True, "front": True, "round": False, "long": False},
     "ʏ": {"high": True, "front": True, "round": True, "long": False},

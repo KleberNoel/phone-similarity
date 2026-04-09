@@ -3,9 +3,7 @@ from phone_similarity.language.eng_uk import FEATURES, PHONEME_FEATURES, VOWELS_
 
 
 def test_make_empty_vector():  # pylint: disable=missing-function-docstring
-    consonants_set = set(
-        filter(lambda phone: phone not in VOWELS_SET, PHONEME_FEATURES)
-    )
+    consonants_set = set(filter(lambda phone: phone not in VOWELS_SET, PHONEME_FEATURES))
     bitarray_specification = BitArraySpecification(
         vowels=VOWELS_SET,
         consonants=consonants_set,
@@ -18,7 +16,7 @@ def test_make_empty_vector():  # pylint: disable=missing-function-docstring
     ) * 2 + len(bitarray_specification.empty_vector(feature_type="vowel"))
 
     assert max_syllable_length == 38, "Max Syllable Length (in bits)"
-    assert (
-        len(bitarray_specification.empty_vector(feature_type="vowel")) == 10
-    ), "Max Syllable Length (in bits)"
+    assert len(bitarray_specification.empty_vector(feature_type="vowel")) == 10, (
+        "Max Syllable Length (in bits)"
+    )
     assert max_syllable_length == 38, "Max Syllable Length (in bits)"

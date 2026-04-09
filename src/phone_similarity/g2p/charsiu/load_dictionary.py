@@ -3,7 +3,7 @@ import csv
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import requests
 
@@ -20,9 +20,7 @@ CHARSIU_DICT_URL_TEMPLATE = (
 )
 
 
-def load_dictionary_tsv(
-    lang_code: str, folder: Optional[Path] = None
-) -> Dict[str, str]:
+def load_dictionary_tsv(lang_code: str, folder: Optional[Path] = None) -> dict[str, str]:
     """
     Load a Charsiu TSV dictionary, downloading it on first use.
 
@@ -65,15 +63,11 @@ def load_dictionary_tsv(
             logger.error("Failed to download %s: %s", url, exc)
             return {}
 
-    dict_map: Dict[str, str] = {}
-    with open(local_path, "r", encoding="utf-8") as tsvfile:
+    dict_map: dict[str, str] = {}
+    with open(local_path, encoding="utf-8") as tsvfile:
         reader = csv.reader(tsvfile, delimiter="\t")
         for row in reader:
-            if (
-                len(row) < 2
-                or "CONSONANTUNACCOUNTEDFOR" in row[1]
-                or "QNOU" in row[1]
-            ):
+            if len(row) < 2 or "CONSONANTUNACCOUNTEDFOR" in row[1] or "QNOU" in row[1]:
                 continue
             word = row[0].strip().lower()
             phones = row[1].strip()

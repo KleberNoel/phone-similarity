@@ -68,7 +68,7 @@ PHONEME_FEATURES = {
     },
     "œ̃": {"nasal": True, "mid-low": True, "front": True, "round": True, "long": False},
     "ɔ̃": {"nasal": True, "mid-low": True, "back": True, "round": True, "long": False},
-     "ɑ̃": {"nasal": True, "low": True, "back": True, "round": False, "long": False},
+    "ɑ̃": {"nasal": True, "low": True, "back": True, "round": False, "long": False},
     "x": {"voiced": False, "place": "velar", "manner": "fricative"},
     "ɪ": {"high": True, "front": True, "round": False, "tense": False, "long": False},
     "ʊ": {"high": True, "back": True, "round": True, "long": False},

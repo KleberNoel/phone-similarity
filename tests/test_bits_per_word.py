@@ -7,9 +7,7 @@ MAX_SYLLABLES = 6
 
 
 def test_bits_per_word():  # pylint: disable=missing-function-docstring
-    consonants_set = set(
-        filter(lambda phone: phone not in VOWELS_SET, PHONEME_FEATURES)
-    )
+    consonants_set = set(filter(lambda phone: phone not in VOWELS_SET, PHONEME_FEATURES))
     bitarray_generator = BitArraySpecification(
         vowels=VOWELS_SET,
         consonants=consonants_set,
@@ -26,9 +24,9 @@ def test_bits_per_word():  # pylint: disable=missing-function-docstring
         ("strings", "strɪŋz"),  # 1 syllable
         ("insight", "ɪnsaɪt"),  # 2 vowels => 2 syllables
     ]
-    assert (
-        bitarray_generator._max_syllables_per_text_chunk == MAX_SYLLABLES
-    ), "Maximum bits per Syllable"
+    assert bitarray_generator._max_syllables_per_text_chunk == MAX_SYLLABLES, (
+        "Maximum bits per Syllable"
+    )
 
     bitarrays = {}
     for w, p in examples:

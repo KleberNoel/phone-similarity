@@ -1,6 +1,19 @@
 VOWELS_SET = {
-    "a", "e", "i", "o", "u", "y", "ɛ", "ɔ",
-    "aː", "eː", "iː", "oː", "uː", "yː", "ɛː",
+    "a",
+    "e",
+    "i",
+    "o",
+    "u",
+    "y",
+    "ɛ",
+    "ɔ",
+    "aː",
+    "eː",
+    "iː",
+    "oː",
+    "uː",
+    "yː",
+    "ɛː",
 }
 
 PHONEME_FEATURES = {
@@ -22,7 +35,6 @@ PHONEME_FEATURES = {
     "ɪ": {"high": True, "front": True, "round": False, "tense": False},
     "ʊ": {"high": True, "back": True, "round": True, "tense": False},
     "ʏ": {"high": True, "front": True, "round": True, "tense": False},
-
     # Consonants
     "p": {"voiced": False, "labial": True, "manner": "plosive"},
     "b": {"voiced": True, "labial": True, "manner": "plosive"},
@@ -43,7 +55,7 @@ PHONEME_FEATURES = {
     "ɥ": {"voiced": True, "labial": True, "place": "palatal", "manner": "approximant"},
     "r": {"voiced": True, "place": "alveolar", "manner": "trill"},
     "ɾ": {"voiced": True, "place": "alveolar", "manner": "tap"},
-    "h": {"voiced": False, "place": "glottal", "manner": "plosive"}, # Can be a fricative as well
+    "h": {"voiced": False, "place": "glottal", "manner": "plosive"},  # Can be a fricative as well
     # Diphthongs
     "ae̯": {"diphthong": True, "start": "a", "end": "e"},
     "oe̯": {"diphthong": True, "start": "o", "end": "e"},
@@ -51,7 +63,6 @@ PHONEME_FEATURES = {
     "eu̯": {"diphthong": True, "start": "e", "end": "u"},
     "ei̯": {"diphthong": True, "start": "e", "end": "i"},
     "ui̯": {"diphthong": True, "start": "u", "end": "i"},
-
     # Modifiers
     "ː": {"long": True},
     "̯": {"diphthong": True},

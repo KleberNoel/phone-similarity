@@ -1,18 +1,30 @@
-from typing import List
+"""
+Merged (union) bitarray specification for cross-language comparisons.
+
+Combines the vowel, consonant, and feature inventories of multiple
+:class:`BitArraySpecification` instances so that phonemes from different
+languages can be encoded into a shared bitarray space.
+"""
+
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
+
 
 class IntersectingBitArraySpecification(BaseBitArraySpecification):
     """
     A specification that combines multiple BitArraySpecifications.
     """
 
-    def __init__(self, specifications: List[BaseBitArraySpecification], max_syllables_per_text: int = 6):
-        """
-        Initializes the IntersectingBitArraySpecification.
+    def __init__(
+        self, specifications: list[BaseBitArraySpecification], max_syllables_per_text: int = 6
+    ):
+        """Combine multiple specifications into a shared phoneme space.
 
-        Args:
-            specifications: A list of BitArraySpecification objects to combine.
-            max_syllables_per_text: The maximum number of syllables per text chunk.
+        Parameters
+        ----------
+        specifications : list of BaseBitArraySpecification
+            Specifications whose inventories will be merged (union).
+        max_syllables_per_text : int
+            Maximum syllables per text chunk (default 6).
         """
         vowels = set()
         consonants = set()

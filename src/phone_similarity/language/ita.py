@@ -9,7 +9,6 @@ PHONEME_FEATURES = {
     "o": {"mid-high": True, "back": True, "round": True},
     "ɔ": {"mid-low": True, "back": True, "round": True},
     "u": {"high": True, "back": True, "round": True},
-
     # Consonants
     "b": {"voiced": True, "labial": True, "manner": "plosive"},
     "d": {"voiced": True, "place": "dental", "manner": "plosive"},

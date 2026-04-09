@@ -4,6 +4,7 @@ Parametrized tests for phoneme feature coverage across all languages.
 This module provides comprehensive tests to verify that all phonemes from
 CharsiuG2P dictionaries have corresponding feature mappings in the language modules.
 """
+
 import importlib
 import logging
 
@@ -12,22 +13,62 @@ import pytest
 from phone_similarity.clean_phones import clean_phones
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 
-
 IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?\u201c\u201d\u0022"
 
 # Known combining diacritics that should be ignored
-IGNORE_DIACRITICS = {"̯", "̩", "̥", "͡", "ː", "ʼ", "ç", "̈", "̇", "̊", "̋", "́", "̂", "̌", "̄", "̑", "̛", "̔", "̕", "̝", "̞", "̘", "̙", "̜", "̟", "̠", "̢", "̼", "̴", "̵", "̷", "̹", "̺", "̻", "̽", "̾", "̿", "̀", "͝", "͞", "͟", "͠", "͡", "͢", "ɫ"}
+IGNORE_DIACRITICS = {
+    "̯",
+    "̩",
+    "̥",
+    "͡",
+    "ː",
+    "ʼ",
+    "ç",
+    "̈",
+    "̇",
+    "̊",
+    "̋",
+    "́",
+    "̂",
+    "̌",
+    "̄",
+    "̑",
+    "̛",
+    "̔",
+    "̕",
+    "̝",
+    "̞",
+    "̘",
+    "̙",
+    "̜",
+    "̟",
+    "̠",
+    "̢",
+    "̼",
+    "̴",
+    "̵",
+    "̷",
+    "̹",
+    "̺",
+    "̻",
+    "̽",
+    "̾",
+    "̿",
+    "̀",
+    "͝",
+    "͞",
+    "͟",
+    "͠",
+    "͢",
+    "ɫ",
+}
 
 
 import os
 
-_LANG_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "src", "phone_similarity", "language"
-)
+_LANG_DIR = os.path.join(os.path.dirname(__file__), "..", "src", "phone_similarity", "language")
 LANGUAGE_MODULES = sorted(
-    f[:-3]
-    for f in os.listdir(_LANG_DIR)
-    if f.endswith(".py") and f != "__init__.py"
+    f[:-3] for f in os.listdir(_LANG_DIR) if f.endswith(".py") and f != "__init__.py"
 )
 
 
@@ -47,16 +88,13 @@ def collect_dict_phonemes(charsiu_code: str) -> set:
     import unicodedata
 
     all_phones = set()
-    for word, pron in g2p.pdict.items():
+    for _word, pron in g2p.pdict.items():
         cleaned = clean_phones(pron)
         for phone in cleaned:
             if phone not in IGNORE_SYMBOLS:
                 # Normalize common issues: g -> ɡ, ε -> ɛ, ʧ -> tʃ, ģ -> ɣ
                 normalized = (
-                    phone.replace("g", "ɡ")
-                    .replace("ε", "ɛ")
-                    .replace("ʧ", "tʃ")
-                    .replace("ģ", "ɣ")
+                    phone.replace("g", "ɡ").replace("ε", "ɛ").replace("ʧ", "tʃ").replace("ģ", "ɣ")
                 )
                 # Skip non-phonemic single letters (uppercase, common word parts)
                 if normalized.isupper() and len(normalized) == 1:
@@ -65,9 +103,7 @@ def collect_dict_phonemes(charsiu_code: str) -> set:
                 if normalized in "()[]{}":
                     continue
                 # Strip combining diacritics (category 'Mn' = Mark, Nonspacing)
-                stripped = "".join(
-                    c for c in normalized if unicodedata.category(c) != "Mn"
-                )
+                stripped = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
                 if not stripped:
                     continue
                 # Skip pure modifiers like ɫ (velarized) that aren't phonemes
@@ -167,15 +203,49 @@ def test_consonants_have_manner(lang_module):
     # Skip combining diacritics and other non-phonemic entries
     # Also skip vowels that exist in PHONEME_FEATURES but not VOWELS_SET
     skip_entries = {
-        "̩", "̯", "ˑ", "̥", "̬", "ʰ", "ˠ", "̠", "̝", "̞", "ˢ", "ˀ", "̊",
-        "ʲ", "‿", "ˑ", "͡", "̃", "⁾", "⁽", "ɑ", "ɪ", "æ", "ʏ", "ɨ", "ʊ"
+        "̩",
+        "̯",
+        "ˑ",
+        "̥",
+        "̬",
+        "ʰ",
+        "ˠ",
+        "̠",
+        "̝",
+        "̞",
+        "ˢ",
+        "ˀ",
+        "̊",
+        "ʲ",
+        "‿",
+        "͡",
+        "̃",
+        "⁾",
+        "⁽",
+        "ɑ",
+        "ɪ",
+        "æ",
+        "ʏ",
+        "ɨ",
+        "ʊ",
     }
 
     # Feature keys that indicate modifier/suprasegmental entries (not consonants)
     modifier_keys = {
-        "marker", "stress", "modifier", "ejective", "syllable_break",
-        "tone", "breathy", "release", "labialized", "pre-nasal",
-        "rhotic", "unaspirated", "dental", "half_long",
+        "marker",
+        "stress",
+        "modifier",
+        "ejective",
+        "syllable_break",
+        "tone",
+        "breathy",
+        "release",
+        "labialized",
+        "pre-nasal",
+        "rhotic",
+        "unaspirated",
+        "dental",
+        "half_long",
     }
 
     missing_manner = []
@@ -203,7 +273,9 @@ def test_consonants_have_manner(lang_module):
         if "manner" not in features:
             missing_manner.append(phone)
 
-    assert len(missing_manner) == 0, f"Consonants missing manner in {module_name}: {missing_manner}"
+    assert len(missing_manner) == 0, (
+        f"Consonants missing manner in {module_name}: {missing_manner}"
+    )
 
 
 def test_consonants_have_voicedness(lang_module):
@@ -216,15 +288,49 @@ def test_consonants_have_voicedness(lang_module):
     # Skip combining diacritics and other non-phonemic entries
     # Also skip vowels that exist in PHONEME_FEATURES but not VOWELS_SET
     skip_entries = {
-        "̩", "̯", "ˑ", "̥", "̬", "ʰ", "ˠ", "̠", "̝", "̞", "ˢ", "ˀ", "̊",
-        "ʲ", "‿", "ˑ", "͡", "̃", "⁾", "⁽", "ɑ", "ɪ", "æ", "ʏ", "ɨ", "ʊ"
+        "̩",
+        "̯",
+        "ˑ",
+        "̥",
+        "̬",
+        "ʰ",
+        "ˠ",
+        "̠",
+        "̝",
+        "̞",
+        "ˢ",
+        "ˀ",
+        "̊",
+        "ʲ",
+        "‿",
+        "͡",
+        "̃",
+        "⁾",
+        "⁽",
+        "ɑ",
+        "ɪ",
+        "æ",
+        "ʏ",
+        "ɨ",
+        "ʊ",
     }
 
     # Feature keys that indicate modifier/suprasegmental entries (not consonants)
     modifier_keys = {
-        "marker", "stress", "modifier", "ejective", "syllable_break",
-        "tone", "breathy", "release", "labialized", "pre-nasal",
-        "rhotic", "unaspirated", "dental", "half_long",
+        "marker",
+        "stress",
+        "modifier",
+        "ejective",
+        "syllable_break",
+        "tone",
+        "breathy",
+        "release",
+        "labialized",
+        "pre-nasal",
+        "rhotic",
+        "unaspirated",
+        "dental",
+        "half_long",
     }
 
     missing_voiced = []
@@ -252,7 +358,9 @@ def test_consonants_have_voicedness(lang_module):
         if "voiced" not in features:
             missing_voiced.append(phone)
 
-    assert len(missing_voiced) == 0, f"Consonants missing voiced in {module_name}: {missing_voiced}"
+    assert len(missing_voiced) == 0, (
+        f"Consonants missing voiced in {module_name}: {missing_voiced}"
+    )
 
 
 if __name__ == "__main__":

@@ -40,7 +40,8 @@ for language in LANGUAGES_TO_TEST:
                         coda = frozenbitarray(syllable.get("coda", bitarray_spec.empty_vector("consonant")))
                         syllables.append((onset, nucleus, coda))
                     analyzer.add_word(SyllableEncoding(syllables=syllables))
-                except:
+                except (KeyError, ValueError, IndexError) as exc:
+                    logging.debug("Skipping phoneme %r for %s: %s", p, language, exc)
                     continue
             count += 1
             if count >= 5000:

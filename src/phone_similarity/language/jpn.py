@@ -99,7 +99,6 @@ PHONEME_FEATURES = {
     "ŋʲ": {"manner": "nasal", "palatalized": True, "place": "velar", "voiced": True},
     "ɕ": {"manner": "fricative", "place": "alveolo-palatal", "voiced": False},
     "ɕː": {"manner": "fricative", "place": "alveolo-palatal", "voiced": False},
-    "ɡ": {"manner": "plosive", "place": "velar", "voiced": True},
     "ɡʲ": {"manner": "plosive", "palatalized": True, "place": "velar", "voiced": True},
     "ɰ": {"manner": "approximant", "place": "velar", "voiced": True},
     "ɰ̃": {"manner": "approximant", "place": "velar", "voiced": True},

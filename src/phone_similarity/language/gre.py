@@ -8,7 +8,6 @@ PHONEME_FEATURES = {
     "o": {"mid": True, "back": True, "round": True},
     "u": {"high": True, "back": True, "round": True},
     "̯": {"marker": True},
-
     # Consonants
     "p": {"voiced": False, "labial": True, "manner": "plosive"},
     "b": {"voiced": True, "labial": True, "manner": "plosive"},

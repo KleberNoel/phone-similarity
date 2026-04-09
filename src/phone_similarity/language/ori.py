@@ -48,7 +48,6 @@ PHONEME_FEATURES = {
     "ŋ": {"manner": "nasal", "place": "velar", "voiced": True},
     "ũ": {"back": True, "high": True, "round": True},
     "ɖ": {"manner": "plosive", "place": "retroflex", "voiced": True},
-    "ɡ": {"manner": "plosive", "place": "velar", "voiced": True},
     "ɲ": {"manner": "nasal", "place": "palatal", "voiced": True},
     "ɳ": {"manner": "nasal", "place": "retroflex", "voiced": True},
     "ɽ": {"manner": "tap", "place": "retroflex", "voiced": True},

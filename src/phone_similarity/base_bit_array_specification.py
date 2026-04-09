@@ -1,12 +1,27 @@
+"""
+Abstract base class for phoneme-to-bitarray mapping specifications.
+
+Defines the interface and shared logic for tokenising IPA strings and
+converting phonological feature dictionaries into fixed-width bitarray
+representations suitable for Hamming distance computation.
+"""
+
 import abc
 import logging
 from functools import lru_cache
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Optional, Union
 
 from bitarray import bitarray
 
+try:
+    from phone_similarity._core import cython_ipa_tokenizer as _cy_tokenize
 
-class BaseBitArraySpecification(
+    _HAS_CYTHON_TOKENIZER = True
+except ImportError:
+    _HAS_CYTHON_TOKENIZER = False
+
+
+class BaseBitArraySpecification(  # noqa: B024
     abc.ABC
 ):  # pylint: disable=too-many-instance-attributes
     """
@@ -15,9 +30,9 @@ class BaseBitArraySpecification(
 
     def __init__(
         self,
-        vowels: Set[str],
-        consonants: Set[str],
-        features_per_phoneme: Dict[str, Dict[str, bool]],
+        vowels: set[str],
+        consonants: set[str],
+        features_per_phoneme: dict[str, dict[str, bool]],
         max_syllables_per_text: int = 6,
     ):
         self._vowels = vowels
@@ -38,12 +53,13 @@ class BaseBitArraySpecification(
                 reverse=True,
             )
         )
+        self._phone_set = frozenset(features_per_phoneme.keys())
         self._max_phoneme_size = max(len(p) for p in self._phones_sorted)
 
     @staticmethod
     def sort_features(
-        features: Dict[str, Set[str]],
-    ) -> Dict[str, Tuple[str]]:
+        features: dict[str, set[str]],
+    ) -> dict[str, tuple[str]]:
         """Sorts features for consistent ordering.
 
         Parameters
@@ -63,7 +79,7 @@ class BaseBitArraySpecification(
         return _features
 
     @lru_cache(maxsize=128)
-    def get_phoneme_features(self, phoneme: str) -> Tuple:
+    def get_phoneme_features(self, phoneme: str) -> tuple:
         """Retrieves the feature set for a given phoneme.
 
         Parameters
@@ -88,7 +104,7 @@ class BaseBitArraySpecification(
 
     @lru_cache(128)
     def features_to_bitarray(
-        self, feature_dict: Union[Tuple[Tuple[str, bool]], Dict[str, bool]], columns: Tuple[str]
+        self, feature_dict: Union[tuple[tuple[str, bool]], dict[str, bool]], columns: tuple[str]
     ) -> "bitarray":
         """Converts a feature dictionary to a bitarray.
 
@@ -106,7 +122,7 @@ class BaseBitArraySpecification(
 
         """
         fd = feature_dict if isinstance(feature_dict, dict) else dict(feature_dict)
-        bits: List[int] = []
+        bits: list[int] = []
 
         for _, col in enumerate(columns, start=0):
             # Find feature in column name ('voiced': binary, or values 'place', 'manner')
@@ -148,12 +164,16 @@ class BaseBitArraySpecification(
                     return phone
         return None
 
-    def ipa_tokenizer(self, ipa_str: str) -> List[str]:
+    def ipa_tokenizer(self, ipa_str: str) -> list[str]:
         """Tokenizes an IPA string into a list of recognized phonemes.
 
         This method uses a basic parsing strategy that prioritizes longer phoneme
         matches. It iterates through the input string and identifies the longest
         possible phoneme at each position.
+
+        When the Cython extension is available, uses a hash-set based lookup
+        (O(max_phoneme_length) per position) instead of the Python linear scan
+        (O(inventory_size) per position).
 
         Parameters
         ----------
@@ -172,6 +192,9 @@ class BaseBitArraySpecification(
             up to the maximum phoneme length.
 
         """
+        if _HAS_CYTHON_TOKENIZER:
+            return _cy_tokenize(ipa_str, self._phone_set, self._max_phoneme_size)
+
         tokens = []
         start = 0
         while start < len(ipa_str):
@@ -179,11 +202,9 @@ class BaseBitArraySpecification(
             phoneme = self.search_phonemes(ipa_str[start:end_idx])
             if phoneme is None:
                 logging.warning(
-                    (
-                        f"IPA string contains phonemes outside usual range {ipa_str} "
-                        f"(max phoneme length = {self._max_phoneme_size}) "
-                        f"Searched: {ipa_str[start:end_idx]}"
-                    )
+                    f"IPA string contains phonemes outside usual range {ipa_str} "
+                    f"(max phoneme length = {self._max_phoneme_size}) "
+                    f"Searched: {ipa_str[start:end_idx]}"
                 )
                 start += 1
             else:

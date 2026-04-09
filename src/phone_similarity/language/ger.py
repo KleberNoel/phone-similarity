@@ -60,14 +60,26 @@ PHONEME_FEATURES = {
     "ts": {"voiced": False, "place": "alveolar", "manner": "affricate"},
     "tʃ": {"voiced": False, "place": "post-alveolar", "manner": "affricate"},
     "dʒ": {"voiced": True, "place": "post-alveolar", "manner": "affricate"},
-    "c": {"voiced": False, "place": "palatal", "manner": "plosive"},  # palatal plosive
-    "ç": {"voiced": False, "place": "palatal", "manner": "fricative"},  # already exists but ensure it's present
-    "ʔ": {"voiced": False, "place": "glottal", "manner": "plosive"},  # glottal stop (vowel-initial onsets)
+    "c": {
+        "voiced": False,
+        "place": "palatal",
+        "manner": "plosive",
+    },  # already exists but ensure it's present
+    "ʔ": {
+        "voiced": False,
+        "place": "glottal",
+        "manner": "plosive",
+    },  # glottal stop (vowel-initial onsets)
     "ɽ": {"voiced": True, "place": "retroflex", "manner": "tap"},  # retroflex flap (R variant)
     "ɕ": {"voiced": False, "place": "alveolo-palatal", "manner": "fricative"},
     "ɱ": {"voiced": True, "labial": True, "dental": True, "manner": "nasal"},  # labiodental nasal
     "w": {"voiced": True, "labial": True, "place": "velar", "manner": "approximant"},
-    "ʋ": {"voiced": True, "labial": True, "dental": True, "manner": "approximant"},  # labiodental approximant
+    "ʋ": {
+        "voiced": True,
+        "labial": True,
+        "dental": True,
+        "manner": "approximant",
+    },  # labiodental approximant
     "θ": {"voiced": False, "place": "dental", "manner": "fricative"},
     # Vowels
     "iː": {"high": True, "front": True, "round": False, "long": True},

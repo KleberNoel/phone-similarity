@@ -1,7 +1,7 @@
 import math
 from collections import Counter
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from phone_similarity.bit_array_specification import BitArraySpecification
@@ -14,11 +14,11 @@ from bitarray import frozenbitarray
 class SyllableEncoding:
     """Container for phoneme bitarray representation."""
 
-    syllables: List[Tuple[frozenbitarray, frozenbitarray, frozenbitarray]]
+    syllables: list[tuple[frozenbitarray, frozenbitarray, frozenbitarray]]
 
     def to_tuple(
         self,
-    ) -> Tuple[Tuple[frozenbitarray, frozenbitarray, frozenbitarray], ...]:
+    ) -> tuple[tuple[frozenbitarray, frozenbitarray, frozenbitarray], ...]:
         """Convert to tuple for hashing."""
         return tuple(self.syllables)
 
@@ -145,16 +145,14 @@ class PhonemeEntropyAnalyzer:
             coda_entropy=self.calculate_entropy(self.coda_counts),
             joint_entropy=self.calculate_entropy(self.joint_counts),
             onset_utilization=self.calculate_utilization(unique_onset, self.max_onset),
-            nucleus_utilization=self.calculate_utilization(
-                unique_nucleus, self.max_nucleus
-            ),
+            nucleus_utilization=self.calculate_utilization(unique_nucleus, self.max_nucleus),
             coda_utilization=self.calculate_utilization(unique_coda, self.max_coda),
             unique_onset_patterns=unique_onset,
             unique_nucleus_patterns=unique_nucleus,
             unique_coda_patterns=unique_coda,
         )
 
-    def get_top_patterns(self, n: int = 20) -> Dict[str, List[Tuple[int, int]]]:
+    def get_top_patterns(self, n: int = 20) -> dict[str, list[tuple[int, int]]]:
         """
         Get the most common patterns for each component.
 
@@ -189,13 +187,13 @@ class PhonemeEntropyAnalyzer:
         print("ENTROPY MEASURES (in bits)")
         print("-" * 70)
         print(
-            f"Onset Entropy:    {metrics.onset_entropy:.3f} / {self.onset_bits} bits ({metrics.onset_entropy/self.onset_bits*100:.1f}% of max)"
+            f"Onset Entropy:    {metrics.onset_entropy:.3f} / {self.onset_bits} bits ({metrics.onset_entropy / self.onset_bits * 100:.1f}% of max)"
         )
         print(
-            f"Nucleus Entropy:  {metrics.nucleus_entropy:.3f} / {self.nucleus_bits} bits ({metrics.nucleus_entropy/self.nucleus_bits*100:.1f}% of max)"
+            f"Nucleus Entropy:  {metrics.nucleus_entropy:.3f} / {self.nucleus_bits} bits ({metrics.nucleus_entropy / self.nucleus_bits * 100:.1f}% of max)"
         )
         print(
-            f"Coda Entropy:     {metrics.coda_entropy:.3f} / {self.coda_bits} bits ({metrics.coda_entropy/self.coda_bits*100:.1f}% of max)"
+            f"Coda Entropy:     {metrics.coda_entropy:.3f} / {self.coda_bits} bits ({metrics.coda_entropy / self.coda_bits * 100:.1f}% of max)"
         )
         print(f"Joint Entropy:    {metrics.joint_entropy:.3f} bits")
 
@@ -208,13 +206,13 @@ class PhonemeEntropyAnalyzer:
         print("BIT UTILIZATION")
         print("-" * 70)
         print(
-            f"Onset:   {metrics.unique_onset_patterns:4d} / {self.max_onset:4d} patterns ({metrics.onset_utilization*100:.1f}%)"
+            f"Onset:   {metrics.unique_onset_patterns:4d} / {self.max_onset:4d} patterns ({metrics.onset_utilization * 100:.1f}%)"
         )
         print(
-            f"Nucleus: {metrics.unique_nucleus_patterns:4d} / {self.max_nucleus:4d} patterns ({metrics.nucleus_utilization*100:.1f}%)"
+            f"Nucleus: {metrics.unique_nucleus_patterns:4d} / {self.max_nucleus:4d} patterns ({metrics.nucleus_utilization * 100:.1f}%)"
         )
         print(
-            f"Coda:    {metrics.unique_coda_patterns:4d} / {self.max_coda:4d} patterns ({metrics.coda_utilization*100:.1f}%)"
+            f"Coda:    {metrics.unique_coda_patterns:4d} / {self.max_coda:4d} patterns ({metrics.coda_utilization * 100:.1f}%)"
         )
 
         # Interpretation
@@ -232,9 +230,7 @@ class PhonemeEntropyAnalyzer:
         if metrics.nucleus_utilization < 0.25:
             print("⚠ Nucleus is OVER-PROVISIONED (using <25% of available patterns)")
         elif metrics.nucleus_utilization > 0.75:
-            print(
-                "⚠ Nucleus may be UNDER-PROVISIONED (using >75% of available patterns)"
-            )
+            print("⚠ Nucleus may be UNDER-PROVISIONED (using >75% of available patterns)")
         else:
             print("✓ Nucleus bit allocation appears appropriate")
 
@@ -246,4 +242,3 @@ class PhonemeEntropyAnalyzer:
             print("✓ Coda bit allocation appears appropriate")
 
         print("=" * 70)
-

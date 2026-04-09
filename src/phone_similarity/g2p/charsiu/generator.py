@@ -6,7 +6,7 @@ import sys
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Optional, Union
 
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
 
@@ -71,24 +71,19 @@ class CharsiuGraphemeToPhonemeGenerator:
         use_cache : bool
             Whether to use a pickle cache for the phoneme dictionary.
         """
-        assert (
-            language in LANGUAGE_CODES_CHARSIU
-        ), "Language not in Charsiu language codes"
+        if language not in LANGUAGE_CODES_CHARSIU:
+            raise ValueError(
+                f"Unsupported language {language!r}. "
+                f"Must be one of: {', '.join(sorted(LANGUAGE_CODES_CHARSIU))}"
+            )
 
         self._language = language
         self._use_cache = use_cache
 
         # All heavy resources are loaded lazily
-        self._pdict: Optional[Dict[str, str]] = None
+        self._pdict: Optional[dict[str, str]] = None
         self._model = None
         self._tokenizer = None
-
-        self._available_g2p_resources: Set[GraphemeToPhonemeResourceType] = set(
-            [
-                GraphemeToPhonemeResourceType.G2P_GENERATOR,
-                GraphemeToPhonemeResourceType.DICT,
-            ]
-        )
 
     # ------------------------------------------------------------------
     # Lazy resource loading
@@ -132,19 +127,15 @@ class CharsiuGraphemeToPhonemeGenerator:
         from optimum.onnxruntime import ORTModelForSeq2SeqLM
         from transformers import AutoTokenizer
 
-        self._model = ORTModelForSeq2SeqLM.from_pretrained(
-            self.DEFAULT_ONNX_MODEL_NAME
-        )
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            self.DEFAULT_TOKENIZER_MODEL_NAME
-        )
+        self._model = ORTModelForSeq2SeqLM.from_pretrained(self.DEFAULT_ONNX_MODEL_NAME)
+        self._tokenizer = AutoTokenizer.from_pretrained(self.DEFAULT_TOKENIZER_MODEL_NAME)
 
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
 
     @property
-    def pdict(self) -> Dict[str, str]:
+    def pdict(self) -> dict[str, str]:
         """A dictionary mapping words to their phonemic representations.
 
         The dictionary is loaded lazily on first access — it will be
@@ -157,13 +148,14 @@ class CharsiuGraphemeToPhonemeGenerator:
             pronunciations.
         """
         self._ensure_dict_loaded()
-        assert self._pdict is not None
+        if self._pdict is None:
+            raise RuntimeError("Dictionary failed to load")
         return self._pdict
 
     @lru_cache(maxsize=2048)
     def generate(
-        self, words: Tuple[str], **generation_kwargs
-    ) -> Union[List[str], List[List[str]]]:
+        self, words: tuple[str], **generation_kwargs
+    ) -> Union[list[str], list[list[str]]]:
         """Generate phonemes for a list of words.
 
         This method uses the Charsiu ONNX model to generate phonemic
@@ -198,9 +190,7 @@ class CharsiuGraphemeToPhonemeGenerator:
                 if not word.startswith(f"<{self._language}>: ")
                 else word
             )
-        out = self._tokenizer(
-            _words, padding=True, add_special_tokens=False, return_tensors="pt"
-        )
+        out = self._tokenizer(_words, padding=True, add_special_tokens=False, return_tensors="pt")
 
         num_return_sequences_active = bool("num_return_sequences" in generation_kwargs)
 
@@ -209,16 +199,9 @@ class CharsiuGraphemeToPhonemeGenerator:
             sequences_preds = preds
             sequences_probs = [1]
         else:
-            sequences_preds = (
-                preds["sequences"] if isinstance(preds, dict) else preds.sequences
-            )
-            if (
-                hasattr(preds, "sequences_scores")
-                and preds.sequences_scores is not None
-            ):
-                sequences_probs = [
-                    math.exp(float(sc)) for sc in preds.sequences_scores
-                ]
+            sequences_preds = preds["sequences"] if isinstance(preds, dict) else preds.sequences
+            if hasattr(preds, "sequences_scores") and preds.sequences_scores is not None:
+                sequences_probs = [math.exp(float(sc)) for sc in preds.sequences_scores]
             else:
                 sequences_probs = [1]
 
@@ -227,23 +210,17 @@ class CharsiuGraphemeToPhonemeGenerator:
                 len(_words), generation_kwargs["num_return_sequences"], -1
             )
             phones = [
-                tuple(
-                    self._tokenizer.batch_decode(
-                        pred.tolist(), skip_special_tokens=True
-                    )
-                )
+                tuple(self._tokenizer.batch_decode(pred.tolist(), skip_special_tokens=True))
                 for pred in sequences_preds
             ]
             return phones, sequences_probs  # type: ignore
 
-        phones = self._tokenizer.batch_decode(
-            sequences_preds.tolist(), skip_special_tokens=True
-        )
+        phones = self._tokenizer.batch_decode(sequences_preds.tolist(), skip_special_tokens=True)
         return phones, sequences_probs  # type: ignore
 
     def get_phones_from_dict(self, word: str) -> str:
         """get phonemes from a pronunciations dictionary"""
-        maybe_phonemes = self._pdict.get(word, None)
+        maybe_phonemes = self.pdict.get(word, None)
         if maybe_phonemes is not None:
             return maybe_phonemes
         error_message = f"{word} was not found in the dictionary"
@@ -256,7 +233,7 @@ class CharsiuGraphemeToPhonemeGenerator:
         word: str,
         limit_resource: Optional[GraphemeToPhonemeResourceType],
         **generation_kwargs,
-    ) -> Tuple[Union[str, Tuple[Tuple[str]]]]:
+    ) -> tuple[Union[str, tuple[tuple[str]]]]:
         """Get phones for a single word.
 
         This method first attempts to look up the word in the phone
@@ -284,17 +261,22 @@ class CharsiuGraphemeToPhonemeGenerator:
         """
 
         if limit_resource and limit_resource == GraphemeToPhonemeResourceType.DICT:
-            phoneme_strings: List[str] = self.get_phones_from_dict(word).split()
+            phoneme_strings: list[str] = self.get_phones_from_dict(word).split()
             return tuple(phoneme_strings)  # type: ignore
 
-        elif (
-            limit_resource
-            and limit_resource == GraphemeToPhonemeResourceType.G2P_GENERATOR
-        ):
-            assert isinstance(generation_kwargs, dict)
+        elif limit_resource and limit_resource == GraphemeToPhonemeResourceType.G2P_GENERATOR:
             phonemes = self.generate(tuple([word]), **generation_kwargs)  # type: ignore
             return tuple(phonemes) if isinstance(phonemes, list) else phonemes  # type: ignore
 
-        phonemes = self.generate(tuple([word]), **generation_kwargs)
-        phonemes.append(self.get_phones_from_dict(word).split())  # type: ignore
-        return tuple(phonemes) if isinstance(phonemes, list) else phonemes
+        generated = self.generate(tuple([word]), **generation_kwargs)
+        dict_phones = self.get_phones_from_dict(word).split()
+        # Combine model output with dictionary lookup without mutating
+        # the cached generate() return value.
+        if isinstance(generated, tuple) and len(generated) == 2:
+            phones, probs = generated
+            combined = list(phones) if isinstance(phones, list) else [phones]
+            combined.append(dict_phones)
+            return tuple(combined), probs  # type: ignore
+        combined = list(generated) if isinstance(generated, list) else [generated]
+        combined.append(dict_phones)
+        return tuple(combined)  # type: ignore

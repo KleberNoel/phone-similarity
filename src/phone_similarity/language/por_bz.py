@@ -1,6 +1,18 @@
 VOWELS_SET = {
-    "a", "e", "i", "o", "u", "ɛ", "ɔ",
-    "ɐ", "ẽ", "ĩ", "õ", "ũ", "ɐ̃", "ɔ̃",
+    "a",
+    "e",
+    "i",
+    "o",
+    "u",
+    "ɛ",
+    "ɔ",
+    "ɐ",
+    "ẽ",
+    "ĩ",
+    "õ",
+    "ũ",
+    "ɐ̃",
+    "ɔ̃",
 }
 
 PHONEME_FEATURES = {
@@ -15,7 +27,6 @@ PHONEME_FEATURES = {
     "o": {"mid-high": True, "back": True, "round": True},
     "ɔ": {"mid-low": True, "back": True, "round": True},
     "ɐ": {"low": True, "central": True, "round": False},
-
     # Nasal Vowels
     "ẽ": {"nasal": True, "mid-high": True, "front": True, "round": False},
     "ĩ": {"nasal": True, "high": True, "front": True, "round": False},
@@ -23,7 +34,6 @@ PHONEME_FEATURES = {
     "ũ": {"nasal": True, "high": True, "back": True, "round": True},
     "ɐ̃": {"nasal": True, "low": True, "central": True, "round": False},
     "ɔ̃": {"nasal": True, "mid-low": True, "back": True, "round": True},
-
     # Consonants
     "p": {"voiced": False, "labial": True, "manner": "plosive"},
     "b": {"voiced": True, "labial": True, "manner": "plosive"},
@@ -54,7 +64,6 @@ PHONEME_FEATURES = {
     "ʁ": {"voiced": True, "place": "uvular", "manner": "fricative"},
     "j": {"voiced": True, "place": "palatal", "manner": "approximant"},
     "w": {"voiced": True, "labial": True, "place": "velar", "manner": "approximant"},
-
     # Modifiers
     "̃": {"nasalized": True},
 }

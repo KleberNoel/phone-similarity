@@ -201,6 +201,9 @@ cython_debug/
 #   you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 
+# OpenCode (AI coding agent state)
+.opencode/
+
 # Ruff stuff:
 .ruff_cache/
 
@@ -220,3 +223,15 @@ onnx_export/
 
 # CharsiuG2P dictionaries (downloaded on demand, cached in ~/.cache/phono-sim/dicts/)
 src/dicts/
+
+# Generated Cython C sources (rebuild from .pyx)
+src/phone_similarity/_core.c
+
+# Profiling artifacts
+scalene_cpu*.json
+
+# Infrastructure / dev-local files
+pod.yaml
+
+# Agent internal state
+.ralph/

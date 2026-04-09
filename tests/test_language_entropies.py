@@ -96,12 +96,12 @@ def test_language_entropy_metrics(language):
     nucleus_min, nucleus_max = ENTROPY_RANGES[language]["nucleus"]
     coda_min, coda_max = ENTROPY_RANGES[language]["coda"]
 
-    assert (
-        onset_min <= metrics.onset_entropy <= onset_max
-    ), f"Onset entropy for {language} is out of range."
-    assert (
-        nucleus_min <= metrics.nucleus_entropy <= nucleus_max
-    ), f"Nucleus entropy for {language} is out of range."
-    assert (
-        coda_min <= metrics.coda_entropy <= coda_max
-    ), f"Coda entropy for {language} is out of range."
+    assert onset_min <= metrics.onset_entropy <= onset_max, (
+        f"Onset entropy for {language} is out of range."
+    )
+    assert nucleus_min <= metrics.nucleus_entropy <= nucleus_max, (
+        f"Nucleus entropy for {language} is out of range."
+    )
+    assert coda_min <= metrics.coda_entropy <= coda_max, (
+        f"Coda entropy for {language} is out of range."
+    )

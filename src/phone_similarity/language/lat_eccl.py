@@ -36,7 +36,12 @@ PHONEME_FEATURES = {
     "j": {"manner": "approximant", "place": "palatal", "voiced": True},
     "k": {"manner": "plosive", "place": "velar", "voiced": False},
     "l": {"manner": "lateral_approximant", "place": "alveolar", "voiced": True},
-    "l̠ʲ": {"manner": "lateral_approximant", "palatalized": True, "place": "alveolar", "voiced": True},
+    "l̠ʲ": {
+        "manner": "lateral_approximant",
+        "palatalized": True,
+        "place": "alveolar",
+        "voiced": True,
+    },
     "l̪": {"manner": "lateral_approximant", "place": "alveolar", "voiced": True},
     "m": {"labial": True, "manner": "nasal", "voiced": True},
     "n": {"manner": "nasal", "place": "alveolar", "voiced": True},

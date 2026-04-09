@@ -1,6 +1,22 @@
 VOWELS_SET = {
-    "i", "ɪ", "e", "ɛ", "æ", "a", "ɑ", "ɔ", "o", "ʊ", "u", "ʌ", "ə", "ɚ", "ɝ",
-    "aɪ", "aʊ", "ɔɪ",
+    "i",
+    "ɪ",
+    "e",
+    "ɛ",
+    "æ",
+    "a",
+    "ɑ",
+    "ɔ",
+    "o",
+    "ʊ",
+    "u",
+    "ʌ",
+    "ə",
+    "ɚ",
+    "ɝ",
+    "aɪ",
+    "aʊ",
+    "ɔɪ",
 }
 
 PHONEME_FEATURES = {
@@ -16,16 +32,27 @@ PHONEME_FEATURES = {
     "o": {"mid": True, "back": True, "round": True, "tense": True},
     "ʊ": {"high": True, "back": True, "round": True, "tense": False},
     "u": {"high": True, "back": True, "round": True, "tense": True},
-     # often transcribed as ə in unstressed syllables
-    "ə": {"mid": True, "central": True, "round": False, "tense": False}, # schwa
-     # r-colored schwa
-    "ɝ": {"mid": True, "central": True, "round": False, "tense": True, "rhotacized": True}, # r-colored vowel
-
+    "ʌ": {"mid-low": True, "back": True, "round": False, "tense": False},  # strut vowel
+    # often transcribed as ə in unstressed syllables
+    "ə": {"mid": True, "central": True, "round": False, "tense": False},  # schwa
+    "ɚ": {
+        "mid": True,
+        "central": True,
+        "round": False,
+        "tense": False,
+        "rhotacized": True,
+    },  # r-colored schwa
+    "ɝ": {
+        "mid": True,
+        "central": True,
+        "round": False,
+        "tense": True,
+        "rhotacized": True,
+    },  # stressed r-colored vowel
     # Vowels (diphthongs)
     "aɪ": {"diphthong": True, "start": "a", "end": "ɪ"},
     "aʊ": {"diphthong": True, "start": "a", "end": "ʊ"},
     "ɔɪ": {"diphthong": True, "start": "ɔ", "end": "ɪ"},
-
     # Consonants
     "p": {"voiced": False, "labial": True, "manner": "plosive"},
     "b": {"voiced": True, "labial": True, "manner": "plosive"},
@@ -51,7 +78,6 @@ PHONEME_FEATURES = {
     "ɹ": {"voiced": True, "place": "alveolar", "manner": "approximant"},
     "j": {"voiced": True, "place": "palatal", "manner": "approximant"},
     "w": {"voiced": True, "labial": True, "place": "velar", "manner": "approximant"},
-
     # Modifiers
     "ˈ": {"marker": True},
     "ˌ": {"marker": True},

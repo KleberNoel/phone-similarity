@@ -83,7 +83,6 @@ PHONEME_FEATURES = {
     "ĩ̯": {"front": True, "high": True, "round": False},
     "ŋ": {"manner": "nasal", "place": "velar", "voiced": True},
     "ũ̯": {"back": True, "high": True, "round": True},
-    "ɡ": {"manner": "plosive", "place": "velar", "voiced": True},
     "ɥ": {"labial": True, "manner": "approximant", "place": "palatal", "voiced": True},
     "ɲ": {"manner": "nasal", "place": "palatal", "voiced": True},
     "ʀ": {"manner": "trill", "place": "uvular", "voiced": True},

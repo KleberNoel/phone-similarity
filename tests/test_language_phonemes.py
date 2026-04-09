@@ -1,8 +1,7 @@
 import importlib
-import unittest
 import unicodedata
+import unittest
 from pathlib import Path
-from typing import Set
 
 import phone_similarity.language
 from phone_similarity.g2p.charsiu.load_dictionary import load_dictionary_tsv
@@ -12,6 +11,16 @@ LANGUAGE_PATH = Path(phone_similarity.language.__file__).parent
 # Symbols to ignore in dictionaries as they are typically non-phonemic markers
 # or redundant diacritics for the purpose of this v0/v1 check.
 IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?"
+
+
+# Phoneme *characters* that are valid IPA for a language but are not used in
+# the CharsiuG2P dictionary transcription convention.  Keyed by Charsiu
+# language code (e.g. "eng-us").  These are excluded from the "module phonemes
+# must all appear in dictionary" assertion.
+_SUPPLEMENTARY_PHONEMES = {
+    # CharsiuG2P eng-us uses ə for both /ʌ/ and /ə/, and ɝ for both /ɝ/ and /ɚ/
+    "eng-us": {"ʌ", "ɚ"},
+}
 
 
 def decompose_ligatures(s: str) -> str:
@@ -35,9 +44,7 @@ def rm_suffix(x: Path):  # pylint: disable=missing-function-docstring
 
 
 def is_language_module(x: Path):  # pylint: disable=missing-function-docstring
-    return not (
-        str(x.name).startswith("__") or str(x.name).startswith(".") or x.is_dir()
-    )
+    return not (str(x.name).startswith("__") or str(x.name).startswith(".") or x.is_dir())
 
 
 class TestLanguagePhonemes(  # pylint: disable=missing-class-docstring
@@ -48,20 +55,18 @@ class TestLanguagePhonemes(  # pylint: disable=missing-class-docstring
             module_name = str(rm_suffix(lang_file).name)
             lang = module_name.replace("_", "-")
             with self.subTest(lang=lang):
-                lang_module = importlib.import_module(
-                    f"phone_similarity.language.{module_name}"
-                )
+                lang_module = importlib.import_module(f"phone_similarity.language.{module_name}")
                 # Split up the phonemes into constituent parts (e.g. ignore dipthongs for now)
                 # Normalize to NFKD to decompose characters and handle diacritics consistently
-                module_phones: Set[str] = set()
-                for p in lang_module.PHONEME_FEATURES.keys():
+                module_phones: set[str] = set()
+                for p in lang_module.PHONEME_FEATURES:
                     p_norm = decompose_ligatures(unicodedata.normalize("NFKD", p))
                     for phone_char in p_norm:
                         if phone_char not in IGNORE_SYMBOLS:
                             module_phones.add(phone_char)
 
                 # Ignore non-phonetic symbols
-                dict_phones: Set[str] = set()
+                dict_phones: set[str] = set()
                 for word in load_dictionary_tsv(lang).values():
                     word_norm = decompose_ligatures(unicodedata.normalize("NFKD", word))
                     for phone_char in word_norm:
@@ -71,6 +76,11 @@ class TestLanguagePhonemes(  # pylint: disable=missing-class-docstring
                 # Check if all module phonemes are in the dictionary and vice-versa
                 phones_in_module_not_dict = module_phones - dict_phones
                 phones_in_dict_not_module = dict_phones - module_phones
+
+                # Exclude known supplementary phonemes (valid IPA but not in
+                # the CharsiuG2P transcription convention for this language)
+                supplementary = _SUPPLEMENTARY_PHONEMES.get(lang, set())
+                phones_in_module_not_dict -= supplementary
 
                 # Minimally, phones in the module must all occur in the dict
                 self.assertEqual(

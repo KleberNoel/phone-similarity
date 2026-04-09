@@ -1,5 +1,3 @@
-from typing import Type
-
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 
 
@@ -11,9 +9,7 @@ class ModelFactory:
     def __init__(self):
         self._models = {}
 
-    def register_model(
-        self, language: str, model_class: Type[BaseBitArraySpecification]
-    ):
+    def register_model(self, language: str, model_class: type[BaseBitArraySpecification]):
         """
         Register a model class for a given language.
         """

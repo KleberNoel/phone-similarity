@@ -17,7 +17,6 @@ PHONEME_FEATURES = {
     "ɑ": {"low": True, "back": True, "round": False},
     "ɪ": {"high": True, "front": True, "near-high": True, "near-front": True, "round": False},
     "æ": {"low": True, "front": True, "round": False},
-
     # Consonants
     "p": {"voiced": False, "labial": True, "manner": "plosive"},
     "b": {"voiced": True, "labial": True, "manner": "plosive"},
@@ -45,7 +44,6 @@ PHONEME_FEATURES = {
     "ʙ": {"voiced": True, "labial": True, "manner": "trill"},
     "ʕ": {"voiced": True, "place": "pharyngeal", "manner": "fricative"},
     "ʔ": {"voiced": False, "place": "glottal", "manner": "plosive"},
-
     # Modifiers
     "ʲ": {"palatalized": True},
     "ː": {"long": True},
