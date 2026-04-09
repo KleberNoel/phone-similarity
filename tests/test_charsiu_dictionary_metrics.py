@@ -1,7 +1,12 @@
 import logging
 
+import pytest
 from bitarray import frozenbitarray
-from tqdm import tqdm
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
 
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.clean_phones import clean_phones
@@ -24,6 +29,7 @@ BITARRAY_SPEC = BitArraySpecification(
 MAX_SYLLABLES = 6
 
 
+@pytest.mark.skipif(tqdm is None, reason="tqdm not installed")
 def test_dictionary_metrics():  # pylint: disable=missing-function-docstring
     language = f"{ISO_689_3_LANGUAGE}-{ISO_3166_1_ALPHA_2}"
     g2p = CharsiuGraphemeToPhonemeGenerator(language)

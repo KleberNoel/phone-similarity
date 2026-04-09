@@ -44,7 +44,7 @@ from phone_similarity.primitives import (
 )
 
 
-@dataclass(order=True, slots=True)
+@dataclass(order=True)
 class _Hypothesis:
     """A partial segmentation hypothesis on the beam.
 
@@ -59,7 +59,7 @@ class _Hypothesis:
     raw_cost: float = field(compare=False)
 
 
-@dataclass(slots=True)
+@dataclass()
 class BeamResult:
     """A single complete segmentation from beam search.
 
