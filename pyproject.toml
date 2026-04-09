@@ -8,7 +8,7 @@ version = "0.0.2"
 description = "A library dedicated to providing phonological distance and similarity metrics."
 authors = [{name = "Kleber Noel"}]
 readme = "README.md"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.9,<4"
 keywords = ["phone", "phonological", "phonetic", "similarity", "ipa", "phonetics", "distance", "bitarray"]
 classifiers = [

@@ -46,6 +46,15 @@ try:
 except ImportError:
     _HAS_CYTHON_EXT = False
 
+try:
+    from phone_similarity._core import (
+        prange_batch_dictionary_scan as _c_prange_batch_dictionary_scan,  # noqa: F401
+    )
+
+    _HAS_PRANGE = True
+except ImportError:
+    _HAS_PRANGE = False
+
 
 def hamming_distance(a: bitarray, b: bitarray) -> int:
     """Count the number of differing bits between two equal-length bitarrays.

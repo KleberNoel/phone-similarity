@@ -322,3 +322,184 @@ class TestDistanceClass:
         d_cat_hat = eng_distance.normalised_edit_distance("kæt", "hæt")
         d_cat_dog = eng_distance.normalised_edit_distance("kæt", "dɔɡ")
         assert d_cat_hat < d_cat_dog
+
+
+# ===================================================================
+# OpenMP prange dictionary scan parity
+# ===================================================================
+
+
+class TestPrangeDictionaryScan:
+    """Verify prange_batch_dictionary_scan produces identical results to
+    the sequential batch_dictionary_scan."""
+
+    @pytest.fixture
+    def ptd_and_feats(self):
+        """Build a small PreTokenizedDictionary-like object for testing."""
+        import numpy as np
+
+        # Small inventory + feature set
+        feats = {
+            "p": {"voiced": False, "manner": "plosive", "labial": True},
+            "b": {"voiced": True, "manner": "plosive", "labial": True},
+            "t": {"voiced": False, "manner": "plosive", "place": "alveolar"},
+            "d": {"voiced": True, "manner": "plosive", "place": "alveolar"},
+            "k": {"voiced": False, "manner": "plosive", "place": "velar"},
+            "s": {"voiced": False, "manner": "fricative", "place": "alveolar"},
+            "z": {"voiced": True, "manner": "fricative", "place": "alveolar"},
+            "m": {"voiced": True, "manner": "nasal", "labial": True},
+            "n": {"voiced": True, "manner": "nasal", "place": "alveolar"},
+            "æ": {"low": True, "front": True, "round": False},
+            "i": {"high": True, "front": True, "round": False},
+            "ɑ": {"low": True, "back": True, "round": False},
+            "u": {"high": True, "back": True, "round": True},
+        }
+
+        inventory = sorted(feats.keys())
+        inv_map = {ph: i for i, ph in enumerate(inventory)}
+
+        # Dictionary entries: (word, ipa, tokens)
+        entries = [
+            ("bat", "bæt", ["b", "æ", "t"]),
+            ("bad", "bæd", ["b", "æ", "d"]),
+            ("pat", "pæt", ["p", "æ", "t"]),
+            ("pad", "pæd", ["p", "æ", "d"]),
+            ("bit", "bit", ["b", "i", "t"]),
+            ("kit", "kit", ["k", "i", "t"]),
+            ("sun", "sʌn", ["s", "n"]),  # short, will be length-filtered for 3-tok source
+            ("must", "mʌst", ["m", "s", "t"]),
+            ("mask", "mæsk", ["m", "æ", "s", "k"]),
+            ("disk", "disk", ["d", "i", "s", "k"]),
+        ]
+
+        words = [e[0] for e in entries]
+        ipas = [e[1] for e in entries]
+        all_tokens = []
+        offsets = [0]
+        for _, _, toks in entries:
+            for tok in toks:
+                idx = inv_map.get(tok, -1)
+                all_tokens.append(idx if idx >= 0 else 0)
+            offsets.append(len(all_tokens))
+
+        token_indices = np.array(all_tokens, dtype=np.int16)
+        offsets_arr = np.array(offsets, dtype=np.int32)
+
+        class FakePTD:
+            pass
+
+        ptd = FakePTD()
+        ptd.token_indices = token_indices
+        ptd.offsets = offsets_arr
+        ptd.inventory = inventory
+        ptd.words = words
+        ptd.ipas = ipas
+
+        return ptd, feats
+
+    def test_prange_matches_sequential(self, ptd_and_feats):
+        """prange scan results should match sequential scan results exactly."""
+        from phone_similarity._core import (
+            batch_dictionary_scan,
+            prange_batch_dictionary_scan,
+        )
+
+        ptd, feats = ptd_and_feats
+        source_tokens = ["b", "æ", "t"]
+        source_len = len(source_tokens)
+
+        seq_results = batch_dictionary_scan(
+            source_tokens,
+            source_len,
+            ptd,
+            feats,
+            top_n=10,
+            max_distance=0.50,
+        )
+        par_results = prange_batch_dictionary_scan(
+            source_tokens,
+            source_len,
+            ptd,
+            feats,
+            top_n=10,
+            max_distance=0.50,
+            num_threads=2,
+        )
+
+        # Same number of results
+        assert len(seq_results) == len(par_results), (
+            f"Sequential found {len(seq_results)} results, parallel found {len(par_results)}"
+        )
+
+        # Same words and distances (order should match since both sort)
+        for (sw, si, sd), (pw, pi, pd) in zip(seq_results, par_results):
+            assert sw == pw, f"Word mismatch: {sw} != {pw}"
+            assert si == pi, f"IPA mismatch: {si} != {pi}"
+            assert abs(sd - pd) < 1e-10, f"Distance mismatch for {sw}: {sd} != {pd}"
+
+    def test_prange_single_thread(self, ptd_and_feats):
+        """prange with num_threads=1 should produce identical results."""
+        from phone_similarity._core import (
+            batch_dictionary_scan,
+            prange_batch_dictionary_scan,
+        )
+
+        ptd, feats = ptd_and_feats
+        source_tokens = ["k", "i", "t"]
+        source_len = len(source_tokens)
+
+        seq_results = batch_dictionary_scan(
+            source_tokens,
+            source_len,
+            ptd,
+            feats,
+            top_n=5,
+            max_distance=0.60,
+        )
+        par_results = prange_batch_dictionary_scan(
+            source_tokens,
+            source_len,
+            ptd,
+            feats,
+            top_n=5,
+            max_distance=0.60,
+            num_threads=1,
+        )
+
+        assert len(seq_results) == len(par_results)
+        for (sw, _, sd), (pw, _, pd) in zip(seq_results, par_results):
+            assert sw == pw
+            assert abs(sd - pd) < 1e-10
+
+    def test_prange_empty_source(self, ptd_and_feats):
+        """Empty source tokens should return empty results."""
+        from phone_similarity._core import prange_batch_dictionary_scan
+
+        ptd, feats = ptd_and_feats
+        results = prange_batch_dictionary_scan(
+            [],
+            0,
+            ptd,
+            feats,
+            top_n=10,
+            max_distance=0.50,
+        )
+        assert results == []
+
+    def test_prange_tight_threshold(self, ptd_and_feats):
+        """Tight threshold should return only exact/near matches."""
+        from phone_similarity._core import prange_batch_dictionary_scan
+
+        ptd, feats = ptd_and_feats
+        results = prange_batch_dictionary_scan(
+            ["b", "æ", "t"],
+            3,
+            ptd,
+            feats,
+            top_n=10,
+            max_distance=0.01,
+        )
+        # Only "bat" should match at distance ~0.0
+        assert len(results) >= 1
+        assert results[0][0] == "bat"
+        assert results[0][2] < 0.01

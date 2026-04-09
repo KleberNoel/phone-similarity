@@ -120,3 +120,30 @@ def batch_dictionary_scan(
     Returns list of ``(word, ipa, distance)`` sorted by ascending distance.
     """
     ...
+
+# ---------------------------------------------------------------------------
+# OpenMP-parallel dictionary scan
+# ---------------------------------------------------------------------------
+
+def prange_batch_dictionary_scan(
+    source_tokens: list[str],
+    source_len: int,
+    pre_tokenized: object,
+    merged_feats: dict[str, dict[str, Union[bool, str]]],
+    top_n: int = 10,
+    max_distance: float = 0.50,
+    num_threads: int = 0,
+) -> list[tuple[str, str, float]]:
+    """Parallel dictionary scan using OpenMP prange.
+
+    Same semantics as ``batch_dictionary_scan`` but parallelises the
+    per-entry DP computation across multiple OS threads.
+
+    Parameters
+    ----------
+    num_threads : int
+        Number of OpenMP threads.  0 means use OMP_NUM_THREADS or all cores.
+
+    Returns list of ``(word, ipa, distance)`` sorted by ascending distance.
+    """
+    ...

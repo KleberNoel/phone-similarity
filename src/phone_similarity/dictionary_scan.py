@@ -16,11 +16,15 @@ from phone_similarity.base_bit_array_specification import BaseBitArraySpecificat
 from phone_similarity.pretokenize import PreTokenizedDictionary
 from phone_similarity.primitives import (
     _HAS_CYTHON_EXT,
+    _HAS_PRANGE,
     normalised_feature_edit_distance,
 )
 
 if _HAS_CYTHON_EXT:
     from phone_similarity.primitives import _c_batch_dictionary_scan
+
+if _HAS_PRANGE:
+    from phone_similarity.primitives import _c_prange_batch_dictionary_scan
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +57,15 @@ def _scan_one_language(args):
     except ImportError:
         _worker_has_cython = False
 
+    try:
+        from phone_similarity._core import (  # type: ignore[import-not-found]
+            prange_batch_dictionary_scan as _worker_prange_scan,
+        )
+
+        _worker_has_prange = True
+    except ImportError:
+        _worker_has_prange = False
+
     results = []
     for phrase_key, source_ipa in phrases:
         merged = {**target_features, **source_features}
@@ -61,7 +74,17 @@ def _scan_one_language(args):
         if source_len == 0:
             continue
 
-        if _worker_has_cython and pre_tokenized is not None:
+        if _worker_has_prange and pre_tokenized is not None:
+            matches = _worker_prange_scan(
+                source_tokens,
+                source_len,
+                pre_tokenized,
+                merged,
+                top_n,
+                max_distance,
+                0,  # num_threads: let OpenMP decide
+            )
+        elif _worker_has_cython and pre_tokenized is not None:
             matches = _worker_batch_scan(
                 source_tokens,
                 source_len,
@@ -195,6 +218,7 @@ def reverse_dictionary_lookup(
     top_n: int = 10,
     max_distance: float = 0.50,
     pre_tokenized: list[tuple[str, str, list[str]]] | None = None,
+    num_threads: int = 0,
 ) -> list[tuple[str, str, float]]:
     """Find dictionary words in a target language closest to a source IPA string.
 
@@ -231,6 +255,10 @@ def reverse_dictionary_lookup(
         Pre-tokenized dictionary entries.  When provided the function
         skips tokenization entirely, giving a large speed-up on repeated
         calls against the same dictionary.
+    num_threads : int
+        Number of OpenMP threads for parallel DP computation.
+        0 (default) lets OpenMP choose.  1 forces sequential execution.
+        Only effective when the Cython prange extension is available.
 
     Returns
     -------
@@ -243,7 +271,19 @@ def reverse_dictionary_lookup(
     if source_len == 0:
         return []
 
-    # Use Cython batch scan when available
+    # Use parallel Cython scan when available
+    if _HAS_PRANGE and pre_tokenized is not None:
+        return _c_prange_batch_dictionary_scan(
+            source_tokens,
+            source_len,
+            pre_tokenized,
+            merged_feats,
+            top_n,
+            max_distance,
+            num_threads,
+        )
+
+    # Use sequential Cython batch scan when available
     if _HAS_CYTHON_EXT and pre_tokenized is not None:
         return _c_batch_dictionary_scan(
             source_tokens,
