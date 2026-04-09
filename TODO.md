@@ -198,9 +198,9 @@ The library's stated purpose (phonological distance/similarity metrics) is now f
 
 ## 4. Cross-Language Feature Mapping
 
-- [ ] **Adopt universal distinctive feature set** -- standardise on Panphon (~24 features) or PHOIBLE as the shared basis so bitarrays from different languages are directly comparable
-- [ ] **Build feature encoder** -- `phoneme -> bitarray` via a unified feature table (replaces per-language ad-hoc feature dicts for comparison purposes)
-- [ ] **Implement `IntersectingBitArraySpecification`** -- flesh out the existing 31-line stub to properly combine multiple language specs with aligned feature dimensions
+- [x] **Adopt universal distinctive feature set** -- standardise on Panphon (~24 features) or PHOIBLE as the shared basis so bitarrays from different languages are directly comparable
+- [x] **Build feature encoder** -- `phoneme -> bitarray` via a unified feature table (replaces per-language ad-hoc feature dicts for comparison purposes)
+- [x] **Implement `IntersectingBitArraySpecification`** -- flesh out the existing 31-line stub to properly combine multiple language specs with aligned feature dimensions
 - [ ] **Add syllable segmenter with onset/nucleus/coda boundaries** -- language-aware syllabification (onset-maximisation or rule-based) as a pre-encoding step
 
 ---
@@ -212,7 +212,7 @@ Tight numeric loops (DP edit distance, Hamming over corpus, batch comparison) ar
 - [x] **Create `_core.pyx`** -- Cython module for hot-path numeric operations
   - Typed DP edit distance inner loop (`boundscheck(False)`, `wraparound(False)`, C-typed loop vars) -- 3.5x speedup measured
   - Batch Hamming similarity over corpus -- 2.3x speedup measured (bitarray XOR already C-accelerated)
-- [ ] **Add `prange` parallel corpus comparison** -- OpenMP-parallelised pairwise distance matrix computation with `nogil`
+- [x] **Add `prange` parallel corpus comparison** -- OpenMP-parallelised pairwise distance matrix computation with `nogil`
 - [x] **Create `_core.pxd`** -- public typed declarations for Cython module
 - [x] **Update `pyproject.toml`** -- add Cython build dependency, configure extension modules, optional dependency groups
 - [x] **Organise Cython/Python split** -- numeric loops in `_core.pyx`, linguistic logic (syllabification, feature lookup) stays in Python; `distance.py` auto-detects Cython and falls back to pure Python

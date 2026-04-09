@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.primitives import normalised_feature_edit_distance
+from phone_similarity.universal_features import UniversalFeatureEncoder
 
 
 class _DistanceLite:
@@ -86,7 +87,9 @@ def compare_cross_language(
                 d = _DistanceLite(merged_bit)
                 results[(la, lb)] = d.hamming(word_ipa_by_lang[la], word_ipa_by_lang[lb])
             else:
-                merged_feats = {**features_by_lang[la], **features_by_lang[lb]}
+                merged_feats = UniversalFeatureEncoder.merge_inventories(
+                    features_by_lang[la], features_by_lang[lb]
+                )
                 tokens_a = specs_by_lang[la].ipa_tokenizer(word_ipa_by_lang[la])
                 tokens_b = specs_by_lang[lb].ipa_tokenizer(word_ipa_by_lang[lb])
                 results[(la, lb)] = normalised_feature_edit_distance(

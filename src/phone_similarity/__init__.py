@@ -43,6 +43,8 @@ For finer-grained imports, use the sub-modules:
   ``beam_search_phrases``, ``BeamResult``
 * :mod:`phone_similarity.embedding` -- ``PhoneticEmbedder``,
   ``BruteForceIndex``, ``KDTreeIndex``, ``ann_dictionary_scan``
+* :mod:`phone_similarity.universal_features` -- ``UniversalFeatureEncoder``,
+  ``encode_phoneme``, ``universal_phoneme_distance``, ``merge_inventories``
 
 Legacy imports from :mod:`phone_similarity.distance` continue to work.
 """
@@ -81,6 +83,12 @@ from phone_similarity.primitives import (
     normalised_feature_edit_distance,
     phoneme_feature_distance,
 )
+from phone_similarity.universal_features import (
+    UniversalFeatureEncoder,
+    encode_phoneme,
+    merge_inventories,
+    universal_phoneme_distance,
+)
 
 __all__ = [
     # beam search
@@ -93,6 +101,8 @@ __all__ = [
     "PhoneticEmbedder",
     # pretokenize
     "PreTokenizedDictionary",
+    # universal features
+    "UniversalFeatureEncoder",
     "ann_dictionary_scan",
     # primitives
     "batch_pairwise_hamming",
@@ -101,16 +111,19 @@ __all__ = [
     "cached_pretokenize_dictionary",
     # cross-language
     "compare_cross_language",
+    "encode_phoneme",
     "feature_edit_distance",
     "hamming_distance",
     "hamming_similarity",
     # inversion
     "invert_features",
     "invert_ipa",
+    "merge_inventories",
     "normalised_feature_edit_distance",
     # dictionary scan
     "parallel_dictionary_scan",
     "phoneme_feature_distance",
     "pretokenize_dictionary",
     "reverse_dictionary_lookup",
+    "universal_phoneme_distance",
 ]
