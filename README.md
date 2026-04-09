@@ -171,17 +171,7 @@ for phoneme, dist in candidates:
 
 ## Multilingual support
 
-The library ships phoneme feature tables for 15 languages:
-
-| Code | Language | Code | Language |
-|------|----------|------|----------|
-| `eng_us` | English (US) | `ita` | Italian |
-| `eng_uk` | English (UK) | `spa` | Spanish |
-| `fra` | French | `por_br` | Portuguese (BR) |
-| `deu` | German | `por_pt` | Portuguese (PT) |
-| `dut` | Dutch | `rus` | Russian |
-| `dan` | Danish | `alb` | Albanian |
-| `gre` | Greek | `lat` | Latin |
+The library ships phoneme features for multiple languages.
 
 G2P dictionaries and neural inference cover 100+ languages via
 [CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P).
