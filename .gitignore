@@ -235,3 +235,8 @@ pod.yaml
 
 # Agent internal state
 .ralph/
+
+# Generated scratch / example files
+find_multiword.py
+multiword_heatmap.py
+*.png

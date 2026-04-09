@@ -32,7 +32,6 @@ Pruning
 
 from __future__ import annotations
 
-import heapq
 from dataclasses import dataclass, field
 from typing import Optional, Sequence, Union
 
@@ -41,7 +40,132 @@ from phone_similarity.pretokenize import PreTokenizedDictionary
 from phone_similarity.primitives import (
     feature_edit_distance,
     normalised_feature_edit_distance,
+    phoneme_feature_distance,
 )
+
+
+# ===================================================================
+# Phoneme trie for fast approximate dictionary matching
+# ===================================================================
+
+
+class _TrieNode:
+    """Node in a phoneme trie.  Leaf nodes store dictionary entries."""
+
+    __slots__ = ("children", "entries")
+
+    def __init__(self):
+        self.children: dict[str, _TrieNode] = {}
+        self.entries: list[tuple[str, str]] = []  # (word, ipa)
+
+
+def _build_trie(ptd: PreTokenizedDictionary, min_tokens: int) -> _TrieNode:
+    """Build a phoneme trie from a pre-tokenized dictionary.
+
+    Each root-to-leaf path corresponds to an entry's phoneme token
+    sequence.  Shared prefixes are stored once.
+    """
+    root = _TrieNode()
+    for i in range(len(ptd)):
+        word, ipa, tokens = ptd[i]
+        if len(tokens) < min_tokens:
+            continue
+        node = root
+        for tok in tokens:
+            child = node.children.get(tok)
+            if child is None:
+                child = _TrieNode()
+                node.children[tok] = child
+            node = child
+        node.entries.append((word, ipa))
+    return root
+
+
+def _trie_expand(
+    root: _TrieNode,
+    source_tokens: Sequence[str],
+    consumed: int,
+    merged: dict[str, dict],
+    max_seg_distance: float,
+    max_len_ratio: float,
+    min_target_tokens: int,
+) -> list[tuple[str, str, int, float]]:
+    """Search the trie for entries matching source_tokens[consumed:].
+
+    Walks the trie depth-first, maintaining one column of the edit-distance
+    DP matrix at each level.  When the minimum value in a column exceeds
+    the cost ceiling, the entire subtree is pruned.
+
+    Returns
+    -------
+    list of (word, ipa, n_tok, seg_cost)
+        Entries whose per-segment normalised feature edit distance is
+        within *max_seg_distance*.
+    """
+    source_len = len(source_tokens)
+    remaining = source_len - consumed
+    if remaining <= 0:
+        return []
+
+    max_depth = int(remaining * max_len_ratio) + 1
+    # Conservative cost ceiling: any valid result satisfies
+    # seg_cost / max(chunk_len, entry_len) <= max_seg_distance.
+    # The largest possible denominator is max(remaining, max_depth).
+    cost_ceil = max_seg_distance * max(remaining, max_depth)
+
+    # Pre-fetch source feature dicts for the remaining tokens
+    src_feats = [merged.get(source_tokens[consumed + i], {}) for i in range(remaining)]
+
+    # Initial DP column (depth 0): source prefix vs empty target = deletions
+    init_col = [float(i) for i in range(remaining + 1)]
+
+    results: list[tuple[str, str, int, float]] = []
+
+    # DFS stack: (node, depth, dp_column)
+    stack: list[tuple[_TrieNode, int, list[float]]] = [(root, 0, init_col)]
+
+    while stack:
+        node, depth, col = stack.pop()
+
+        # Collect complete entries at this node
+        if node.entries and depth >= min_target_tokens:
+            chunk_len = min(depth, remaining)
+            seg_cost = col[chunk_len]
+            denom = max(chunk_len, depth)
+            if denom > 0 and seg_cost / denom <= max_seg_distance:
+                for word, ipa in node.entries:
+                    results.append((word, ipa, depth, seg_cost))
+
+        if depth >= max_depth:
+            continue
+
+        # Expand children: compute next DP column for each phoneme edge
+        for phoneme, child in node.children.items():
+            tgt_feat = merged.get(phoneme, {})
+
+            new_col = [0.0] * (remaining + 1)
+            new_col[0] = col[0] + 1.0  # insert target phoneme
+
+            min_val = new_col[0]
+
+            for j in range(1, remaining + 1):
+                sub = phoneme_feature_distance(src_feats[j - 1], tgt_feat)
+                val = min(
+                    new_col[j - 1] + 1.0,  # delete source phoneme
+                    col[j] + 1.0,  # insert target phoneme
+                    col[j - 1] + sub,  # substitute
+                )
+                new_col[j] = val
+                if val < min_val:
+                    min_val = val
+
+            # Prune: if no alignment in this subtree can be good enough
+            if min_val > cost_ceil:
+                continue
+
+            stack.append((child, depth + 1, new_col))
+
+    return results
 
 
 @dataclass(order=True)
@@ -154,16 +278,9 @@ def beam_search_segmentation(
 
     merged = {**target_features, **source_features}
 
-    # Pre-filter dictionary: build a list of (word, ipa, tokens, n_tok)
-    # keeping only entries with enough tokens.
-    dict_entries: list[tuple[str, str, list[str], int]] = []
-    for i in range(len(target_ptd)):
-        word, ipa, tokens = target_ptd[i]
-        n_tok = len(tokens)
-        if n_tok >= min_target_tokens:
-            dict_entries.append((word, ipa, tokens, n_tok))
-
-    if not dict_entries:
+    # ── Build phoneme trie for fast approximate matching ──
+    trie_root = _build_trie(target_ptd, min_target_tokens)
+    if not trie_root.children:
         return []
 
     # Seed the beam with the initial empty hypothesis
@@ -173,6 +290,10 @@ def beam_search_segmentation(
     complete: list[_Hypothesis] = []
     best_complete_score = float("inf")
 
+    # Pre-compute the score ceiling: if we already have a good complete
+    # hypothesis, we can prune aggressively.
+    score_ceil = max_distance * prune_ratio  # initial ceiling
+
     # Iterative expansion: up to max_words rounds
     for _round in range(max_words):
         if not beam:
@@ -180,72 +301,53 @@ def beam_search_segmentation(
 
         next_beam: list[_Hypothesis] = []
 
+        # Cache trie expansion results by consumed position within a round.
+        # Multiple hypotheses at the same consumed position will produce the
+        # same expansion candidates (different only in accumulated cost).
+        expand_cache: dict[int, list[tuple[str, str, int, float]]] = {}
+
         for hyp in beam:
             remaining = source_len - hyp.consumed
             if remaining <= 0:
-                # Already complete — should have been collected
                 continue
 
-            # Try every dictionary entry
-            for word, ipa, tokens, n_tok in dict_entries:
-                # Length ratio filter: the entry shouldn't be wildly
-                # longer or shorter than the remaining source segment
-                if n_tok > remaining * max_len_ratio:
-                    continue
-                if remaining > n_tok * max_len_ratio:
-                    # Entry is too short relative to what's left,
-                    # but only skip if we'd still have room for more
-                    # words and this would leave too much unconsumed
-                    pass  # allow — might be part of a multi-word chain
+            # Lookup or compute expansions for this consumed position
+            candidates = expand_cache.get(hyp.consumed)
+            if candidates is None:
+                candidates = _trie_expand(
+                    trie_root,
+                    source_tokens,
+                    hyp.consumed,
+                    merged,
+                    max_distance,
+                    max_len_ratio,
+                    min_target_tokens,
+                )
+                expand_cache[hyp.consumed] = candidates
 
-                # Sub-sequence: align this entry against the next chunk
-                # of source phonemes.  We use the full feature edit distance
-                # against the sub-sequence [consumed : consumed + n_tok]
-                # (or remaining, whichever is appropriate).
-                # The "chunk" is the next min(n_tok, remaining) source tokens
-                # but we compare against the entry's full tokens.
-                chunk_end = min(hyp.consumed + n_tok, source_len)
-                chunk = source_tokens[hyp.consumed : chunk_end]
-                chunk_len = len(chunk)
-
-                # Quick length ratio check on the actual alignment
-                if chunk_len > 0 and n_tok > 0:
-                    ratio = max(chunk_len, n_tok) / min(chunk_len, n_tok)
-                    if ratio > max_len_ratio:
-                        continue
-
-                # Compute feature edit distance for this segment
-                seg_cost = feature_edit_distance(list(chunk), tokens, merged)
-
-                # Normalise by the chunk/entry max length for pruning
-                seg_norm = seg_cost / max(chunk_len, n_tok) if max(chunk_len, n_tok) > 0 else 0.0
-
-                new_consumed = chunk_end
+            for word, ipa, n_tok, seg_cost in candidates:
+                new_consumed = min(hyp.consumed + n_tok, source_len)
                 new_raw_cost = hyp.raw_cost + seg_cost
                 new_score = new_raw_cost / max(new_consumed, 1)
 
                 # Pruning: skip if already worse than best complete × ratio
-                if new_score > best_complete_score * prune_ratio:
+                if new_score > score_ceil:
                     continue
-
-                new_words = hyp.words + (word,)
-                new_ipas = hyp.ipas + (ipa,)
 
                 new_hyp = _Hypothesis(
                     score=new_score,
                     consumed=new_consumed,
-                    words=new_words,
-                    ipas=new_ipas,
+                    words=hyp.words + (word,),
+                    ipas=hyp.ipas + (ipa,),
                     raw_cost=new_raw_cost,
                 )
 
                 if new_consumed >= source_len:
-                    # Complete hypothesis
                     complete.append(new_hyp)
                     if new_score < best_complete_score:
                         best_complete_score = new_score
-                elif len(new_words) < max_words:
-                    # Partial — can still expand
+                        score_ceil = best_complete_score * prune_ratio
+                elif len(new_hyp.words) < max_words:
                     next_beam.append(new_hyp)
 
         # Keep only the top beam_width hypotheses
