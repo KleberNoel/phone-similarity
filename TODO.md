@@ -201,7 +201,7 @@ The library's stated purpose (phonological distance/similarity metrics) is now f
 - [x] **Adopt universal distinctive feature set** -- standardise on Panphon (~24 features) or PHOIBLE as the shared basis so bitarrays from different languages are directly comparable
 - [x] **Build feature encoder** -- `phoneme -> bitarray` via a unified feature table (replaces per-language ad-hoc feature dicts for comparison purposes)
 - [x] **Implement `IntersectingBitArraySpecification`** -- flesh out the existing 31-line stub to properly combine multiple language specs with aligned feature dimensions
-- [ ] **Add syllable segmenter with onset/nucleus/coda boundaries** -- language-aware syllabification (onset-maximisation or rule-based) as a pre-encoding step
+- [x] **Add syllable segmenter with onset/nucleus/coda boundaries** -- language-aware syllabification (onset-maximisation or rule-based) as a pre-encoding step
 
 ---
 

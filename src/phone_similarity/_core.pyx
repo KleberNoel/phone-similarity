@@ -1207,3 +1207,207 @@ def prange_batch_dictionary_scan(
 
     candidates.sort(key=lambda t: t[2])
     return candidates[:top_n]
+
+
+# ===================================================================
+# Syllabification — Maximum Onset Principle (Cython-accelerated)
+# ===================================================================
+
+cdef Py_ssize_t _split_cluster_nogil(
+    const int* son,
+    Py_ssize_t k,
+    bint sibilant_appendix,
+) noexcept nogil:
+    """Find onset start index in a consonant cluster.
+
+    Returns the index where the onset begins (everything before it is
+    coda).  Pure C — no GIL required.
+
+    The split maximises the onset subject to SSP (strictly rising
+    sonority towards the nucleus).  When *sibilant_appendix* is true,
+    a fricative (rank 2) may attach to the left of a stop (rank 1).
+    """
+    if k <= 1:
+        return 0  # single consonant → all onset
+
+    cdef Py_ssize_t onset_start = k - 1
+    while onset_start > 0:
+        if son[onset_start - 1] < son[onset_start]:
+            onset_start -= 1
+        else:
+            break
+
+    # Sibilant appendix (/s/ exception)
+    if (sibilant_appendix
+            and onset_start > 0
+            and son[onset_start - 1] == 2    # RANK_FRICATIVE
+            and son[onset_start] == 1):      # RANK_STOP
+        onset_start -= 1
+
+    return onset_start
+
+
+def cython_syllabify(
+    list tokens,
+    frozenset vowels,
+    dict sonority_map,
+    bint sibilant_appendix = True,
+):
+    """Syllabify *tokens* using MOP + SSP in Cython.
+
+    Parameters
+    ----------
+    tokens : list of str
+        IPA phoneme tokens.
+    vowels : frozenset of str
+        Vowel inventory.
+    sonority_map : dict
+        ``{phoneme: int}`` sonority ranks.
+    sibilant_appendix : bool
+        Allow /s/-exception.
+
+    Returns
+    -------
+    list of (onset_list, nucleus_list, coda_list) tuples.
+    """
+    cdef Py_ssize_t n = len(tokens)
+    if n == 0:
+        return []
+
+    # --- All cdef declarations up front (Cython requirement) ---
+    cdef int* son = <int*>malloc(n * sizeof(int))
+    if son == NULL:
+        raise MemoryError("Could not allocate sonority array")
+
+    cdef bint* is_vowel = <bint*>malloc(n * sizeof(bint))
+    if is_vowel == NULL:
+        free(son)
+        raise MemoryError("Could not allocate vowel mask")
+
+    cdef Py_ssize_t i
+    cdef str ph
+    cdef Py_ssize_t max_spans = n
+    cdef Py_ssize_t* span_starts = NULL
+    cdef Py_ssize_t* span_ends = NULL
+    cdef Py_ssize_t n_spans = 0
+    cdef list results = []
+    cdef Py_ssize_t v_start, v_end, prev_end
+    cdef Py_ssize_t cluster_len, split
+    cdef Py_ssize_t idx
+    cdef list syllables = []
+    cdef list onset, nucleus, coda, old_syl
+
+    try:
+        for i in range(n):
+            ph = tokens[i]
+            son[i] = sonority_map.get(ph, 0)
+            is_vowel[i] = (ph in vowels)
+
+        # --- Phase 1: find vowel spans ---
+        span_starts = <Py_ssize_t*>malloc(max_spans * sizeof(Py_ssize_t))
+        span_ends = <Py_ssize_t*>malloc(max_spans * sizeof(Py_ssize_t))
+        if span_starts == NULL or span_ends == NULL:
+            raise MemoryError("Could not allocate span arrays")
+
+        i = 0
+        while i < n:
+            if is_vowel[i]:
+                span_starts[n_spans] = i
+                while i < n and is_vowel[i]:
+                    i += 1
+                span_ends[n_spans] = i
+                n_spans += 1
+            else:
+                i += 1
+
+        if n_spans == 0:
+            # No vowels — degenerate syllable (onset only)
+            results.append((list(tokens), [], []))
+            free(span_ends)
+            free(span_starts)
+            free(is_vowel)
+            free(son)
+            return results
+
+        # --- Phase 2: split inter-vocalic clusters ---
+        for idx in range(n_spans):
+            v_start = span_starts[idx]
+            v_end = span_ends[idx]
+
+            if idx == 0:
+                onset = list(tokens[:v_start])
+            else:
+                prev_end = span_ends[idx - 1]
+                cluster_len = v_start - prev_end
+                if cluster_len == 0:
+                    onset = []
+                else:
+                    split = _split_cluster_nogil(
+                        &son[prev_end], cluster_len, sibilant_appendix,
+                    )
+                    if split > 0:
+                        old_syl = syllables[len(syllables) - 1]
+                        for i in range(split):
+                            old_syl[2].append(tokens[prev_end + i])
+                    onset = []
+                    for i in range(split, cluster_len):
+                        onset.append(tokens[prev_end + i])
+
+            nucleus = list(tokens[v_start:v_end])
+
+            if idx == n_spans - 1:
+                coda = list(tokens[v_end:])
+            else:
+                coda = []
+
+            syllables.append([onset, nucleus, coda])
+
+        if span_ends != NULL:
+            free(span_ends)
+            span_ends = NULL
+        if span_starts != NULL:
+            free(span_starts)
+            span_starts = NULL
+
+        results = [(s[0], s[1], s[2]) for s in syllables]
+
+    finally:
+        if span_ends != NULL:
+            free(span_ends)
+        if span_starts != NULL:
+            free(span_starts)
+        free(is_vowel)
+        free(son)
+
+    return results
+
+
+def batch_cython_syllabify(
+    list token_lists,
+    frozenset vowels,
+    dict sonority_map,
+    bint sibilant_appendix = True,
+):
+    """Syllabify a batch of token lists in one Cython call.
+
+    Parameters
+    ----------
+    token_lists : list of list of str
+    vowels : frozenset of str
+    sonority_map : dict
+    sibilant_appendix : bool
+
+    Returns
+    -------
+    list of list of (onset_list, nucleus_list, coda_list)
+    """
+    cdef Py_ssize_t n_words = len(token_lists)
+    cdef list results = []
+    cdef Py_ssize_t i
+
+    for i in range(n_words):
+        results.append(
+            cython_syllabify(token_lists[i], vowels, sonority_map, sibilant_appendix)
+        )
+
+    return results

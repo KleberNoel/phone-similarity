@@ -17,6 +17,7 @@ from phone_similarity.distance import (
 )
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 from phone_similarity.language import LANGUAGES
+from phone_similarity.universal_features import UniversalFeatureEncoder
 
 # -----------------------------------------------------------------------
 # Fixtures
@@ -120,7 +121,10 @@ class TestCognateDistances:
         for concept, ipa_map in cognate_ipa.items():
             langs = sorted(ipa_map)
             for la, lb in combinations(langs, 2):
-                merged_feats = {**features_by_lang[la], **features_by_lang[lb]}
+                merged_feats = UniversalFeatureEncoder.merge_inventories(
+                    features_by_lang[la],
+                    features_by_lang[lb],
+                )
                 tokens_a = specs[la].ipa_tokenizer(ipa_map[la])
                 tokens_b = specs[lb].ipa_tokenizer(ipa_map[lb])
                 d = normalised_feature_edit_distance(tokens_a, tokens_b, merged_feats)
@@ -142,7 +146,10 @@ class TestCognateDistances:
         for _concept, ipa_map in cognate_ipa.items():
             langs = sorted(ipa_map)
             for la, lb in combinations(langs, 2):
-                merged_feats = {**features_by_lang[la], **features_by_lang[lb]}
+                merged_feats = UniversalFeatureEncoder.merge_inventories(
+                    features_by_lang[la],
+                    features_by_lang[lb],
+                )
                 tokens_a = specs[la].ipa_tokenizer(ipa_map[la])
                 tokens_b = specs[lb].ipa_tokenizer(ipa_map[lb])
                 d = normalised_feature_edit_distance(tokens_a, tokens_b, merged_feats)
@@ -183,9 +190,9 @@ class TestCognateDistances:
             pytest.skip("Not enough father pronunciations")
 
         # Build a merged spec + features for all languages in this set
-        all_feats: dict = {}
-        for lc in ipa_map:
-            all_feats.update(features_by_lang[lc])
+        all_feats = UniversalFeatureEncoder.merge_inventories(
+            *(features_by_lang[lc] for lc in ipa_map),
+        )
 
         # Pick one spec (we only need the tokenizer)
         first_lc = next(iter(ipa_map))

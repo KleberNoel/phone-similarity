@@ -89,6 +89,13 @@ from phone_similarity.universal_features import (
     merge_inventories,
     universal_phoneme_distance,
 )
+from phone_similarity.syllable import (
+    MaxOnsetSegmenter,
+    Syllable,
+    SonorityScale,
+    batch_syllabify,
+    syllabify,
+)
 
 __all__ = [
     # beam search
@@ -98,14 +105,19 @@ __all__ = [
     # Distance class
     "Distance",
     "KDTreeIndex",
+    # syllable
+    "MaxOnsetSegmenter",
     "PhoneticEmbedder",
     # pretokenize
     "PreTokenizedDictionary",
+    "SonorityScale",
+    "Syllable",
     # universal features
     "UniversalFeatureEncoder",
     "ann_dictionary_scan",
     # primitives
     "batch_pairwise_hamming",
+    "batch_syllabify",
     "beam_search_phrases",
     "beam_search_segmentation",
     "cached_pretokenize_dictionary",
@@ -125,5 +137,6 @@ __all__ = [
     "phoneme_feature_distance",
     "pretokenize_dictionary",
     "reverse_dictionary_lookup",
+    "syllabify",
     "universal_phoneme_distance",
 ]
