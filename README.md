@@ -114,9 +114,9 @@ ptd = cached_pretokenize_dictionary(
     lambda: fra_g2p.pdict, fra_spec, lang="fra",
 )
 
-# Find French words closest to English "hello" (/hɛloʊ/)
+# Find French words closest to English "music" (/mjuzɪk/)
 matches = reverse_dictionary_lookup(
-    source_ipa="hɛloʊ",
+    source_ipa="mjuzɪk",
     source_lang_code="eng-us",
     source_spec=eng_spec,
     source_phoneme_features=eng.PHONEME_FEATURES,
@@ -126,10 +126,20 @@ matches = reverse_dictionary_lookup(
     target_dictionary={},  # ignored when pre_tokenized is given
     pre_tokenized=ptd,
     top_n=5,
-    max_distance=0.30,
+    max_distance=0.40,
 )
 for word, ipa, dist in matches:
     print(f"  {word:20s} /{ipa}/  d={dist:.3f}")
+```
+
+Output:
+
+```
+  bionique             /bjɔnik/  d=0.253
+  bioniques            /bjɔnik/  d=0.253
+  moujik               /muʒik/  d=0.264
+  moujiks              /muʒik/  d=0.264
+  new-look             /njuluk/  d=0.272
 ```
 
 ### Multi-word beam search
