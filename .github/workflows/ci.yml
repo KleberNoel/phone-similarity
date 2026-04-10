@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, "dev/**"]
   pull_request:
 
 concurrency:
@@ -111,6 +111,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: >-
             CFLAGS="-I$(brew --prefix libomp)/include"
             LDFLAGS="-L$(brew --prefix libomp)/lib"
+            MACOSX_DEPLOYMENT_TARGET="14.0"
           # Smoke-test: import the package and verify Cython loaded
           CIBW_TEST_COMMAND: >-
             python -c "from phone_similarity._dispatch import HAS_CYTHON; assert HAS_CYTHON"
