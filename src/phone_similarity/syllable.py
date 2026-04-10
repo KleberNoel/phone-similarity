@@ -57,25 +57,18 @@ import dataclasses
 from collections.abc import Sequence
 from typing import ClassVar, Protocol, Union
 
+from phone_similarity._dispatch import (
+    HAS_CYTHON_SYLLABIFIER as _HAS_CYTHON_SYLLABLE,
+)
+from phone_similarity._dispatch import (
+    cy_batch_syllabify as _cy_batch_syllabify,
+)
+from phone_similarity._dispatch import (
+    cy_syllabify as _cy_syllabify,
+)
 from phone_similarity.universal_features import (
     UniversalFeatureEncoder,
 )
-
-# ---------------------------------------------------------------------------
-# Cython dispatch
-# ---------------------------------------------------------------------------
-try:
-    from phone_similarity._core import (
-        batch_cython_syllabify as _cy_batch_syllabify,
-    )
-    from phone_similarity._core import (
-        cython_syllabify as _cy_syllabify,
-    )
-
-    _HAS_CYTHON_SYLLABLE = True
-except ImportError:
-    _HAS_CYTHON_SYLLABLE = False
-
 
 # ---------------------------------------------------------------------------
 # Sonority ranks

@@ -28,16 +28,18 @@ import tracemalloc
 
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.clean_phones import clean_phones
-from phone_similarity.distance import (
-    _HAS_CYTHON,
-    _HAS_CYTHON_EXT,
+from phone_similarity.dictionary_scan import reverse_dictionary_lookup
+from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
+from phone_similarity.inversion import invert_ipa
+from phone_similarity.pretokenize import (
     PreTokenizedDictionary,
     cached_pretokenize_dictionary,
-    invert_ipa,
-    normalised_feature_edit_distance,
-    reverse_dictionary_lookup,
 )
-from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
+from phone_similarity.primitives import (
+    _HAS_CYTHON,
+    _HAS_CYTHON_EXT,
+    normalised_feature_edit_distance,
+)
 
 logging.disable(logging.WARNING)
 

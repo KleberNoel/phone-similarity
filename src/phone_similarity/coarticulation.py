@@ -580,7 +580,7 @@ class DefaultCoarticulationModel:
 
     @staticmethod
     def syllable_boundary_map(
-        syllables: Sequence,  # Sequence[Syllable]
+        syllables: Sequence[object],
     ) -> list[int]:
         """Convert a list of Syllable objects to a per-token syllable index.
 

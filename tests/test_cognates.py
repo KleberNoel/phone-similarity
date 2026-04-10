@@ -10,13 +10,11 @@ from itertools import combinations
 import pytest
 
 from phone_similarity.bit_array_specification import BitArraySpecification
-from phone_similarity.distance import (
-    Distance,
-    compare_cross_language,
-    normalised_feature_edit_distance,
-)
+from phone_similarity.cross_language import compare_cross_language
+from phone_similarity.distance_class import Distance
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 from phone_similarity.language import LANGUAGES
+from phone_similarity.primitives import normalised_feature_edit_distance
 from phone_similarity.universal_features import UniversalFeatureEncoder
 
 # -----------------------------------------------------------------------

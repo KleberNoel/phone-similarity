@@ -16,44 +16,22 @@ from typing import Union
 
 from bitarray import bitarray
 
-# ---------------------------------------------------------------------------
-# Cython dispatch flags
-# ---------------------------------------------------------------------------
-try:
-    from phone_similarity._core import (  # noqa: F401
-        batch_pairwise_hamming as _c_batch_pairwise_hamming,
-    )
-    from phone_similarity._core import feature_edit_distance as _c_feature_edit_distance
-    from phone_similarity._core import (  # noqa: F401
-        hamming_distance as _c_hamming_distance,
-    )
-    from phone_similarity._core import hamming_similarity as _c_hamming_similarity  # noqa: F401
+from phone_similarity._dispatch import (
+    HAS_CYTHON,
+    HAS_CYTHON_EXT,
+    HAS_PRANGE,
+)
+from phone_similarity._dispatch import (
+    cy_feature_edit_distance as _c_feature_edit_distance,
+)
+from phone_similarity._dispatch import (
+    cy_phoneme_feature_distance as _c_phoneme_feature_distance,
+)
 
-    _HAS_CYTHON = True
-except ImportError:
-    _HAS_CYTHON = False
-
-try:
-    from phone_similarity._core import (
-        batch_dictionary_scan as _c_batch_dictionary_scan,  # noqa: F401
-    )
-    from phone_similarity._core import invert_features as _c_invert_features  # noqa: F401
-    from phone_similarity._core import (
-        phoneme_feature_distance as _c_phoneme_feature_distance,
-    )
-
-    _HAS_CYTHON_EXT = True
-except ImportError:
-    _HAS_CYTHON_EXT = False
-
-try:
-    from phone_similarity._core import (
-        prange_batch_dictionary_scan as _c_prange_batch_dictionary_scan,  # noqa: F401
-    )
-
-    _HAS_PRANGE = True
-except ImportError:
-    _HAS_PRANGE = False
+# Backward-compatible aliases for modules that import these flags
+_HAS_CYTHON = HAS_CYTHON
+_HAS_CYTHON_EXT = HAS_CYTHON_EXT
+_HAS_PRANGE = HAS_PRANGE
 
 
 def hamming_distance(a: bitarray, b: bitarray) -> int:

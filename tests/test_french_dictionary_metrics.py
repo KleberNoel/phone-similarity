@@ -3,9 +3,9 @@ import logging
 from bitarray import frozenbitarray
 from tqdm import tqdm
 
+from phone_similarity.analysis.entropy import PhonemeEntropyAnalyzer, SyllableEncoding
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.clean_phones import clean_phones
-from phone_similarity.entropy_analyzer import PhonemeEntropyAnalyzer, SyllableEncoding
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 from phone_similarity.language.fra import FEATURES, PHONEME_FEATURES, VOWELS_SET
 

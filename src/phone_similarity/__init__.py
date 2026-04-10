@@ -8,18 +8,11 @@ Cython-accelerated when the ``_core`` extension is compiled.
 
 Quick start::
 
-    from phone_similarity import Distance
     from phone_similarity.language import LANGUAGES
-    from phone_similarity.bit_array_specification import BitArraySpecification
 
-    lang = LANGUAGES["eng_us"]
-    spec = BitArraySpecification(
-        vowels=lang.VOWELS_SET,
-        consonants=set(lang.PHONEME_FEATURES) - lang.VOWELS_SET,
-        features=lang.FEATURES,
-        features_per_phoneme=lang.PHONEME_FEATURES,
-    )
-    dist = Distance(spec)
+    # Builder pattern — one call instead of 5 lines:
+    spec = LANGUAGES.build_spec("eng_us")
+    dist = LANGUAGES.build_distance("eng_us")
     dist.normalised_edit_distance("kæt", "kæb")  # ~0.04
 
 Public API
@@ -52,10 +45,21 @@ For finer-grained imports, use the sub-modules:
 * :mod:`phone_similarity.coarticulation` -- ``DefaultCoarticulationModel``,
   ``CoarticulationRule``, ``FricativeConfig``,
   ``coarticulated_feature_edit_distance``,
-  ``normalised_coarticulated_feature_edit_distance``
+  ``normalised_coarticulated_feature_edit_distance``,
+  ``coarticulated_phoneme_distance``
+* :mod:`phone_similarity.syllable` -- ``syllabify``, ``Syllable``,
+  ``SonorityScale``, ``MaxOnsetSegmenter``, ``batch_syllabify``,
+  ``stressed_syllable``, ``stress_pattern``, ``syllable_count``
 
-Legacy imports from :mod:`phone_similarity.distance` continue to work.
+Legacy imports from :mod:`phone_similarity.distance` still work but emit
+a ``DeprecationWarning``.
 """
+
+from __future__ import annotations
+
+from importlib.metadata import version as _pkg_version
+
+__version__: str = _pkg_version("phone-similarity")
 
 from phone_similarity.beam_search import (
     BeamResult,
@@ -144,6 +148,7 @@ __all__ = [
     "SonorityScale",
     "Syllable",
     "UniversalFeatureEncoder",
+    "__version__",
     "ann_dictionary_scan",
     "batch_pairwise_hamming",
     "batch_syllabify",

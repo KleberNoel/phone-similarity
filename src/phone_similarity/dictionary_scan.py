@@ -12,19 +12,19 @@ from __future__ import annotations
 import logging
 from typing import Union
 
+from phone_similarity._dispatch import (
+    HAS_CYTHON_EXT,
+    HAS_PRANGE,
+)
+from phone_similarity._dispatch import (
+    cy_batch_dictionary_scan as _c_batch_dictionary_scan,
+)
+from phone_similarity._dispatch import (
+    cy_prange_batch_dictionary_scan as _c_prange_batch_dictionary_scan,
+)
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.pretokenize import PreTokenizedDictionary
-from phone_similarity.primitives import (
-    _HAS_CYTHON_EXT,
-    _HAS_PRANGE,
-    normalised_feature_edit_distance,
-)
-
-if _HAS_CYTHON_EXT:
-    from phone_similarity.primitives import _c_batch_dictionary_scan
-
-if _HAS_PRANGE:
-    from phone_similarity.primitives import _c_prange_batch_dictionary_scan
+from phone_similarity.primitives import normalised_feature_edit_distance
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +272,7 @@ def reverse_dictionary_lookup(
         return []
 
     # Use parallel Cython scan when available
-    if _HAS_PRANGE and pre_tokenized is not None:
+    if HAS_PRANGE and pre_tokenized is not None:
         return _c_prange_batch_dictionary_scan(
             source_tokens,
             source_len,
@@ -284,7 +284,7 @@ def reverse_dictionary_lookup(
         )
 
     # Use sequential Cython batch scan when available
-    if _HAS_CYTHON_EXT and pre_tokenized is not None:
+    if HAS_CYTHON_EXT and pre_tokenized is not None:
         return _c_batch_dictionary_scan(
             source_tokens,
             source_len,

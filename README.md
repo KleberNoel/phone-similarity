@@ -34,13 +34,20 @@ pip install phone-similarity
 With Cython acceleration (recommended):
 
 ```bash
-pip install phone-similarity[dev]   # includes Cython, builds _core.so
+pip install phone-similarity[dev]
+python setup.py build_ext --inplace   # compile Cython extension
 ```
 
 For G2P (grapheme-to-phoneme) support:
 
 ```bash
 pip install phone-similarity[g2p]   # adds transformers + ONNX Runtime
+```
+
+For approximate nearest-neighbour support:
+
+```bash
+pip install phone-similarity[ann]   # adds scipy
 ```
 
 Development install from source:
@@ -60,18 +67,10 @@ python setup.py build_ext --inplace   # compile Cython extension
 ### Compare two IPA strings
 
 ```python
-from phone_similarity import Distance
 from phone_similarity.language import LANGUAGES
-from phone_similarity.bit_array_specification import BitArraySpecification
 
-lang = LANGUAGES["eng_us"]
-spec = BitArraySpecification(
-    vowels=lang.VOWELS_SET,
-    consonants=set(lang.PHONEME_FEATURES) - lang.VOWELS_SET,
-    features=lang.FEATURES,
-    features_per_phoneme=lang.PHONEME_FEATURES,
-)
-dist = Distance(spec)
+# Builder pattern — one call creates a full Distance object:
+dist = LANGUAGES.build_distance("eng_us")
 
 # Hamming similarity (bitarray-level, fixed-width)
 print(dist.hamming("kæt", "kæb"))        # ~0.97
@@ -88,25 +87,15 @@ from phone_similarity import (
     cached_pretokenize_dictionary,
     reverse_dictionary_lookup,
 )
+from phone_similarity.language import LANGUAGES
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 
-# Load English source
+# Build specs via registry
+eng_spec = LANGUAGES.build_spec("eng_us")
 eng = LANGUAGES["eng_us"]
-eng_spec = BitArraySpecification(
-    vowels=eng.VOWELS_SET,
-    consonants=set(eng.PHONEME_FEATURES) - eng.VOWELS_SET,
-    features=eng.FEATURES,
-    features_per_phoneme=eng.PHONEME_FEATURES,
-)
 
-# Load French target
+fra_spec = LANGUAGES.build_spec("fra")
 fra = LANGUAGES["fra"]
-fra_spec = BitArraySpecification(
-    vowels=fra.VOWELS_SET,
-    consonants=set(fra.PHONEME_FEATURES) - fra.VOWELS_SET,
-    features=fra.FEATURES,
-    features_per_phoneme=fra.PHONEME_FEATURES,
-)
 fra_g2p = CharsiuGraphemeToPhonemeGenerator("fra")
 
 # Pre-tokenize and cache the French dictionary
@@ -146,7 +135,10 @@ Output:
 
 ```python
 from phone_similarity import beam_search_segmentation
+from phone_similarity.language import LANGUAGES
 
+eng_spec = LANGUAGES.build_spec("eng_us")
+eng = LANGUAGES["eng_us"]
 source_tokens = eng_spec.ipa_tokenizer("mɛɹikɹɪsməs")
 
 results = beam_search_segmentation(
@@ -219,9 +211,14 @@ beam_search_segmentation()   Multi-word segmentation via beam search
 | `cross_language` | `compare_cross_language` -- pairwise comparison across languages |
 | `beam_search` | `beam_search_segmentation`, `beam_search_phrases` -- multi-word segmentation |
 | `embedding` | `PhoneticEmbedder`, `BruteForceIndex`, `KDTreeIndex`, `ann_dictionary_scan` |
+| `coarticulation` | `DefaultCoarticulationModel`, `FricativeConfig`, co-articulation distance |
+| `syllable` | `syllabify`, `Syllable`, `SonorityScale`, `MaxOnsetSegmenter` |
+| `universal_features` | `UniversalFeatureEncoder` backed by [Panphon](https://github.com/dmort27/panphon) |
 | `bit_array_specification` | `BitArraySpecification` -- phoneme-to-bitarray encoding |
-| `clean_phones` | IPA cleaning and NFKD normalisation |
-| `language` | Per-language phoneme feature tables (lazy-loaded) |
+| `clean_phones` | IPA cleaning, stress extraction, and NFKD normalisation |
+| `language` | Per-language phoneme feature tables (lazy-loaded registry) |
+| `analysis` | `PhonemeEntropyAnalyzer` -- entropy and bit utilisation diagnostics |
+| `_dispatch` | Centralised Cython extension detection (Chain of Responsibility) |
 | `g2p` | CharsiuG2P grapheme-to-phoneme backend |
 
 ## Performance
@@ -244,6 +241,13 @@ The model loads **lazily** -- only downloaded on the first `.generate()` call.
 Dictionary-only usage (`.pdict`) does not require the ML runtime.
 
 ## Attribution
+
+> Mortensen, D. R., Dalmia, S., & Littell, P. (2018). Epitran:
+> Precision G2P for many languages. *Proceedings of LREC 2018*.
+>
+> Mortensen, D. R. (2017). PanPhon: A resource for mapping IPA segments
+> to articulatory feature vectors.
+> [GitHub](https://github.com/dmort27/panphon)
 
 > Zhu, J., Zhang, C., & Jurgens, D. (2022). ByT5 model for massively
 > multilingual grapheme-to-phoneme conversion. *Proceedings of

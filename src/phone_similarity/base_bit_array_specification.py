@@ -13,12 +13,7 @@ from typing import Optional, Union
 
 from bitarray import bitarray
 
-try:
-    from phone_similarity._core import cython_ipa_tokenizer as _cy_tokenize
-
-    _HAS_CYTHON_TOKENIZER = True
-except ImportError:
-    _HAS_CYTHON_TOKENIZER = False
+from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER, cy_ipa_tokenizer
 
 
 class BaseBitArraySpecification(  # noqa: B024
@@ -192,8 +187,8 @@ class BaseBitArraySpecification(  # noqa: B024
             up to the maximum phoneme length.
 
         """
-        if _HAS_CYTHON_TOKENIZER:
-            return _cy_tokenize(ipa_str, self._phone_set, self._max_phoneme_size)
+        if HAS_CYTHON_TOKENIZER:
+            return cy_ipa_tokenizer(ipa_str, self._phone_set, self._max_phoneme_size)
 
         tokens = []
         start = 0

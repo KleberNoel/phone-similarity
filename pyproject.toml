@@ -23,9 +23,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "bitarray",
-    "langcodes[data]",
+    "bitarray>=2.0",
+    "langcodes[data]>=3.0",
     "numpy>=1.24",
+    "panphon>=0.20",
 ]
 
 [project.urls]
@@ -41,6 +42,9 @@ g2p = [
 ]
 alignment = [
     "jiwer>=4",
+]
+ann = [
+    "scipy>=1.10",
 ]
 dev = [
     "Cython>=3.0",
@@ -84,7 +88,7 @@ ignore = [
 "src/phone_similarity/base_bit_array_specification.py" = ["B019", "RUF002"]  # lru_cache on methods is intentional; IPA chars in docstrings
 "src/phone_similarity/g2p/charsiu/generator.py" = ["B019"]  # lru_cache on methods is intentional
 "src/phone_similarity/coarticulation.py" = ["RUF001", "RUF002", "RUF003", "RUF012"]  # IPA chars; frozen rule data as class attrs
-"src/phone_similarity/universal_features.py" = ["RUF001", "RUF002", "RUF003", "F601"]  # IPA data; Panphon duplicate NFC/NFD keys
+"src/phone_similarity/universal_features.py" = ["RUF001", "RUF002", "RUF003"]  # IPA chars in docstrings
 "src/phone_similarity/clean_phones.py" = ["RUF001", "RUF002"]  # IPA chars in code and docstrings
 "src/phone_similarity/syllable.py" = ["RUF001", "RUF002"]  # IPA chars in docstrings
 "src/phone_similarity/beam_search.py" = ["RUF002", "RUF003"]  # Unicode math symbols in docstrings

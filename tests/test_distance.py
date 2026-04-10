@@ -11,8 +11,8 @@ Tests cover:
 import pytest
 from bitarray import bitarray
 
-from phone_similarity.distance import (
-    Distance,
+from phone_similarity.distance_class import Distance
+from phone_similarity.primitives import (
     batch_pairwise_hamming,
     feature_edit_distance,
     hamming_distance,

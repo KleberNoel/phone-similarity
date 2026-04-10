@@ -11,14 +11,9 @@ from __future__ import annotations
 
 from typing import Union
 
+from phone_similarity._dispatch import HAS_CYTHON_EXT, cy_invert_features
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
-from phone_similarity.primitives import (
-    _HAS_CYTHON_EXT,
-    phoneme_feature_distance,
-)
-
-if _HAS_CYTHON_EXT:
-    from phone_similarity.primitives import _c_invert_features
+from phone_similarity.primitives import phoneme_feature_distance
 
 
 def invert_features(
@@ -53,8 +48,8 @@ def invert_features(
     list of (phoneme, distance)
         Phonemes sorted by ascending distance from *feature_vector*.
     """
-    if _HAS_CYTHON_EXT:
-        return _c_invert_features(feature_vector, target_phoneme_features, top_n, max_distance)
+    if HAS_CYTHON_EXT:
+        return cy_invert_features(feature_vector, target_phoneme_features, top_n, max_distance)
     ranked: list[tuple[str, float]] = []
     for phoneme, feats in target_phoneme_features.items():
         d = phoneme_feature_distance(feature_vector, feats)

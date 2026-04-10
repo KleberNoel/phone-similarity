@@ -9,21 +9,20 @@ edit distance, and pairwise matrices.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Union
 
+from phone_similarity._dispatch import (
+    HAS_CYTHON,
+    cy_batch_pairwise_hamming,
+    cy_hamming_similarity,
+)
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.primitives import (
-    _HAS_CYTHON,
     batch_pairwise_hamming,
     feature_edit_distance,
     hamming_similarity,
     normalised_feature_edit_distance,
 )
-
-if _HAS_CYTHON:
-    from phone_similarity.primitives import (
-        _c_batch_pairwise_hamming,
-        _c_hamming_similarity,
-    )
 
 
 class Distance:
@@ -59,10 +58,10 @@ class Distance:
     def __init__(
         self,
         spec: BitArraySpecification,
-        phoneme_features: dict[str, dict] | None = None,
+        phoneme_features: dict[str, dict[str, Union[bool, str]]] | None = None,
     ):
         self._spec = spec
-        self._phoneme_features: dict[str, dict] = (
+        self._phoneme_features: dict[str, dict[str, Union[bool, str]]] = (
             phoneme_features if phoneme_features is not None else spec._phoneme_features
         )
 
@@ -85,8 +84,8 @@ class Distance:
         """
         arr_a = self._spec.ipa_to_bitarray(ipa_a, max_syllables)
         arr_b = self._spec.ipa_to_bitarray(ipa_b, max_syllables)
-        if _HAS_CYTHON:
-            return _c_hamming_similarity(arr_a, arr_b)
+        if HAS_CYTHON:
+            return cy_hamming_similarity(arr_a, arr_b)
         return hamming_similarity(arr_a, arr_b)
 
     # ----- Phoneme-sequence-level metrics ----------------------------------
@@ -137,8 +136,8 @@ class Distance:
             Symmetric ``N x N`` similarity matrix.
         """
         arrays = [self._spec.ipa_to_bitarray(s, max_syllables) for s in ipa_strings]
-        if _HAS_CYTHON:
-            return _c_batch_pairwise_hamming(arrays)
+        if HAS_CYTHON:
+            return cy_batch_pairwise_hamming(arrays)
         return batch_pairwise_hamming(arrays)
 
     def pairwise_edit_distance(self, ipa_strings: Sequence[str]) -> list[list[float]]:
