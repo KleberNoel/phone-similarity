@@ -49,6 +49,10 @@ For finer-grained imports, use the sub-modules:
   ``BruteForceIndex``, ``KDTreeIndex``, ``ann_dictionary_scan``
 * :mod:`phone_similarity.universal_features` -- ``UniversalFeatureEncoder``,
   ``encode_phoneme``, ``universal_phoneme_distance``, ``merge_inventories``
+* :mod:`phone_similarity.coarticulation` -- ``DefaultCoarticulationModel``,
+  ``CoarticulationRule``, ``FricativeConfig``,
+  ``coarticulated_feature_edit_distance``,
+  ``normalised_coarticulated_feature_edit_distance``
 
 Legacy imports from :mod:`phone_similarity.distance` continue to work.
 """
@@ -57,6 +61,14 @@ from phone_similarity.beam_search import (
     BeamResult,
     beam_search_phrases,
     beam_search_segmentation,
+)
+from phone_similarity.coarticulation import (
+    CoarticulationRule,
+    DefaultCoarticulationModel,
+    FricativeConfig,
+    coarticulated_feature_edit_distance,
+    coarticulated_phoneme_distance,
+    normalised_coarticulated_feature_edit_distance,
 )
 from phone_similarity.clean_phones import (
     CleanConfig,
@@ -120,8 +132,12 @@ __all__ = [
     "BruteForceIndex",
     # clean phones
     "CleanConfig",
+    # co-articulation
+    "CoarticulationRule",
     # Distance class
     "Distance",
+    "DefaultCoarticulationModel",
+    "FricativeConfig",
     "KDTreeIndex",
     # syllable
     "MaxOnsetSegmenter",
@@ -144,6 +160,8 @@ __all__ = [
     "beam_search_segmentation",
     "cached_pretokenize_dictionary",
     "clean_phones",
+    "coarticulated_feature_edit_distance",
+    "coarticulated_phoneme_distance",
     # cross-language
     "compare_cross_language",
     "encode_phoneme",
@@ -155,6 +173,7 @@ __all__ = [
     "invert_features",
     "invert_ipa",
     "merge_inventories",
+    "normalised_coarticulated_feature_edit_distance",
     "normalised_feature_edit_distance",
     # dictionary scan
     "parallel_dictionary_scan",
