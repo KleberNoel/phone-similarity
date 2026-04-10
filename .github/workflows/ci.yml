@@ -50,7 +50,7 @@ jobs:
 
       - name: Verify Cython extension loaded
         run: |
-          python -c "from phone_similarity.primitives import _HAS_CYTHON; assert _HAS_CYTHON, 'Cython extension failed to load'"
+          python -c "from phone_similarity._dispatch import HAS_CYTHON; assert HAS_CYTHON, 'Cython extension failed to load'"
 
       - name: Run tests
         run: python -m pytest tests/ -x -q --junitxml=junit/results-${{ matrix.python-version }}.xml
@@ -107,8 +107,8 @@ jobs:
           CIBW_BEFORE_BUILD: "pip install Cython numpy"
           # Smoke-test: import the package and verify Cython loaded
           CIBW_TEST_COMMAND: >-
-            python -c "from phone_similarity.primitives import _HAS_CYTHON; assert _HAS_CYTHON"
-          CIBW_TEST_REQUIRES: "bitarray langcodes[data] numpy"
+            python -c "from phone_similarity._dispatch import HAS_CYTHON; assert HAS_CYTHON"
+          CIBW_TEST_REQUIRES: "bitarray langcodes[data] numpy panphon"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
