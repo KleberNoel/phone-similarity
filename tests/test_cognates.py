@@ -79,7 +79,7 @@ def cognate_ipa(g2ps) -> dict[str, dict[str, str]]:
     result: dict[str, dict[str, str]] = {}
     for concept, words in COGNATES.items():
         ipa_by_lang: dict[str, str] = {}
-        for lc, word in zip(LANG_CODES, words):
+        for lc, word in zip(LANG_CODES, words, strict=False):
             pron = g2ps[lc].pdict.get(word)
             if pron:
                 # Take first pronunciation, strip stress markers for cleaner comparison

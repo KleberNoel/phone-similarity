@@ -789,7 +789,7 @@ class TestPunBeamSearch:
         target_ipas = target_ipas[: len(target_words)]
 
         entries: list[tuple[str, str, list[str]]] = []
-        for word, ipa in zip(target_words, target_ipas):
+        for word, ipa in zip(target_words, target_ipas, strict=False):
             tokens = _tokenize_ipa(ipa, _SHARED_FEATURES)
             if tokens:
                 entries.append((word, ipa, tokens))

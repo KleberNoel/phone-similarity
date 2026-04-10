@@ -106,7 +106,7 @@ class UniversalFeatureEncoder:
         :mod:`phone_similarity.primitives`.
         """
         vec = UniversalFeatureEncoder.encode(phoneme)
-        return dict(zip(PANPHON_FEATURE_NAMES, vec))
+        return dict(zip(PANPHON_FEATURE_NAMES, vec, strict=False))
 
     # ----- bulk conversion ------------------------------------------------
 
@@ -141,7 +141,7 @@ class UniversalFeatureEncoder:
         vb = UniversalFeatureEncoder.encode(ph_b)
         comparable = 0
         mismatches = 0
-        for a_val, b_val in zip(va, vb):
+        for a_val, b_val in zip(va, vb, strict=False):
             if a_val == 0 or b_val == 0:
                 continue
             comparable += 1

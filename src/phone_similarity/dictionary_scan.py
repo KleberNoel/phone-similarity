@@ -271,7 +271,6 @@ def reverse_dictionary_lookup(
     if source_len == 0:
         return []
 
-    # Use parallel Cython scan when available
     if HAS_PRANGE and pre_tokenized is not None:
         return _c_prange_batch_dictionary_scan(
             source_tokens,
@@ -283,7 +282,6 @@ def reverse_dictionary_lookup(
             num_threads,
         )
 
-    # Use sequential Cython batch scan when available
     if HAS_CYTHON_EXT and pre_tokenized is not None:
         return _c_batch_dictionary_scan(
             source_tokens,

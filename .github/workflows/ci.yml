@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
@@ -40,6 +40,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+          allow-prereleases: true
 
       - name: Install dependencies and build Cython extension
         run: |
@@ -99,8 +100,8 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
-          # Build for CPython 3.9–3.13
-          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
+          # Build for CPython 3.10–3.14
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           # Skip 32-bit and musl builds to keep CI fast
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
           # Install build deps before each wheel build

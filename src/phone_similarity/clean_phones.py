@@ -130,7 +130,6 @@ def clean_phones(
     str
         Normalised IPA string.
     """
-    # Resolve config --------------------------------------------------------
     if config is not None:
         cfg = config
     elif preserve_stress:
@@ -138,15 +137,12 @@ def clean_phones(
     else:
         cfg = STRIP_ALL
 
-    # NFKD normalisation ----------------------------------------------------
     if cfg.nfkd:
         ipa = unicodedata.normalize("NFKD", ipa)
 
-    # Fast path: strip everything (most common case) -----------------------
     if cfg.strip_all:
         return _STRIP_PATTERN.sub("", ipa)
 
-    # Selective stripping ---------------------------------------------------
     if cfg.strip_stress:
         ipa = _PAT_STRESS.sub("", ipa)
     if cfg.strip_length:

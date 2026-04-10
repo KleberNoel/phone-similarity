@@ -79,7 +79,6 @@ from phone_similarity.universal_features import (
 _NUM_FEATURES = len(PANPHON_FEATURE_NAMES)
 _FEAT_IDX = {name: i for i, name in enumerate(PANPHON_FEATURE_NAMES)}
 
-# Feature indices for quick lookup
 _SYL = _FEAT_IDX["syl"]
 _SON = _FEAT_IDX["son"]
 _CONS = _FEAT_IDX["cons"]
@@ -165,7 +164,6 @@ class FricativeConfig:
             )
 
 
-# Default config: no special weighting
 _DEFAULT_FRICATIVE_CONFIG = FricativeConfig()
 
 
@@ -392,8 +390,7 @@ class DefaultCoarticulationModel:
     ) -> bool:
         """Check whether two token indices are in the same syllable."""
         if syl_boundaries is None:
-            return True  # no syllable info -> assume same syllable
-        # syl_boundaries[i] is the syllable index for token i
+            return True
         return syl_boundaries[idx_a] == syl_boundaries[idx_b]
 
     # ----- Core perturbation logic ----------------------------------------
@@ -412,23 +409,18 @@ class DefaultCoarticulationModel:
 
         where stochastic_scale depends on jitter.
         """
-        # Probability of firing
         prob = rule.base_probability
         boundary_factor = 1.0 if same_syllable else self._cross_syllable_decay
 
         if self._jitter > 0.0:
-            # Stochastic: roll against scaled probability
             fire_prob = prob * (1.0 - self._jitter) + prob * self._jitter * self._rng.random()
             if self._rng.random() > fire_prob:
                 return
-            # Scale magnitude stochastically
             mag = rule.magnitude * (1.0 - self._jitter + self._jitter * self._rng.random())
         else:
-            # Deterministic: always fire at full probability/magnitude
             mag = rule.magnitude
 
         shift = direction * mag * boundary_factor
-        # Clamp to [-1.0, +1.0]
         new_val = base[rule.target_feature] + shift
         base[rule.target_feature] = max(-1.0, min(1.0, new_val))
 
@@ -459,11 +451,9 @@ class DefaultCoarticulationModel:
         if n == 0:
             return []
 
-        # Get base features via cached encode (avoids repeated NFD fallback)
         raw_feats = [_cached_encode(tok) for tok in tokens]
         perturbed: list[list[float]] = [[float(v) for v in f] for f in raw_feats]
 
-        # Local aliases for hot-path attribute lookups
         _antic = self._ANTICIPATORY_RULES
         _carry = self._CARRYOVER_RULES
         _assim_voi = self._ASSIMILATION_VOICING
@@ -477,12 +467,10 @@ class DefaultCoarticulationModel:
         for i in range(n):
             feats_i = raw_feats[i]
 
-            # --- Anticipatory: look at next token (i+1) ---
             if i + 1 < n:
                 feats_next = raw_feats[i + 1]
                 same_syl = _same_syl(i, i + 1, syllable_boundaries)
 
-                # Consonant before vowel: anticipatory coarticulation
                 if self._is_consonant(feats_i) and self._is_vowel(feats_next):
                     if self._is_high_vowel(feats_next):
                         for rule in _antic["high_vowel"]:
@@ -494,8 +482,6 @@ class DefaultCoarticulationModel:
                         for rule in _antic["back_vowel"]:
                             _apply(perturbed[i], rule, rule.direction, same_syl)
 
-                # Frication spread: fricative before vowel -> partial
-                # devoicing and stridency bleed onto following vowel
                 if _fric_spread and self._is_fricative(feats_i) and self._is_vowel(feats_next):
                     mag_scale = _fric_cfg.spread_magnitude / 0.30
                     is_sib = self._is_sibilant(feats_i)
@@ -515,16 +501,13 @@ class DefaultCoarticulationModel:
                         )
                         _apply(perturbed[i + 1], scaled_rule, rule.direction, same_syl)
 
-                # Consonant cluster assimilation: C before C
                 if self._is_consonant(feats_i) and self._is_consonant(feats_next):
-                    # Voicing assimilation
                     voi_next = feats_next[_VOI]
                     if voi_next != 0:
                         direction = float(voi_next)
                         for rule in _assim_voi:
                             _apply(perturbed[i], rule, direction, same_syl)
 
-                    # Place assimilation: nasal before stop
                     if self._is_nasal(feats_i) and self._is_stop(feats_next):
                         for rule in _assim_place:
                             target_val = feats_next[rule.target_feature]
@@ -536,12 +519,10 @@ class DefaultCoarticulationModel:
                                     same_syl,
                                 )
 
-            # --- Carryover: look at previous token (i-1) ---
             if i > 0:
                 feats_prev = raw_feats[i - 1]
                 same_syl = _same_syl(i - 1, i, syllable_boundaries)
 
-                # Vowel after consonant: carryover coarticulation
                 if self._is_vowel(feats_i) and self._is_consonant(feats_prev):
                     if self._is_nasal(feats_prev):
                         for rule in _carry["nasal_consonant"]:
@@ -553,8 +534,6 @@ class DefaultCoarticulationModel:
                         for rule in _carry["labial_consonant"]:
                             _apply(perturbed[i], rule, rule.direction, same_syl)
 
-                    # Frication carryover: vowel after fricative picks up
-                    # residual frication noise
                     if _fric_spread and self._is_fricative(feats_prev):
                         mag_scale = _fric_cfg.spread_magnitude / 0.30
                         is_sib_prev = self._is_sibilant(feats_prev)
@@ -673,7 +652,6 @@ def coarticulated_phoneme_distance(
         either_fric = _is_fricative_vec(vec_a) or _is_fricative_vec(vec_b)
         either_sib = _is_sibilant_vec(vec_a) or _is_sibilant_vec(vec_b)
 
-    # Weights — only looked up when needed
     fric_w = fc.fricative_weight
     sib_w = fc.sibilant_weight
 
@@ -682,14 +660,11 @@ def coarticulated_phoneme_distance(
     for idx in range(_NUM_FEATURES):
         a_val = vec_a[idx]
         b_val = vec_b[idx]
-        # Skip unspecified features (near zero in both)
         if -0.01 < a_val < 0.01 and -0.01 < b_val < 0.01:
             continue
         comparable += 1
-        # Continuous difference: |a - b| / 2.0  (max possible diff is 2.0)
         diff = abs(a_val - b_val) * 0.5
 
-        # Apply fricative weighting when relevant
         if either_fric and idx == _CONT:
             diff *= fric_w
         elif either_sib and idx == _STRID:
@@ -746,14 +721,11 @@ def coarticulated_feature_edit_distance(
     len_a = len(vecs_a)
     len_b = len(vecs_b)
 
-    # Pre-compute fricative/sibilant flags per vector to avoid
-    # recomputing in every DP cell
     fric_a = [_is_fricative_vec(v) for v in vecs_a]
     fric_b = [_is_fricative_vec(v) for v in vecs_b]
     sib_a = [_is_sibilant_vec(v) for v in vecs_a]
     sib_b = [_is_sibilant_vec(v) for v in vecs_b]
 
-    # Rolling 2-row DP — O(len_b) memory instead of O(len_a * len_b)
     prev = [insert_cost * j for j in range(len_b + 1)]
     curr = [0.0] * (len_b + 1)
 

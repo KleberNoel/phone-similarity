@@ -6,7 +6,7 @@ import sys
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
 
@@ -80,8 +80,7 @@ class CharsiuGraphemeToPhonemeGenerator:
         self._language = language
         self._use_cache = use_cache
 
-        # All heavy resources are loaded lazily
-        self._pdict: Optional[dict[str, str]] = None
+        self._pdict: dict[str, str] | None = None
         self._model = None
         self._tokenizer = None
 
@@ -231,7 +230,7 @@ class CharsiuGraphemeToPhonemeGenerator:
     def get_phones_for_word(
         self,
         word: str,
-        limit_resource: Optional[GraphemeToPhonemeResourceType],
+        limit_resource: GraphemeToPhonemeResourceType | None,
         **generation_kwargs,
     ) -> tuple[Union[str, tuple[tuple[str]]]]:
         """Get phones for a single word.

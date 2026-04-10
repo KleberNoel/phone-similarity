@@ -279,7 +279,6 @@ class MaxOnsetSegmenter:
             return []
 
         # --- Phase 1: identify vowel-span boundaries -----------------------
-        # spans = list of (start, end) index pairs for each vowel nucleus
         spans: list[tuple[int, int]] = []
         i = 0
         while i < n:
@@ -300,14 +299,11 @@ class MaxOnsetSegmenter:
 
         for idx, (v_start, v_end) in enumerate(spans):
             if idx == 0:
-                # Leading consonants → onset of first syllable
                 onset = tuple(tokens[:v_start])
             else:
-                # Consonant cluster between previous nucleus end and this
                 prev_end = spans[idx - 1][1]
                 cluster = tokens[prev_end:v_start]
                 split = self._split_cluster(cluster, sonority[prev_end:v_start])
-                # Attach coda to previous syllable
                 if split > 0:
                     old = syllables[-1]
                     syllables[-1] = Syllable(
@@ -320,7 +316,6 @@ class MaxOnsetSegmenter:
             nucleus = tuple(tokens[v_start:v_end])
 
             if idx == len(spans) - 1:
-                # Trailing consonants → coda of last syllable
                 coda = tuple(tokens[v_end:])
             else:
                 coda = ()  # will be filled when processing next span
@@ -394,15 +389,13 @@ def _assign_stress(
     if not stress_marks:
         return syllables
 
-    # Build a mapping from token index → syllable index
-    syl_stress: dict[int, str] = {}  # syl_idx -> stress kind
+    syl_stress: dict[int, str] = {}
     offset = 0
     for syl_idx, syl in enumerate(syllables):
         syl_len = len(syl)
         for tok_idx, kind in stress_marks:
             if offset <= tok_idx < offset + syl_len:
                 existing = syl_stress.get(syl_idx)
-                # primary > secondary
                 if existing != "primary":
                     syl_stress[syl_idx] = kind
         offset += syl_len
@@ -518,7 +511,6 @@ def batch_syllabify(
 
     # Cython fast path
     if _HAS_CYTHON_SYLLABLE and isinstance(seg, MaxOnsetSegmenter):
-        # Build a single sonority map over the union of all inventories
         all_phones: set[str] = set()
         for tl in token_lists:
             all_phones.update(tl)
@@ -540,7 +532,6 @@ def batch_syllabify(
             syllabify(tl, vowel_fs, sonority_scale=scale, strategy=seg) for tl in token_lists
         ]
 
-    # Attach stress if provided
     if stress_marks_list is not None:
         for i, marks in enumerate(stress_marks_list):
             if marks:

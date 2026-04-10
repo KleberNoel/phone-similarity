@@ -178,7 +178,7 @@ class PreTokenizedDictionary:
 
     def to_cleaned_dict(self) -> dict[str, str]:
         """Derive a ``{word: cleaned_ipa}`` dict without loading the raw G2P."""
-        return dict(zip(self.words, self.ipas))
+        return dict(zip(self.words, self.ipas, strict=False))
 
 
 # ===================================================================
@@ -187,7 +187,6 @@ class PreTokenizedDictionary:
 
 _DEFAULT_CACHE_DIR = Path(os.path.expanduser("~/.cache/phone_similarity"))
 
-# G2P raw-dict pickle lives at ~/.cache/phono-sim/{lang}_{pyver}.pkl
 _G2P_CACHE_DIR = Path(os.path.expanduser("~/.cache/phono-sim"))
 
 

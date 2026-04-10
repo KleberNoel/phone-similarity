@@ -9,18 +9,18 @@ description = "A library dedicated to providing phonological distance and simila
 authors = [{name = "Kleber Noel"}]
 readme = "README.md"
 license = {text = "Apache-2.0"}
-requires-python = ">=3.9,<4"
+requires-python = ">=3.10,<4"
 keywords = ["phone", "phonological", "phonetic", "similarity", "ipa", "phonetics", "distance", "bitarray"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "bitarray>=2.0",
@@ -62,7 +62,7 @@ where = ["src"]
 # Ruff
 # ---------------------------------------------------------------------------
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 line-length = 99
 src = ["src"]
 
@@ -80,7 +80,7 @@ select = [
 ignore = [
     "E501",   # line length (handled by formatter)
     "SIM108", # ternary operator (readability in Cython compat)
-    "UP007",  # X | Y union syntax (need to support 3.9)
+    "UP007",  # X | Y union syntax (kept for consistency with existing code)
 ]
 
 [tool.ruff.lint.per-file-ignores]

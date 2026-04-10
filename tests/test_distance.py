@@ -432,7 +432,7 @@ class TestPrangeDictionaryScan:
         )
 
         # Same words and distances (order should match since both sort)
-        for (sw, si, sd), (pw, pi, pd) in zip(seq_results, par_results):
+        for (sw, si, sd), (pw, pi, pd) in zip(seq_results, par_results, strict=False):
             assert sw == pw, f"Word mismatch: {sw} != {pw}"
             assert si == pi, f"IPA mismatch: {si} != {pi}"
             assert abs(sd - pd) < 1e-10, f"Distance mismatch for {sw}: {sd} != {pd}"
@@ -467,7 +467,7 @@ class TestPrangeDictionaryScan:
         )
 
         assert len(seq_results) == len(par_results)
-        for (sw, _, sd), (pw, _, pd) in zip(seq_results, par_results):
+        for (sw, _, sd), (pw, _, pd) in zip(seq_results, par_results, strict=False):
             assert sw == pw
             assert abs(sd - pd) < 1e-10
 

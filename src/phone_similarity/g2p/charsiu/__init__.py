@@ -123,10 +123,4 @@ LANGUAGE_CODES_CHARSIU_TO_ISO_639_3 = {
     "spa-latin": "es-ES",
     "spa-me": "es-MX",
     "vie-c": "vie",
-    # "vie-n", # ... TODO
-    # "vie-s",
-    # "wel-nw",
-    # "wel-sw",
-    # "zho-s",
-    # "zho-t",
 }

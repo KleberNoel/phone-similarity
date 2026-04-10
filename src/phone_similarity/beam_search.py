@@ -126,7 +126,6 @@ def _trie_expand(
     while stack:
         node, depth, col = stack.pop()
 
-        # Collect complete entries at this node
         if node.entries and depth >= min_target_tokens:
             chunk_len = min(depth, remaining)
             seg_cost = col[chunk_len]
@@ -138,7 +137,6 @@ def _trie_expand(
         if depth >= max_depth:
             continue
 
-        # Expand children: compute next DP column for each phoneme edge
         for phoneme, child in node.children.items():
             tgt_feat = merged.get(phoneme, {})
 
@@ -282,27 +280,19 @@ def beam_search_segmentation(
     if not trie_root.children:
         return []
 
-    # Seed the beam with the initial empty hypothesis
     beam: list[_Hypothesis] = [_Hypothesis(score=0.0, consumed=0, words=(), ipas=(), raw_cost=0.0)]
 
-    # Collect complete hypotheses (consumed == source_len)
     complete: list[_Hypothesis] = []
     best_complete_score = float("inf")
 
-    # Pre-compute the score ceiling: if we already have a good complete
-    # hypothesis, we can prune aggressively.
-    score_ceil = max_distance * prune_ratio  # initial ceiling
+    score_ceil = max_distance * prune_ratio
 
-    # Iterative expansion: up to max_words rounds
     for _round in range(max_words):
         if not beam:
             break
 
         next_beam: list[_Hypothesis] = []
 
-        # Cache trie expansion results by consumed position within a round.
-        # Multiple hypotheses at the same consumed position will produce the
-        # same expansion candidates (different only in accumulated cost).
         expand_cache: dict[int, list[tuple[str, str, int, float]]] = {}
 
         for hyp in beam:
@@ -310,7 +300,6 @@ def beam_search_segmentation(
             if remaining <= 0:
                 continue
 
-            # Lookup or compute expansions for this consumed position
             candidates = expand_cache.get(hyp.consumed)
             if candidates is None:
                 candidates = _trie_expand(
@@ -329,7 +318,6 @@ def beam_search_segmentation(
                 new_raw_cost = hyp.raw_cost + seg_cost
                 new_score = new_raw_cost / max(new_consumed, 1)
 
-                # Pruning: skip if already worse than best complete × ratio
                 if new_score > score_ceil:
                     continue
 
@@ -349,7 +337,6 @@ def beam_search_segmentation(
                 elif len(new_hyp.words) < max_words:
                     next_beam.append(new_hyp)
 
-        # Keep only the top beam_width hypotheses
         if len(next_beam) > beam_width:
             next_beam.sort()
             next_beam = next_beam[:beam_width]
@@ -359,7 +346,6 @@ def beam_search_segmentation(
     if not complete:
         return []
 
-    # De-duplicate: keep the best score per unique word-tuple
     seen: dict[tuple[str, ...], _Hypothesis] = {}
     for hyp in complete:
         existing = seen.get(hyp.words)
@@ -367,8 +353,6 @@ def beam_search_segmentation(
             seen[hyp.words] = hyp
     unique_complete = sorted(seen.values())
 
-    # Re-score the top candidates end-to-end: concatenate foreign IPAs
-    # and compute normalised feature edit distance against the full source.
     results: list[BeamResult] = []
 
     for hyp in unique_complete[: top_k * 3]:  # evaluate extra for filtering

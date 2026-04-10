@@ -80,7 +80,6 @@ class PhoneticEmbedder:
             phonemes that may be encountered (typically the merged
             source + target features).
         """
-        # Collect all (key, value) pairs
         pairs: set[tuple[str, Union[bool, str]]] = set()
         for feats in phoneme_features.values():
             for k, v in feats.items():
@@ -89,7 +88,6 @@ class PhoneticEmbedder:
         pair_to_idx = {pair: i for i, pair in enumerate(sorted(pairs, key=repr))}
         dim = len(pair_to_idx)
 
-        # Pre-compute per-phoneme vectors
         phoneme_vectors: dict[str, np.ndarray] = {}
         for phoneme, feats in phoneme_features.items():
             vec = np.zeros(dim, dtype=np.float32)
@@ -230,7 +228,6 @@ class BruteForceIndex:
         from pathlib import Path
 
         path = Path(path)
-        # Reconstruct unnormalised embeddings from normalised + norms
         raw = self.embeddings * self.norms
         np.save(path, raw)
         logger.info("Saved BruteForceIndex (%d entries) to %s", self.n_entries, path)
@@ -277,14 +274,11 @@ class BruteForceIndex:
         # Cosine similarity = dot product of normalised vectors
         sims = self.embeddings @ q  # (N,)
 
-        # Top-k by highest similarity (= lowest distance)
         k = min(top_k, self.n_entries)
-        # argpartition is O(N) vs O(N log N) for full sort
         if k < self.n_entries:
             part_idx = np.argpartition(sims, -k)[-k:]
         else:
             part_idx = np.arange(self.n_entries)
-        # Sort the top-k by descending similarity
         top_idx = part_idx[np.argsort(-sims[part_idx])]
         distances = 1.0 - sims[top_idx]
         return top_idx, distances
@@ -432,7 +426,6 @@ def ann_dictionary_scan(
         if target_len == 0:
             continue
 
-        # Length-ratio pre-filter
         ratio = max(source_len, target_len) / min(source_len, target_len)
         if ratio > 2.0:
             continue

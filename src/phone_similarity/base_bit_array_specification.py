@@ -9,7 +9,7 @@ representations suitable for Hamming distance computation.
 import abc
 import logging
 from functools import lru_cache
-from typing import Optional, Union
+from typing import Union
 
 from bitarray import bitarray
 
@@ -136,7 +136,7 @@ class BaseBitArraySpecification(  # noqa: B024
         return bitarray(bits)
 
     @lru_cache(maxsize=256)
-    def search_phonemes(self, ipa_str: str) -> Optional[str]:
+    def search_phonemes(self, ipa_str: str) -> str | None:
         """Searches for the longest matching phoneme in the internal list.
 
         This method iterates through a pre-sorted list of phonemes (longest to shortest)

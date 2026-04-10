@@ -3,7 +3,6 @@ import csv
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import requests
 
@@ -20,7 +19,7 @@ CHARSIU_DICT_URL_TEMPLATE = (
 )
 
 
-def load_dictionary_tsv(lang_code: str, folder: Optional[Path] = None) -> dict[str, str]:
+def load_dictionary_tsv(lang_code: str, folder: Path | None = None) -> dict[str, str]:
     """
     Load a Charsiu TSV dictionary, downloading it on first use.
 
