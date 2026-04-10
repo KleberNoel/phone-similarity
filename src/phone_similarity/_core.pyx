@@ -24,7 +24,17 @@ from libc.stdlib cimport malloc, free
 from libc.string cimport memset
 
 from cython.parallel cimport prange, parallel
-cimport openmp
+
+cdef extern from *:
+    """
+    #ifdef _OPENMP
+    #include <omp.h>
+    static int _get_max_threads(void) { return omp_get_max_threads(); }
+    #else
+    static int _get_max_threads(void) { return 1; }
+    #endif
+    """
+    int _get_max_threads() nogil
 
 import numpy as np
 cimport numpy as cnp
@@ -1037,7 +1047,7 @@ def prange_batch_dictionary_scan(
     if num_threads > 0:
         n_threads_c = num_threads
     else:
-        n_threads_c = openmp.omp_get_max_threads()
+        n_threads_c = _get_max_threads()
         if n_threads_c < 1:
             n_threads_c = 1
     cdef list candidates

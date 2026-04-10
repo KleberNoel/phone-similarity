@@ -35,6 +35,9 @@ def pretokenize_dictionary(
     tuples.  Entries that fail to tokenize or are shorter than *min_tokens*
     are silently dropped.
 
+    When the Cython batch tokenizer is available, all IPA strings are
+    tokenized in a single Cython call for reduced Python overhead.
+
     Parameters
     ----------
     dictionary : dict
@@ -48,16 +51,33 @@ def pretokenize_dictionary(
     -------
     list of (word, ipa_str, tokens)
     """
+    from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER, cy_batch_ipa_tokenize
     from phone_similarity.clean_phones import clean_phones as _clean
 
-    result: list[tuple[str, str, list[str]]] = []
+    words: list[str] = []
+    ipas: list[str] = []
     for word, raw_ipa in dictionary.items():
         ipa = _clean(raw_ipa.split(",")[0].strip())
-        if not ipa:
-            continue
-        tokens = spec.ipa_tokenizer(ipa)
+        if ipa:
+            words.append(word)
+            ipas.append(ipa)
+
+    if HAS_CYTHON_TOKENIZER and hasattr(spec, "_phones_sorted"):
+        phone_set = frozenset(spec._phones_sorted)
+        max_phoneme_size = max((len(p) for p in phone_set), default=1)
+        all_tokens = cy_batch_ipa_tokenize(ipas, phone_set, max_phoneme_size, min_tokens)
+        result: list[tuple[str, str, list[str]]] = []
+        for i in range(len(words)):
+            toks = all_tokens[i]
+            if toks:
+                result.append((words[i], ipas[i], toks))
+        return result
+
+    result = []
+    for i in range(len(words)):
+        tokens = spec.ipa_tokenizer(ipas[i])
         if len(tokens) >= min_tokens:
-            result.append((word, ipa, tokens))
+            result.append((words[i], ipas[i], tokens))
     return result
 
 

@@ -98,6 +98,9 @@ except ImportError:
 # ---------------------------------------------------------------------------
 try:
     from phone_similarity._core import (
+        batch_ipa_tokenize as cy_batch_ipa_tokenize,
+    )
+    from phone_similarity._core import (
         cython_ipa_tokenizer as cy_ipa_tokenizer,
     )
 
@@ -105,6 +108,7 @@ try:
 except ImportError:
     HAS_CYTHON_TOKENIZER = False
     cy_ipa_tokenizer = _UNAVAILABLE
+    cy_batch_ipa_tokenize = _UNAVAILABLE
 
 # ---------------------------------------------------------------------------
 # Level 5: Cython syllabifier

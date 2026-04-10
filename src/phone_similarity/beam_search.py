@@ -44,6 +44,49 @@ from phone_similarity.primitives import (
 )
 
 # ===================================================================
+# Pre-computed phoneme distance matrix
+# ===================================================================
+
+_MISSING = -1  # sentinel for unknown phonemes
+
+
+def _build_dist_matrix(
+    merged: dict[str, dict],
+) -> tuple[dict[str, int], list[float], int]:
+    """Build a flat distance matrix for all phonemes in *merged*.
+
+    Returns
+    -------
+    ph_to_idx : dict mapping phoneme str -> int index
+    dist_flat : flat list of floats (dim * dim), row-major
+    dim : matrix dimension (number of phonemes + 1 for UNK)
+    """
+    phonemes = sorted(merged)
+    n = len(phonemes)
+    dim = n + 1  # extra row/col for unknown phonemes
+    ph_to_idx = {p: i for i, p in enumerate(phonemes)}
+
+    dist_flat = [0.0] * (dim * dim)
+
+    for i in range(n):
+        fi = merged[phonemes[i]]
+        for j in range(i, n):
+            fj = merged[phonemes[j]]
+            d = phoneme_feature_distance(fi, fj)
+            dist_flat[i * dim + j] = d
+            dist_flat[j * dim + i] = d
+
+    # UNK row/col: distance 1.0 to everything, 0.0 to itself
+    unk = n  # index of UNK sentinel
+    for i in range(dim):
+        dist_flat[i * dim + unk] = 1.0
+        dist_flat[unk * dim + i] = 1.0
+    dist_flat[unk * dim + unk] = 0.0
+
+    return ph_to_idx, dist_flat, dim
+
+
+# ===================================================================
 # Phoneme trie for fast approximate dictionary matching
 # ===================================================================
 
@@ -84,16 +127,21 @@ def _trie_expand(
     root: _TrieNode,
     source_tokens: Sequence[str],
     consumed: int,
-    merged: dict[str, dict],
     max_seg_distance: float,
     max_len_ratio: float,
     min_target_tokens: int,
+    ph_to_idx: dict[str, int],
+    dist_flat: list[float],
+    dim: int,
 ) -> list[tuple[str, str, int, float]]:
     """Search the trie for entries matching source_tokens[consumed:].
 
     Walks the trie depth-first, maintaining one column of the edit-distance
     DP matrix at each level.  When the minimum value in a column exceeds
     the cost ceiling, the entire subtree is pruned.
+
+    Uses a pre-computed flat distance matrix (*dist_flat*) for O(1)
+    phoneme-pair distance lookups instead of per-cell function calls.
 
     Returns
     -------
@@ -112,8 +160,10 @@ def _trie_expand(
     # The largest possible denominator is max(remaining, max_depth).
     cost_ceil = max_seg_distance * max(remaining, max_depth)
 
-    # Pre-fetch source feature dicts for the remaining tokens
-    src_feats = [merged.get(source_tokens[consumed + i], {}) for i in range(remaining)]
+    unk_idx = dim - 1  # UNK sentinel is the last row/col
+
+    # Pre-resolve source token indices for the remaining segment
+    src_indices = [ph_to_idx.get(source_tokens[consumed + i], unk_idx) for i in range(remaining)]
 
     # Initial DP column (depth 0): source prefix vs empty target = deletions
     init_col = [float(i) for i in range(remaining + 1)]
@@ -138,7 +188,7 @@ def _trie_expand(
             continue
 
         for phoneme, child in node.children.items():
-            tgt_feat = merged.get(phoneme, {})
+            tgt_idx = ph_to_idx.get(phoneme, unk_idx)
 
             new_col = [0.0] * (remaining + 1)
             new_col[0] = col[0] + 1.0  # insert target phoneme
@@ -146,7 +196,7 @@ def _trie_expand(
             min_val = new_col[0]
 
             for j in range(1, remaining + 1):
-                sub = phoneme_feature_distance(src_feats[j - 1], tgt_feat)
+                sub = dist_flat[src_indices[j - 1] * dim + tgt_idx]
                 val = min(
                     new_col[j - 1] + 1.0,  # delete source phoneme
                     col[j] + 1.0,  # insert target phoneme
@@ -275,6 +325,9 @@ def beam_search_segmentation(
 
     merged = {**target_features, **source_features}
 
+    # ── Pre-compute pairwise phoneme distance matrix ──
+    ph_to_idx, dist_flat, dim = _build_dist_matrix(merged)
+
     # ── Build phoneme trie for fast approximate matching ──
     trie_root = _build_trie(target_ptd, min_target_tokens)
     if not trie_root.children:
@@ -306,10 +359,12 @@ def beam_search_segmentation(
                     trie_root,
                     source_tokens,
                     hyp.consumed,
-                    merged,
                     max_distance,
                     max_len_ratio,
                     min_target_tokens,
+                    ph_to_idx,
+                    dist_flat,
+                    dim,
                 )
                 expand_cache[hyp.consumed] = candidates
 

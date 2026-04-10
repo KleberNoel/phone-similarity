@@ -92,10 +92,7 @@ ignore = [
 "src/phone_similarity/clean_phones.py" = ["RUF001", "RUF002"]  # IPA chars in code and docstrings
 "src/phone_similarity/syllable.py" = ["RUF001", "RUF002"]  # IPA chars in docstrings
 "src/phone_similarity/beam_search.py" = ["RUF002", "RUF003"]  # Unicode math symbols in docstrings
-"scripts/*.py" = ["RUF001"]  # IPA chars in scripts
 "tests/*" = ["F811", "RUF001", "RUF002", "RUF003", "E701", "E402", "B007", "SIM114"]  # pytest fixtures; IPA chars; style in tests
-"profile_hotpaths.py" = ["RUF001"]  # IPA phoneme strings
-"get_entropies.py" = ["RUF001"]  # IPA phoneme strings
 
 [tool.ruff.lint.isort]
 known-first-party = ["phone_similarity"]

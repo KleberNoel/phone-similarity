@@ -100,12 +100,17 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
-          # Build for CPython 3.10–3.14
+          # Build for CPython 3.10-3.14
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           # Skip 32-bit and musl builds to keep CI fast
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
           # Install build deps before each wheel build
           CIBW_BEFORE_BUILD: "pip install Cython numpy"
+          # macOS: install libomp so OpenMP prange is available in wheels
+          CIBW_BEFORE_BUILD_MACOS: "brew install libomp && pip install Cython numpy"
+          CIBW_ENVIRONMENT_MACOS: >-
+            CFLAGS="-I$(brew --prefix libomp)/include"
+            LDFLAGS="-L$(brew --prefix libomp)/lib"
           # Smoke-test: import the package and verify Cython loaded
           CIBW_TEST_COMMAND: >-
             python -c "from phone_similarity._dispatch import HAS_CYTHON; assert HAS_CYTHON"

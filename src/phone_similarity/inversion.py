@@ -76,6 +76,10 @@ def invert_ipa(
     features in *source_phoneme_features*, then calls
     :func:`invert_features` against the *target_phoneme_features* inventory.
 
+    Deduplicates tokens so each unique phoneme is inverted only once
+    against the target inventory, then reuses the cached result for
+    repeated tokens.
+
     Parameters
     ----------
     source_ipa : str
@@ -98,14 +102,20 @@ def invert_ipa(
         target-language candidates.
     """
     tokens = source_spec.ipa_tokenizer(source_ipa)
+
+    # Deduplicate: invert each unique token only once
+    cache: dict[str, list[tuple[str, float]]] = {}
     result: list[tuple[str, list[tuple[str, float]]]] = []
     for tok in tokens:
-        feat_vec = source_phoneme_features.get(tok, {})
-        candidates = invert_features(
-            feat_vec,
-            target_phoneme_features,
-            top_n=top_n,
-            max_distance=max_distance,
-        )
+        candidates = cache.get(tok)
+        if candidates is None:
+            feat_vec = source_phoneme_features.get(tok, {})
+            candidates = invert_features(
+                feat_vec,
+                target_phoneme_features,
+                top_n=top_n,
+                max_distance=max_distance,
+            )
+            cache[tok] = candidates
         result.append((tok, candidates))
     return result
