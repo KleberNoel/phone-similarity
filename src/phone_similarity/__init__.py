@@ -61,73 +61,115 @@ from importlib.metadata import version as _pkg_version
 
 __version__: str = _pkg_version("phone-similarity")
 
-from phone_similarity.beam_search import (
-    BeamResult,
-    beam_search_phrases,
-    beam_search_segmentation,
-)
-from phone_similarity.clean_phones import (
-    PRESERVE_ALL,
-    PRESERVE_LENGTH,
-    PRESERVE_STRESS,
-    STRIP_ALL,
-    CleanConfig,
-    clean_phones,
-    extract_stress_marks,
-)
-from phone_similarity.coarticulation import (
-    CoarticulationRule,
-    DefaultCoarticulationModel,
-    FricativeConfig,
-    coarticulated_feature_edit_distance,
-    coarticulated_phoneme_distance,
-    normalised_coarticulated_feature_edit_distance,
-)
-from phone_similarity.cross_language import compare_cross_language
-from phone_similarity.dictionary_scan import (
-    parallel_dictionary_scan,
-    reverse_dictionary_lookup,
-)
-from phone_similarity.distance_class import Distance
-from phone_similarity.embedding import (
-    BruteForceIndex,
-    KDTreeIndex,
-    PhoneticEmbedder,
-    ann_dictionary_scan,
-)
-from phone_similarity.inversion import (
-    invert_features,
-    invert_ipa,
-)
-from phone_similarity.pretokenize import (
-    PreTokenizedDictionary,
-    cached_pretokenize_dictionary,
-    pretokenize_dictionary,
-)
-from phone_similarity.primitives import (
-    batch_pairwise_hamming,
-    feature_edit_distance,
-    hamming_distance,
-    hamming_similarity,
-    normalised_feature_edit_distance,
-    phoneme_feature_distance,
-)
-from phone_similarity.syllable import (
-    MaxOnsetSegmenter,
-    SonorityScale,
-    Syllable,
-    batch_syllabify,
-    stress_pattern,
-    stressed_syllable,
-    syllabify,
-    syllable_count,
-)
-from phone_similarity.universal_features import (
-    UniversalFeatureEncoder,
-    encode_phoneme,
-    merge_inventories,
-    universal_phoneme_distance,
-)
+# ---------------------------------------------------------------------------
+# Lazy public API (PEP 562) — submodules are imported on first attribute
+# access so that ``import phone_similarity`` is cheap and does not pull in
+# heavy dependencies (panphon, pandas, …) until they are actually needed.
+# ---------------------------------------------------------------------------
+
+# Map public name → (module, attribute)
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    # beam_search
+    "BeamResult": ("phone_similarity.beam_search", "BeamResult"),
+    "beam_search_phrases": ("phone_similarity.beam_search", "beam_search_phrases"),
+    "beam_search_segmentation": ("phone_similarity.beam_search", "beam_search_segmentation"),
+    # clean_phones
+    "PRESERVE_ALL": ("phone_similarity.clean_phones", "PRESERVE_ALL"),
+    "PRESERVE_LENGTH": ("phone_similarity.clean_phones", "PRESERVE_LENGTH"),
+    "PRESERVE_STRESS": ("phone_similarity.clean_phones", "PRESERVE_STRESS"),
+    "STRIP_ALL": ("phone_similarity.clean_phones", "STRIP_ALL"),
+    "CleanConfig": ("phone_similarity.clean_phones", "CleanConfig"),
+    "clean_phones": ("phone_similarity.clean_phones", "clean_phones"),
+    "extract_stress_marks": ("phone_similarity.clean_phones", "extract_stress_marks"),
+    # coarticulation
+    "CoarticulationRule": ("phone_similarity.coarticulation", "CoarticulationRule"),
+    "DefaultCoarticulationModel": (
+        "phone_similarity.coarticulation",
+        "DefaultCoarticulationModel",
+    ),
+    "FricativeConfig": ("phone_similarity.coarticulation", "FricativeConfig"),
+    "coarticulated_feature_edit_distance": (
+        "phone_similarity.coarticulation",
+        "coarticulated_feature_edit_distance",
+    ),
+    "coarticulated_phoneme_distance": (
+        "phone_similarity.coarticulation",
+        "coarticulated_phoneme_distance",
+    ),
+    "normalised_coarticulated_feature_edit_distance": (
+        "phone_similarity.coarticulation",
+        "normalised_coarticulated_feature_edit_distance",
+    ),
+    # cross_language
+    "compare_cross_language": ("phone_similarity.cross_language", "compare_cross_language"),
+    # dictionary_scan
+    "parallel_dictionary_scan": ("phone_similarity.dictionary_scan", "parallel_dictionary_scan"),
+    "reverse_dictionary_lookup": (
+        "phone_similarity.dictionary_scan",
+        "reverse_dictionary_lookup",
+    ),
+    # distance_class
+    "Distance": ("phone_similarity.distance_class", "Distance"),
+    # embedding
+    "BruteForceIndex": ("phone_similarity.embedding", "BruteForceIndex"),
+    "KDTreeIndex": ("phone_similarity.embedding", "KDTreeIndex"),
+    "PhoneticEmbedder": ("phone_similarity.embedding", "PhoneticEmbedder"),
+    "ann_dictionary_scan": ("phone_similarity.embedding", "ann_dictionary_scan"),
+    # inversion
+    "invert_features": ("phone_similarity.inversion", "invert_features"),
+    "invert_ipa": ("phone_similarity.inversion", "invert_ipa"),
+    # pretokenize
+    "PreTokenizedDictionary": ("phone_similarity.pretokenize", "PreTokenizedDictionary"),
+    "cached_pretokenize_dictionary": (
+        "phone_similarity.pretokenize",
+        "cached_pretokenize_dictionary",
+    ),
+    "pretokenize_dictionary": ("phone_similarity.pretokenize", "pretokenize_dictionary"),
+    # primitives
+    "batch_pairwise_hamming": ("phone_similarity.primitives", "batch_pairwise_hamming"),
+    "feature_edit_distance": ("phone_similarity.primitives", "feature_edit_distance"),
+    "hamming_distance": ("phone_similarity.primitives", "hamming_distance"),
+    "hamming_similarity": ("phone_similarity.primitives", "hamming_similarity"),
+    "normalised_feature_edit_distance": (
+        "phone_similarity.primitives",
+        "normalised_feature_edit_distance",
+    ),
+    "phoneme_feature_distance": ("phone_similarity.primitives", "phoneme_feature_distance"),
+    # syllable
+    "MaxOnsetSegmenter": ("phone_similarity.syllable", "MaxOnsetSegmenter"),
+    "SonorityScale": ("phone_similarity.syllable", "SonorityScale"),
+    "Syllable": ("phone_similarity.syllable", "Syllable"),
+    "batch_syllabify": ("phone_similarity.syllable", "batch_syllabify"),
+    "stress_pattern": ("phone_similarity.syllable", "stress_pattern"),
+    "stressed_syllable": ("phone_similarity.syllable", "stressed_syllable"),
+    "syllabify": ("phone_similarity.syllable", "syllabify"),
+    "syllable_count": ("phone_similarity.syllable", "syllable_count"),
+    # universal_features
+    "UniversalFeatureEncoder": (
+        "phone_similarity.universal_features",
+        "UniversalFeatureEncoder",
+    ),
+    "encode_phoneme": ("phone_similarity.universal_features", "encode_phoneme"),
+    "merge_inventories": ("phone_similarity.universal_features", "merge_inventories"),
+    "universal_phoneme_distance": (
+        "phone_similarity.universal_features",
+        "universal_phoneme_distance",
+    ),
+}
+
+
+def __getattr__(name: str) -> object:
+    if name in _LAZY_IMPORTS:
+        import importlib
+
+        module_path, attr = _LAZY_IMPORTS[name]
+        mod = importlib.import_module(module_path)
+        val = getattr(mod, attr)
+        # Cache on the module so __getattr__ is not called again
+        globals()[name] = val
+        return val
+    raise AttributeError(f"module 'phone_similarity' has no attribute {name!r}")
+
 
 __all__ = [
     "PRESERVE_ALL",
