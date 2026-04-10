@@ -30,6 +30,10 @@ All public symbols are importable directly from this package::
 
 For finer-grained imports, use the sub-modules:
 
+* :mod:`phone_similarity.clean_phones` -- ``clean_phones``,
+  ``CleanConfig``, ``extract_stress_marks``, pre-built configs
+  (``STRIP_ALL``, ``PRESERVE_STRESS``, ``PRESERVE_LENGTH``,
+  ``PRESERVE_ALL``)
 * :mod:`phone_similarity.primitives` -- Hamming distance/similarity,
   phoneme feature distance, feature edit distance, batch pairwise Hamming
 * :mod:`phone_similarity.distance_class` -- ``Distance`` high-level class
@@ -53,6 +57,15 @@ from phone_similarity.beam_search import (
     BeamResult,
     beam_search_phrases,
     beam_search_segmentation,
+)
+from phone_similarity.clean_phones import (
+    CleanConfig,
+    PRESERVE_ALL,
+    PRESERVE_LENGTH,
+    PRESERVE_STRESS,
+    STRIP_ALL,
+    clean_phones,
+    extract_stress_marks,
 )
 from phone_similarity.cross_language import compare_cross_language
 from phone_similarity.dictionary_scan import (
@@ -94,6 +107,9 @@ from phone_similarity.syllable import (
     Syllable,
     SonorityScale,
     batch_syllabify,
+    stress_pattern,
+    stressed_syllable,
+    syllable_count,
     syllabify,
 )
 
@@ -102,14 +118,20 @@ __all__ = [
     "BeamResult",
     # embedding / ANN
     "BruteForceIndex",
+    # clean phones
+    "CleanConfig",
     # Distance class
     "Distance",
     "KDTreeIndex",
     # syllable
     "MaxOnsetSegmenter",
+    "PRESERVE_ALL",
+    "PRESERVE_LENGTH",
+    "PRESERVE_STRESS",
     "PhoneticEmbedder",
     # pretokenize
     "PreTokenizedDictionary",
+    "STRIP_ALL",
     "SonorityScale",
     "Syllable",
     # universal features
@@ -121,9 +143,11 @@ __all__ = [
     "beam_search_phrases",
     "beam_search_segmentation",
     "cached_pretokenize_dictionary",
+    "clean_phones",
     # cross-language
     "compare_cross_language",
     "encode_phoneme",
+    "extract_stress_marks",
     "feature_edit_distance",
     "hamming_distance",
     "hamming_similarity",
@@ -137,6 +161,9 @@ __all__ = [
     "phoneme_feature_distance",
     "pretokenize_dictionary",
     "reverse_dictionary_lookup",
+    "stress_pattern",
+    "stressed_syllable",
+    "syllable_count",
     "syllabify",
     "universal_phoneme_distance",
 ]

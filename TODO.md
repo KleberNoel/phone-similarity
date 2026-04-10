@@ -304,9 +304,9 @@ Portmanteaus merge two words at a phonological overlap: "breakfast" + "lunch" �
 Many features above require better syllable decomposition than the current naive vowel-nucleus scan.
 
 - [ ] **Proper syllabification** -- implement the Maximum Onset Principle (consonants prefer onsets over codas) with language-specific phonotactic constraints. Current `ipa_to_syllable()` uses a simple heuristic
-- [ ] **Stress preservation mode** -- add `preserve_stress=True` to `clean_phones` and distance functions. Critical for rhyme anchoring, spoonerism targeting, and prosodic matching
+- [x] **Stress preservation mode** -- add `preserve_stress=True` to `clean_phones` and distance functions. Critical for rhyme anchoring, spoonerism targeting, and prosodic matching
 - [ ] **Syllable-level edit distance** -- compare syllable-structured `(onset, nucleus, coda)` tuples rather than flat phoneme sequences. Weight nucleus mismatches more heavily (more perceptually salient)
-- [ ] **Syllable count & meter detection** -- `syllable_count(ipa, spec) -> int` and `stress_pattern(ipa, spec) -> str` (e.g. "01001" for iambic). Useful for poetry analysis and limerick detection
+- [x] **Syllable count & meter detection** -- `syllable_count(ipa, spec) -> int` and `stress_pattern(ipa, spec) -> str` (e.g. "01001" for iambic). Useful for poetry analysis and limerick detection
 - [ ] **Prosodic tier** -- optional pitch/tone encoding for tonal languages (Mandarin, Vietnamese, Thai, etc.)
 
 ---
@@ -320,7 +320,7 @@ The text→phoneme pipeline is: raw text → `clean_phones` (strip stress/length
 - [ ] **Unified G2P fallback chain** -- currently `CharsiuG2P.generate()` tries dict lookup then ONNX model, but the two paths return slightly different IPA conventions (e.g. dict may use /ɹ/ while model outputs /r/). Normalize outputs at the boundary so downstream distance is consistent
 - [ ] **Multi-word G2P sandhi** -- when phonemizing a phrase like "a net", generate IPA for the phrase as a unit (capturing liaison/elision/assimilation) rather than concatenating per-word results. Relevant for French liaison ("les amis" → /le.z‿a.mi/) and English flapping
 - [ ] **OOV phoneme handling** -- when `ipa_tokenizer` encounters a character not in the language's phoneme inventory, it currently silently drops it. Add a configurable strategy: `drop`, `pass_through`, or `nearest_phoneme` (map to closest feature-vector match in the inventory)
-- [ ] **Language-specific normalization rules** -- `clean_phones` applies the same strip-set (`ˈˌːˑ‿`) to all languages. Some languages need different treatment: length is contrastive in Finnish/Japanese, tone diacritics are contrastive in Mandarin/Vietnamese. Add per-language `CleanConfig` with `strip_stress`, `strip_length`, `strip_tone` booleans
+- [x] **Language-specific normalization rules** -- `clean_phones` applies the same strip-set (`ˈˌːˑ‿`) to all languages. Some languages need different treatment: length is contrastive in Finnish/Japanese, tone diacritics are contrastive in Mandarin/Vietnamese. Add per-language `CleanConfig` with `strip_stress`, `strip_length`, `strip_tone` booleans
 
 ### 14b. Disk caching for pre-tokenized dictionaries  ✅ DONE
 
