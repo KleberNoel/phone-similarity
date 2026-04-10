@@ -11,7 +11,6 @@ from phone_similarity.embedding import (
     ann_dictionary_scan,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -121,14 +120,14 @@ class TestBruteForceIndex:
         data = embedder.embed_batch(seqs)
         index = BruteForceIndex.from_embeddings(data)
         query = embedder.embed_sequence(["p", "a"])
-        indices, distances = index.query(query, top_k=1)
+        indices, _distances = index.query(query, top_k=1)
         assert indices[0] == 0  # "pa" is entry 0
 
     def test_top_k_larger_than_entries(self, embedder):
         data = embedder.embed_batch([["p", "a"], ["t", "a"]])
         index = BruteForceIndex.from_embeddings(data)
         query = embedder.embed_sequence(["p", "a"])
-        indices, distances = index.query(query, top_k=100)
+        indices, _distances = index.query(query, top_k=100)
         assert len(indices) == 2  # capped at n_entries
 
     def test_save_and_load(self, embedder, tmp_path):

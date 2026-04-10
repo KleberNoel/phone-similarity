@@ -65,7 +65,8 @@ from __future__ import annotations
 
 import dataclasses
 import random
-from typing import Optional, Protocol, Sequence, Union
+from collections.abc import Sequence
+from typing import Protocol
 
 from phone_similarity.universal_features import (
     PANPHON_FEATURE_NAMES,

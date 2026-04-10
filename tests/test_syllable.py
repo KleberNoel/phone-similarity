@@ -15,12 +15,11 @@ from phone_similarity.syllable import (
     RANK_STOP,
     RANK_VOWEL,
     MaxOnsetSegmenter,
-    Syllable,
     SonorityScale,
+    Syllable,
     batch_syllabify,
     syllabify,
 )
-
 
 # -----------------------------------------------------------------------
 # SonorityScale

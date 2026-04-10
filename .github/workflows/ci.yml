@@ -46,7 +46,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install setuptools Cython numpy
           python setup.py build_ext --inplace
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,g2p]"
 
       - name: Verify Cython extension loaded
         run: |

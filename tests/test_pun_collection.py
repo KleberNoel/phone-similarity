@@ -33,17 +33,14 @@ Sources
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 import pytest
 
 from phone_similarity.beam_search import (
-    BeamResult,
     beam_search_segmentation,
 )
 from phone_similarity.pretokenize import PreTokenizedDictionary
-
 
 # ===================================================================
 # Pun data structures
@@ -929,7 +926,6 @@ class TestPunSyllableAlignment:
     def test_syllable_counts_comparable(self, pun):
         """Source and target should have similar syllable counts
         (within +/-2), since puns rely on syllable-level matching."""
-        from phone_similarity.syllable import syllable_count
 
         # Use the shared features to build a minimal vowels set
         vowels = {

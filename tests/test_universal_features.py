@@ -17,7 +17,6 @@ from phone_similarity.universal_features import (
     universal_phoneme_distance,
 )
 
-
 # -----------------------------------------------------------------------
 # Encoder basics
 # -----------------------------------------------------------------------

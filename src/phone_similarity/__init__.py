@@ -62,6 +62,15 @@ from phone_similarity.beam_search import (
     beam_search_phrases,
     beam_search_segmentation,
 )
+from phone_similarity.clean_phones import (
+    PRESERVE_ALL,
+    PRESERVE_LENGTH,
+    PRESERVE_STRESS,
+    STRIP_ALL,
+    CleanConfig,
+    clean_phones,
+    extract_stress_marks,
+)
 from phone_similarity.coarticulation import (
     CoarticulationRule,
     DefaultCoarticulationModel,
@@ -69,15 +78,6 @@ from phone_similarity.coarticulation import (
     coarticulated_feature_edit_distance,
     coarticulated_phoneme_distance,
     normalised_coarticulated_feature_edit_distance,
-)
-from phone_similarity.clean_phones import (
-    CleanConfig,
-    PRESERVE_ALL,
-    PRESERVE_LENGTH,
-    PRESERVE_STRESS,
-    STRIP_ALL,
-    clean_phones,
-    extract_stress_marks,
 )
 from phone_similarity.cross_language import compare_cross_language
 from phone_similarity.dictionary_scan import (
@@ -108,52 +108,43 @@ from phone_similarity.primitives import (
     normalised_feature_edit_distance,
     phoneme_feature_distance,
 )
+from phone_similarity.syllable import (
+    MaxOnsetSegmenter,
+    SonorityScale,
+    Syllable,
+    batch_syllabify,
+    stress_pattern,
+    stressed_syllable,
+    syllabify,
+    syllable_count,
+)
 from phone_similarity.universal_features import (
     UniversalFeatureEncoder,
     encode_phoneme,
     merge_inventories,
     universal_phoneme_distance,
 )
-from phone_similarity.syllable import (
-    MaxOnsetSegmenter,
-    Syllable,
-    SonorityScale,
-    batch_syllabify,
-    stress_pattern,
-    stressed_syllable,
-    syllable_count,
-    syllabify,
-)
 
 __all__ = [
-    # beam search
-    "BeamResult",
-    # embedding / ANN
-    "BruteForceIndex",
-    # clean phones
-    "CleanConfig",
-    # co-articulation
-    "CoarticulationRule",
-    # Distance class
-    "Distance",
-    "DefaultCoarticulationModel",
-    "FricativeConfig",
-    "KDTreeIndex",
-    # syllable
-    "MaxOnsetSegmenter",
     "PRESERVE_ALL",
     "PRESERVE_LENGTH",
     "PRESERVE_STRESS",
-    "PhoneticEmbedder",
-    # pretokenize
-    "PreTokenizedDictionary",
     "STRIP_ALL",
+    "BeamResult",
+    "BruteForceIndex",
+    "CleanConfig",
+    "CoarticulationRule",
+    "DefaultCoarticulationModel",
+    "Distance",
+    "FricativeConfig",
+    "KDTreeIndex",
+    "MaxOnsetSegmenter",
+    "PhoneticEmbedder",
+    "PreTokenizedDictionary",
     "SonorityScale",
     "Syllable",
-    # universal features
     "UniversalFeatureEncoder",
     "ann_dictionary_scan",
-    # primitives
     "batch_pairwise_hamming",
     "batch_syllabify",
     "beam_search_phrases",
@@ -162,27 +153,24 @@ __all__ = [
     "clean_phones",
     "coarticulated_feature_edit_distance",
     "coarticulated_phoneme_distance",
-    # cross-language
     "compare_cross_language",
     "encode_phoneme",
     "extract_stress_marks",
     "feature_edit_distance",
     "hamming_distance",
     "hamming_similarity",
-    # inversion
     "invert_features",
     "invert_ipa",
     "merge_inventories",
     "normalised_coarticulated_feature_edit_distance",
     "normalised_feature_edit_distance",
-    # dictionary scan
     "parallel_dictionary_scan",
     "phoneme_feature_distance",
     "pretokenize_dictionary",
     "reverse_dictionary_lookup",
     "stress_pattern",
     "stressed_syllable",
-    "syllable_count",
     "syllabify",
+    "syllable_count",
     "universal_phoneme_distance",
 ]

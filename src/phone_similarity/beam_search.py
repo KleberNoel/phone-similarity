@@ -32,17 +32,16 @@ Pruning
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, Union
+from typing import Union
 
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.pretokenize import PreTokenizedDictionary
 from phone_similarity.primitives import (
-    feature_edit_distance,
     normalised_feature_edit_distance,
     phoneme_feature_distance,
 )
-
 
 # ===================================================================
 # Phoneme trie for fast approximate dictionary matching
@@ -337,8 +336,8 @@ def beam_search_segmentation(
                 new_hyp = _Hypothesis(
                     score=new_score,
                     consumed=new_consumed,
-                    words=hyp.words + (word,),
-                    ipas=hyp.ipas + (ipa,),
+                    words=(*hyp.words, word),
+                    ipas=(*hyp.ipas, ipa),
                     raw_cost=new_raw_cost,
                 )
 
@@ -370,7 +369,6 @@ def beam_search_segmentation(
 
     # Re-score the top candidates end-to-end: concatenate foreign IPAs
     # and compute normalised feature edit distance against the full source.
-    source_ipa_joined = "".join(source_tokens)
     results: list[BeamResult] = []
 
     for hyp in unique_complete[: top_k * 3]:  # evaluate extra for filtering

@@ -83,7 +83,15 @@ ignore = [
 "src/phone_similarity/language/*.py" = ["E741", "RUF001"]  # language data files
 "src/phone_similarity/base_bit_array_specification.py" = ["B019", "RUF002"]  # lru_cache on methods is intentional; IPA chars in docstrings
 "src/phone_similarity/g2p/charsiu/generator.py" = ["B019"]  # lru_cache on methods is intentional
-"tests/*" = ["F811", "RUF001", "RUF002", "RUF003", "E701", "E402", "B007"]  # pytest fixtures; IPA chars; style in tests
+"src/phone_similarity/coarticulation.py" = ["RUF001", "RUF002", "RUF003", "RUF012"]  # IPA chars; frozen rule data as class attrs
+"src/phone_similarity/universal_features.py" = ["RUF001", "RUF002", "RUF003", "F601"]  # IPA data; Panphon duplicate NFC/NFD keys
+"src/phone_similarity/clean_phones.py" = ["RUF001", "RUF002"]  # IPA chars in code and docstrings
+"src/phone_similarity/syllable.py" = ["RUF001", "RUF002"]  # IPA chars in docstrings
+"src/phone_similarity/beam_search.py" = ["RUF002", "RUF003"]  # Unicode math symbols in docstrings
+"scripts/*.py" = ["RUF001"]  # IPA chars in scripts
+"tests/*" = ["F811", "RUF001", "RUF002", "RUF003", "E701", "E402", "B007", "SIM114"]  # pytest fixtures; IPA chars; style in tests
+"profile_hotpaths.py" = ["RUF001"]  # IPA phoneme strings
+"get_entropies.py" = ["RUF001"]  # IPA phoneme strings
 
 [tool.ruff.lint.isort]
 known-first-party = ["phone_similarity"]

@@ -8,11 +8,11 @@ Covers ``CleanConfig``, ``clean_phones`` with ``preserve_stress``,
 import pytest
 
 from phone_similarity.clean_phones import (
-    CleanConfig,
     PRESERVE_ALL,
     PRESERVE_LENGTH,
     PRESERVE_STRESS,
     STRIP_ALL,
+    CleanConfig,
     clean_phones,
     extract_stress_marks,
 )
@@ -20,10 +20,9 @@ from phone_similarity.syllable import (
     Syllable,
     stress_pattern,
     stressed_syllable,
-    syllable_count,
     syllabify,
+    syllable_count,
 )
-
 
 # -----------------------------------------------------------------------
 # CleanConfig
@@ -440,7 +439,7 @@ class TestStressPipeline:
         assert marks[0] == (0, "secondary")
         assert marks[1][1] == "primary"
 
-        cleaned = clean_phones(raw)
+        clean_phones(raw)
         tokens = ["ʌ", "n", "d", "ə", "s", "t", "æ", "n", "d"]
         syls = syllabify(tokens, eng_vowels, stress_marks=marks)
 

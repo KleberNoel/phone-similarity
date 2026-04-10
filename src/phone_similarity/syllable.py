@@ -54,10 +54,10 @@ Usage::
 from __future__ import annotations
 
 import dataclasses
-from typing import Optional, Protocol, Sequence, Union
+from collections.abc import Sequence
+from typing import ClassVar, Protocol, Union
 
 from phone_similarity.universal_features import (
-    PANPHON_FEATURE_NAMES,
     UniversalFeatureEncoder,
 )
 
@@ -66,10 +66,10 @@ from phone_similarity.universal_features import (
 # ---------------------------------------------------------------------------
 try:
     from phone_similarity._core import (
-        cython_syllabify as _cy_syllabify,
+        batch_cython_syllabify as _cy_batch_syllabify,
     )
     from phone_similarity._core import (
-        batch_cython_syllabify as _cy_batch_syllabify,
+        cython_syllabify as _cy_syllabify,
     )
 
     _HAS_CYTHON_SYLLABLE = True
@@ -118,7 +118,7 @@ class Syllable:
     onset: tuple[str, ...]
     nucleus: tuple[str, ...]
     coda: tuple[str, ...]
-    stress: Optional[str] = None
+    stress: str | None = None
 
     @property
     def phonemes(self) -> tuple[str, ...]:
@@ -161,7 +161,7 @@ class SonorityScale:
         absent from the Panphon table or for language-specific tweaks.
     """
 
-    _cache: dict[str, int] = {}
+    _cache: ClassVar[dict[str, int]] = {}
 
     def __init__(
         self,

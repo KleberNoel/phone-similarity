@@ -17,17 +17,16 @@ from __future__ import annotations
 import pytest
 
 from phone_similarity.coarticulation import (
+    _FEAT_IDX,
+    _NUM_FEATURES,
     CoarticulationRule,
     DefaultCoarticulationModel,
     FricativeConfig,
-    _FEAT_IDX,
-    _NUM_FEATURES,
     coarticulated_feature_edit_distance,
     coarticulated_phoneme_distance,
     normalised_coarticulated_feature_edit_distance,
 )
 from phone_similarity.universal_features import (
-    PANPHON_FEATURE_NAMES,
     UniversalFeatureEncoder,
 )
 
@@ -218,10 +217,6 @@ class TestCarryover:
     def test_backing_after_velar(self):
         """Vowel after /k/ should shift [back] upward."""
         model = DefaultCoarticulationModel(jitter=0.0)
-        result = model.perturb_sequence(["k", "a"])
-        base_a = _base_vec("a")
-        back_base = float(base_a[_FEAT_IDX["back"]])
-        back_perturbed = _feat_val(result[1], "back")
         # /a/ is already [+back], so check for /k/ before /ɪ/ instead
         result2 = model.perturb_sequence(["k", "ɪ"])
         base_i = _base_vec("ɪ")
@@ -305,9 +300,7 @@ class TestAssimilation:
             if k_val != 0:
                 base_val = float(base_n[_FEAT_IDX[feat]])
                 pert_val = _feat_val(result[0], feat)
-                if k_val == 1 and pert_val > base_val:
-                    shifted = True
-                elif k_val == -1 and pert_val < base_val:
+                if (k_val == 1 and pert_val > base_val) or (k_val == -1 and pert_val < base_val):
                     shifted = True
         assert shifted, "Expected at least one place feature to shift"
 
@@ -402,7 +395,6 @@ class TestJitter:
 
     def test_high_jitter_sometimes_no_effect(self):
         """With jitter=1.0, some rule applications should be skipped."""
-        model = DefaultCoarticulationModel(jitter=1.0, seed=42)
         tokens = ["m", "a"]
         base_a = _base_vec("a")
         nas_base = float(base_a[_FEAT_IDX["nas"]])
@@ -416,7 +408,7 @@ class TestJitter:
             min_nas = min(min_nas, nas_val)
         # With high jitter, at least one trial should produce weak/no effect
         # (The rule either didn't fire or fired at reduced magnitude)
-        assert min_nas < nas_base + 0.5, f"Expected at least one weak nasalization with jitter=1.0"
+        assert min_nas < nas_base + 0.5, "Expected at least one weak nasalization with jitter=1.0"
 
     def test_seed_produces_same_jitter(self):
         """Same seed + same jitter = same output."""
