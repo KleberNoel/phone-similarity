@@ -11,11 +11,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Union
 
-from phone_similarity._dispatch import (
-    HAS_CYTHON,
-    cy_batch_pairwise_hamming,
-    cy_hamming_similarity,
-)
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.primitives import (
     batch_pairwise_hamming,
@@ -84,8 +79,6 @@ class Distance:
         """
         arr_a = self._spec.ipa_to_bitarray(ipa_a, max_syllables)
         arr_b = self._spec.ipa_to_bitarray(ipa_b, max_syllables)
-        if HAS_CYTHON:
-            return cy_hamming_similarity(arr_a, arr_b)
         return hamming_similarity(arr_a, arr_b)
 
     # ----- Phoneme-sequence-level metrics ----------------------------------
@@ -136,8 +129,6 @@ class Distance:
             Symmetric ``N x N`` similarity matrix.
         """
         arrays = [self._spec.ipa_to_bitarray(s, max_syllables) for s in ipa_strings]
-        if HAS_CYTHON:
-            return cy_batch_pairwise_hamming(arrays)
         return batch_pairwise_hamming(arrays)
 
     def pairwise_edit_distance(self, ipa_strings: Sequence[str]) -> list[list[float]]:

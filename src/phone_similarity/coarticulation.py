@@ -68,6 +68,13 @@ import random
 from collections.abc import Sequence
 from typing import Protocol
 
+# ---------------------------------------------------------------------------
+# Cython dispatch (imported once; flag checked in hot functions)
+# ---------------------------------------------------------------------------
+from phone_similarity._dispatch import (
+    HAS_CYTHON_COARTICULATION,
+    cy_coarticulated_feature_edit_distance,
+)
 from phone_similarity.universal_features import (
     PANPHON_FEATURE_NAMES,
     UniversalFeatureEncoder,
@@ -718,6 +725,21 @@ def coarticulated_feature_edit_distance(
     vecs_a = m.perturb_sequence(seq_a, syl_boundaries_a)
     vecs_b = m.perturb_sequence(seq_b, syl_boundaries_b)
 
+    # --- Cython fast path: delegate DP loop to C --------------------------
+    if HAS_CYTHON_COARTICULATION:
+        return cy_coarticulated_feature_edit_distance(
+            vecs_a,
+            vecs_b,
+            fc.fricative_weight,
+            fc.sibilant_weight,
+            _SON,
+            _CONT,
+            _STRID,
+            insert_cost,
+            delete_cost,
+        )
+
+    # --- Python fallback ---------------------------------------------------
     len_a = len(vecs_a)
     len_b = len(vecs_b)
 

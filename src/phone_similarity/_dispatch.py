@@ -126,3 +126,29 @@ except ImportError:
     HAS_CYTHON_SYLLABIFIER = False
     cy_syllabify = _UNAVAILABLE
     cy_batch_syllabify = _UNAVAILABLE
+
+# ---------------------------------------------------------------------------
+# Level 6: Cython co-articulated edit distance
+# ---------------------------------------------------------------------------
+try:
+    from phone_similarity._core import (
+        coarticulated_feature_edit_distance_c as cy_coarticulated_feature_edit_distance,
+    )
+
+    HAS_CYTHON_COARTICULATION = True
+except ImportError:
+    HAS_CYTHON_COARTICULATION = False
+    cy_coarticulated_feature_edit_distance = _UNAVAILABLE
+
+# ---------------------------------------------------------------------------
+# Level 7: Cython phoneme distance matrix builder
+# ---------------------------------------------------------------------------
+try:
+    from phone_similarity._core import (
+        build_phoneme_dist_matrix as cy_build_phoneme_dist_matrix,
+    )
+
+    HAS_CYTHON_DIST_MATRIX = True
+except ImportError:
+    HAS_CYTHON_DIST_MATRIX = False
+    cy_build_phoneme_dist_matrix = _UNAVAILABLE

@@ -2,7 +2,7 @@
 
 Tests that cognate word pairs (e.g. *father/père/vater/vader/padre*) are
 more similar to each other than to unrelated words, using the feature-
-weighted edit distance API from ``phone_similarity.distance``.
+weighted edit distance API from ``phone_similarity.distance_class``.
 """
 
 from itertools import combinations
