@@ -1,5 +1,10 @@
 from phone_similarity.bit_array_specification import BitArraySpecification
-from phone_similarity.language.eng_uk import FEATURES, PHONEME_FEATURES, VOWELS_SET
+from phone_similarity.language import LANGUAGES
+
+_eng_uk = LANGUAGES["eng_uk"]
+VOWELS_SET = _eng_uk.VOWELS_SET
+PHONEME_FEATURES = _eng_uk.PHONEME_FEATURES
+FEATURES = _eng_uk.FEATURES
 
 
 def test_make_empty_vector():  # pylint: disable=missing-function-docstring

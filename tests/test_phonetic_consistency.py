@@ -1,7 +1,9 @@
-import importlib
+import json
 import unicodedata
 import unittest
 from pathlib import Path
+
+from phone_similarity.language import LANGUAGES
 
 # Ligature mapping for consistency check
 LIGATURES = {
@@ -33,28 +35,21 @@ class TestPhoneticConsistency(unittest.TestCase):
 
     def test_g_variant_standardization(self):
         """IPA 'ɡ' (U+0261) must be used instead of Latin 'g' (U+0067) in all modules."""
-        lang_path = Path(__file__).parent.parent / "src" / "phone_similarity" / "language"
-        for p in lang_path.glob("*.py"):
-            if p.name == "__init__.py":
-                continue
-            content = p.read_text()
-            # Ensure no "g" as a dictionary key for phonemes
-            self.assertNotIn("'g':", content, f"Latin 'g' found in {p.name}")
-            self.assertNotIn('"g":', content, f"Latin 'g' found in {p.name}")
+        data_path = (
+            Path(__file__).parent.parent / "src" / "phone_similarity" / "language" / "_data.json"
+        )
+        raw = json.loads(data_path.read_text())
+        for lang_key, entry in raw.items():
+            for phone in entry.get("phonemes", {}):
+                self.assertNotEqual(
+                    phone, "g", f"Latin 'g' (U+0067) used as phoneme key in {lang_key}"
+                )
 
     def test_feature_schema_completeness(self):
         """Check that all vowel/consonant definitions have the core required keys for their manner."""
-        lang_path = Path(__file__).parent.parent / "src" / "phone_similarity" / "language"
-        for p in lang_path.glob("*.py"):
-            if p.name == "__init__.py":
-                continue
-            module_name = f"phone_similarity.language.{p.stem}"
-            mod = importlib.import_module(module_name)
-
+        for lang_key, mod in LANGUAGES.items():
             for phone, features in mod.PHONEME_FEATURES.items():
                 if phone in mod.VOWELS_SET:
-                    # Minimum vowel features (checking for high, mid, or low variants)
-                    # Diphthongs might not have these directly if they use start/end
                     if "diphthong" in features:
                         continue
                     self.assertTrue(
@@ -70,12 +65,11 @@ class TestPhoneticConsistency(unittest.TestCase):
                                 "near-low",
                             ]
                         ),
-                        f"Vowel {phone} in {p.stem} missing height",
+                        f"Vowel {phone} in {lang_key} missing height",
                     )
                 elif "manner" in features:
-                    # Minimum consonant features if manner is specified
                     self.assertIn(
-                        "voiced", features, f"Consonant {phone} in {p.stem} missing voicedness"
+                        "voiced", features, f"Consonant {phone} in {lang_key} missing voicedness"
                     )
 
 

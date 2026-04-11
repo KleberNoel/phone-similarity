@@ -6,22 +6,20 @@ have feature mappings, vowels have height and rounding, consonants have
 manner and voicedness.
 """
 
-import importlib
 import logging
-import os
 import unicodedata
 
 import pytest
 
 from phone_similarity.clean_phones import clean_phones
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
+from phone_similarity.language import LANGUAGES
+
+# ---------------------------------------------------------------------------
 
 IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?\u201c\u201d\u0022"
 
-_LANG_DIR = os.path.join(os.path.dirname(__file__), "..", "src", "phone_similarity", "language")
-LANGUAGE_MODULES = sorted(
-    f[:-3] for f in os.listdir(_LANG_DIR) if f.endswith(".py") and f != "__init__.py"
-)
+LANGUAGE_MODULES = sorted(LANGUAGES.keys())
 
 _HEIGHT_FEATURES = {"high", "mid-high", "mid", "mid-low", "low", "near-high", "near-low"}
 
@@ -120,7 +118,7 @@ def _is_consonant_entry(phone, features, vowels_set):
 @pytest.fixture(params=LANGUAGE_MODULES)
 def lang_module(request):
     module_name = request.param
-    module = importlib.import_module(f"phone_similarity.language.{module_name}")
+    module = LANGUAGES[module_name]
     charsiu_code = _get_charsiu_code(module_name)
     return module, charsiu_code, module_name
 

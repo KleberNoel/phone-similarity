@@ -1,4 +1,3 @@
-import importlib
 import logging
 
 import pytest
@@ -9,6 +8,7 @@ from phone_similarity.analysis.entropy import PhonemeEntropyAnalyzer, SyllableEn
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.clean_phones import clean_phones
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
+from phone_similarity.language import LANGUAGES
 
 # List of languages to test
 # Omitting por-bz and por-po as they are dialects of Portuguese
@@ -29,8 +29,7 @@ ENTROPY_RANGES = {
 
 @pytest.mark.parametrize("language", LANGUAGES_TO_TEST)
 def test_language_entropy_metrics(language):
-    module_name = f"phone_similarity.language.{language}"
-    lang_module = importlib.import_module(module_name)
+    lang_module = LANGUAGES[language]
 
     phoneme_features = lang_module.PHONEME_FEATURES
 

@@ -1,117 +1,118 @@
 """
 Language module registry with lazy loading.
 
-Language files have the structure of BCP-47 language tags.  These language
-tags predominantly combine ISO-639-1, ISO-639-2, and ISO-639-3.
-
-Language modules are loaded *lazily* on first access to avoid importing all
-100+ modules at package import time.
+Language data is stored in a single compressed JSON file
+(``_data.json``) and loaded lazily via :mod:`._loader`.  Each
+language entry contains phoneme feature tables originally curated
+from `CharsiuG2P <https://github.com/lingjzhu/CharsiuG2P>`_
+dictionaries and cross-referenced against Panphon and Wikipedia.
 
 Design Patterns
 ---------------
-* **Registry** — ``LanguageRegistry`` auto-discovers language modules and
-  provides ``get()``, ``contains()``, iteration, and ``build_spec()``
-  (Builder pattern) for constructing a ``BitArraySpecification`` from a
-  language key in a single call.
-* **Lazy Loading** — Modules are imported only on first access via
-  ``importlib.import_module``.
+* **Registry** -- ``LanguageRegistry`` exposes dict-like access,
+  ``build_spec()`` (Builder), and ``build_distance()`` for
+  constructing a ``BitArraySpecification`` or ``Distance`` object
+  from a language key in a single call.
+* **Lazy Loading** -- The JSON file is read only on first access
+  and each language namespace is cached in ``_loader``.
 """
 
 from __future__ import annotations
 
-import importlib
-import os
+from functools import lru_cache
 from typing import TYPE_CHECKING
+
+from phone_similarity.language._loader import (
+    available_languages,
+    get_language,
+)
 
 if TYPE_CHECKING:
     from phone_similarity.bit_array_specification import BitArraySpecification
     from phone_similarity.distance_class import Distance
+    from phone_similarity.language._loader import _LanguageNamespace
 
 # ---------------------------------------------------------------------------
-# Auto-discover language modules
+# Available languages (from JSON keys, no data loaded yet)
 # ---------------------------------------------------------------------------
-_LANG_DIR = os.path.dirname(__file__)
-LANGUAGE_FILES = [
-    f[:-3] for f in os.listdir(_LANG_DIR) if f.endswith(".py") and f != "__init__.py"
-]
-_LANGUAGE_FILE_SET = frozenset(LANGUAGE_FILES)
+LANGUAGE_FILES: list[str] = sorted(available_languages())
+_LANGUAGE_KEY_SET: frozenset[str] = frozenset(LANGUAGE_FILES)
 
 
 # ---------------------------------------------------------------------------
 # Registry (Singleton + Lazy Loading + Builder)
 # ---------------------------------------------------------------------------
 class LanguageRegistry:
-    """Registry of language modules with lazy import and spec building.
+    """Registry of language data with lazy loading and spec building.
 
     Supports dict-like access::
 
         from phone_similarity.language import LANGUAGES
 
-        lang = LANGUAGES["eng_us"]            # lazy import
+        lang = LANGUAGES["eng_us"]            # lazy load from JSON
         spec = LANGUAGES.build_spec("eng_us") # Builder pattern
         dist = LANGUAGES.build_distance("eng_us")  # full Distance object
 
-    Parameters
-    ----------
-    None.  The registry auto-discovers modules from the ``language/``
-    directory at construction time.
+    Feature reduction
+    -----------------
+    Pass ``reduce_features=True`` to :meth:`build_spec` or
+    :meth:`build_distance` to derive the feature column sets from
+    the actual phoneme data instead of using the stored (original)
+    columns.  This drops columns that never produce a 1-bit in the
+    bitarray encoding, yielding tighter representations for languages
+    whose curated column sets include dead entries.
     """
-
-    def __init__(self) -> None:
-        self._cache: dict[str, object] = {}
 
     # -- dict-like access ---------------------------------------------------
 
-    def __getitem__(self, key: str) -> object:
-        if key in self._cache:
-            return self._cache[key]
-        if key not in _LANGUAGE_FILE_SET:
+    def __getitem__(self, key: str) -> _LanguageNamespace:
+        if key not in _LANGUAGE_KEY_SET:
             raise KeyError(key)
-        try:
-            mod = importlib.import_module(f"phone_similarity.language.{key}")
-        except (AttributeError, ImportError, ModuleNotFoundError):
-            raise KeyError(key) from None
-        self._cache[key] = mod
-        return mod
+        return get_language(key)
 
     def __contains__(self, key: object) -> bool:
-        return key in _LANGUAGE_FILE_SET or key in self._cache
+        return key in _LANGUAGE_KEY_SET
 
-    def get(self, key: str, default: object = None) -> object:
-        """Return the language module for *key*, or *default*."""
+    def get(self, key: str, default: object = None) -> _LanguageNamespace | object:
+        """Return the language namespace for *key*, or *default*."""
         try:
             return self[key]
         except KeyError:
             return default
 
     def keys(self) -> frozenset[str]:
-        """All available language keys (without importing them)."""
-        return _LANGUAGE_FILE_SET
+        """All available language keys (no data loaded)."""
+        return _LANGUAGE_KEY_SET
 
     def __len__(self) -> int:
-        return len(_LANGUAGE_FILE_SET)
+        return len(_LANGUAGE_KEY_SET)
 
     def __iter__(self):
-        return iter(_LANGUAGE_FILE_SET)
+        return iter(_LANGUAGE_KEY_SET)
 
     def items(self):
-        """Iterate ``(key, module)`` pairs — imports all modules."""
-        for k in _LANGUAGE_FILE_SET:
+        """Iterate ``(key, namespace)`` pairs -- loads each language."""
+        for k in _LANGUAGE_KEY_SET:
             yield k, self[k]
 
     def values(self):
-        """Iterate language modules — imports all modules."""
-        for k in _LANGUAGE_FILE_SET:
+        """Iterate language namespaces -- loads each language."""
+        for k in _LANGUAGE_KEY_SET:
             yield self[k]
 
     def __repr__(self) -> str:
-        loaded = len(self._cache)
-        total = len(_LANGUAGE_FILE_SET)
-        return f"<LanguageRegistry {loaded}/{total} loaded>"
+        total = len(_LANGUAGE_KEY_SET)
+        return f"<LanguageRegistry {total} languages>"
 
     # -- Builder pattern ----------------------------------------------------
 
-    def build_spec(self, key: str) -> BitArraySpecification:
+    @lru_cache(maxsize=256)  # noqa: B019
+    def build_spec(
+        self,
+        key: str,
+        *,
+        reduce_features: bool = False,
+    ) -> BitArraySpecification:
         """Build a ``BitArraySpecification`` for *key* in one call.
 
         Replaces the 5-line boilerplate::
@@ -131,7 +132,11 @@ class LanguageRegistry:
         Parameters
         ----------
         key : str
-            Language module key (e.g. ``"eng_us"``, ``"fra"``).
+            Language key (e.g. ``"eng_us"``, ``"fra"``).
+        reduce_features : bool
+            If ``True``, derive columns from phoneme data (smaller
+            bitarrays, no dead columns).  Default ``False`` preserves
+            the original curated column sets.
 
         Returns
         -------
@@ -139,7 +144,7 @@ class LanguageRegistry:
         """
         from phone_similarity.bit_array_specification import BitArraySpecification
 
-        lang = self[key]
+        lang = get_language(key, reduce_features=reduce_features)
         return BitArraySpecification(
             vowels=lang.VOWELS_SET,
             consonants=set(lang.PHONEME_FEATURES) - lang.VOWELS_SET,
@@ -147,7 +152,13 @@ class LanguageRegistry:
             features_per_phoneme=lang.PHONEME_FEATURES,
         )
 
-    def build_distance(self, key: str) -> Distance:
+    @lru_cache(maxsize=256)  # noqa: B019
+    def build_distance(
+        self,
+        key: str,
+        *,
+        reduce_features: bool = False,
+    ) -> Distance:
         """Build a ``Distance`` object for *key* in one call.
 
         Replaces::
@@ -162,7 +173,9 @@ class LanguageRegistry:
         Parameters
         ----------
         key : str
-            Language module key.
+            Language key.
+        reduce_features : bool
+            Passed through to :meth:`build_spec`.
 
         Returns
         -------
@@ -170,10 +183,10 @@ class LanguageRegistry:
         """
         from phone_similarity.distance_class import Distance
 
-        return Distance(self.build_spec(key))
+        return Distance(self.build_spec(key, reduce_features=reduce_features))
 
 
 # ---------------------------------------------------------------------------
-# Singleton instance — the public API
+# Singleton instance -- the public API
 # ---------------------------------------------------------------------------
 LANGUAGES = LanguageRegistry()
