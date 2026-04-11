@@ -7,6 +7,28 @@ transcriptions, scans foreign-language dictionaries for phonological
 near-matches, and discovers multi-word interlingual puns via beam search
 segmentation -- all accelerated by a Cython backend.
 
+## Why phone-similarity?
+
+**phone-similarity lets you measure how similar two words *sound* across
+any pair of 101 languages, using articulatory phonetics rather than
+string matching.**
+
+- **Cross-language phonological search** -- "find me words in Japanese
+  that sound like the English word 'cat'" -- not by spelling, but by how
+  the mouth produces them
+- **Linguistically grounded** -- distances based on panphon's 24
+  articulatory features (voicing, place, manner, ...), not ad-hoc edit
+  distance on characters; co-articulation modelling adds realism
+- **Fast enough for dictionary-scale** -- Cython + OpenMP makes scanning
+  100k+ entry dictionaries practical; beam search makes multi-word phrase
+  matching tractable
+- **101 languages out of the box** -- each with curated phoneme
+  inventories and G2P
+
+Target use cases: computational pun detection, loanword identification,
+cognate discovery, cross-linguistic phonological typology,
+foreign-language word selection for mnemonic / pedagogical tools.
+
 ## Features
 
 - **Feature-weighted edit distance** -- substitution cost is proportional to
