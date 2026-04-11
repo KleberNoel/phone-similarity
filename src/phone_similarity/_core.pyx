@@ -224,6 +224,97 @@ def phoneme_feature_distance(dict fa, dict fb) -> float:
 
 
 # ===================================================================
+# Shared distance matrix helpers (deduplicates _batch_scan_* + prange)
+# ===================================================================
+
+cdef void _fill_dist_matrix(
+    double* dist_matrix,
+    list all_phonemes,
+    Py_ssize_t num_ph,
+    Py_ssize_t matrix_dim,
+    Py_ssize_t UNK_IDX,
+    dict merged_feats,
+):
+    """Fill a pre-allocated flat distance matrix from merged_feats.
+
+    Computes the symmetric pairwise phoneme feature distance for all
+    phonemes in *all_phonemes*, plus an UNK row/col with distance 1.0
+    to everything (0.0 to itself).
+    """
+    cdef Py_ssize_t ai, bi
+    cdef dict fa, fb
+    cdef set all_keys
+    cdef Py_ssize_t num_keys, mismatches
+    cdef str k
+    cdef double d
+
+    for ai in range(num_ph):
+        fa = merged_feats.get(all_phonemes[ai], {})
+        for bi in range(ai, num_ph):
+            fb = merged_feats.get(all_phonemes[bi], {})
+            all_keys = set(fa) | set(fb)
+            num_keys = len(all_keys)
+            if num_keys == 0:
+                dist_matrix[ai * matrix_dim + bi] = 0.0
+                dist_matrix[bi * matrix_dim + ai] = 0.0
+            else:
+                mismatches = 0
+                for k in all_keys:
+                    if fa.get(k) != fb.get(k):
+                        mismatches += 1
+                d = (<double>mismatches) / (<double>num_keys)
+                dist_matrix[ai * matrix_dim + bi] = d
+                dist_matrix[bi * matrix_dim + ai] = d
+    # Unknown vs anything = 1.0
+    for ai in range(matrix_dim):
+        dist_matrix[ai * matrix_dim + UNK_IDX] = 1.0
+        dist_matrix[UNK_IDX * matrix_dim + ai] = 1.0
+    dist_matrix[UNK_IDX * matrix_dim + UNK_IDX] = 0.0
+
+
+def build_phoneme_dist_matrix(dict merged_feats) -> tuple:
+    """Build a pairwise phoneme distance matrix from merged feature dicts.
+
+    Public entry point callable from Python (e.g. beam_search.py).
+
+    Returns
+    -------
+    tuple of (ph_to_idx: dict, dist_flat: list[float], dim: int)
+        * ph_to_idx: maps phoneme str -> int index
+        * dist_flat: flat row-major float list (dim * dim)
+        * dim: matrix dimension (num_phonemes + 1 for UNK)
+    """
+    cdef list all_phonemes = sorted(merged_feats)
+    cdef Py_ssize_t num_ph = len(all_phonemes)
+    cdef Py_ssize_t matrix_dim = num_ph + 1
+    cdef Py_ssize_t UNK_IDX = num_ph
+    cdef dict ph_to_idx = {}
+    cdef Py_ssize_t pi
+
+    for pi in range(num_ph):
+        ph_to_idx[all_phonemes[pi]] = pi
+
+    cdef double* dist_matrix = <double*>malloc(matrix_dim * matrix_dim * sizeof(double))
+    if dist_matrix == NULL:
+        raise MemoryError("Could not allocate distance matrix")
+
+    cdef Py_ssize_t total = matrix_dim * matrix_dim
+    cdef list dist_flat
+
+    try:
+        _fill_dist_matrix(dist_matrix, all_phonemes, num_ph, matrix_dim, UNK_IDX, merged_feats)
+
+        # Convert to Python list
+        dist_flat = [0.0] * total
+        for pi in range(total):
+            dist_flat[pi] = dist_matrix[pi]
+    finally:
+        free(dist_matrix)
+
+    return (ph_to_idx, dist_flat, matrix_dim)
+
+
+# ===================================================================
 # Feature-vector → phoneme inversion
 # ===================================================================
 
@@ -452,21 +543,15 @@ cdef list _batch_scan_ptd(
     cdef double ratio, d, raw
     cdef Py_ssize_t max_len
 
-    cdef dict fa, fb
-    cdef set all_keys, all_phonemes_set
-    cdef Py_ssize_t num_keys, mismatches
-    cdef str k
-    cdef Py_ssize_t ai, bi, pi
+    cdef set all_phonemes_set
+    cdef Py_ssize_t pi
     cdef list all_phonemes
     cdef dict ph_to_idx
     cdef Py_ssize_t num_ph, UNK_IDX, matrix_dim
     cdef double* dist_matrix
     cdef Py_ssize_t* src_idx
     cdef Py_ssize_t* tgt_idx
-    cdef double* dp
-    cdef Py_ssize_t dp_size
-    cdef double sub_cost, del_val, ins_val, sub_val
-    cdef Py_ssize_t i, j
+    cdef Py_ssize_t j
     cdef Py_ssize_t overlap, min_overlap
 
     # --- PTD-specific: read numpy arrays once ---
@@ -493,7 +578,6 @@ cdef list _batch_scan_ptd(
     cdef Py_ssize_t entry_idx, tgt_start, tgt_end
 
     # ── Build the phoneme universe ────────────────────────────────
-    # Collect all phonemes from: source tokens, PTD inventory, merged_feats
     all_phonemes_set = set(source_tokens)
     for pi in range(ptd_inv_size):
         all_phonemes_set.add(ptd_inventory[pi])
@@ -541,32 +625,10 @@ cdef list _batch_scan_ptd(
         raise MemoryError("Could not allocate target mask")
 
     try:
-        # ── Fill distance matrix ──────────────────────────────────
-        for ai in range(num_ph):
-            fa = merged_feats.get(all_phonemes[ai], {})
-            for bi in range(ai, num_ph):
-                fb = merged_feats.get(all_phonemes[bi], {})
-                all_keys = set(fa) | set(fb)
-                num_keys = len(all_keys)
-                if num_keys == 0:
-                    dist_matrix[ai * matrix_dim + bi] = 0.0
-                    dist_matrix[bi * matrix_dim + ai] = 0.0
-                else:
-                    mismatches = 0
-                    for k in all_keys:
-                        if fa.get(k) != fb.get(k):
-                            mismatches += 1
-                    d = (<double>mismatches) / (<double>num_keys)
-                    dist_matrix[ai * matrix_dim + bi] = d
-                    dist_matrix[bi * matrix_dim + ai] = d
-        # Unknown vs anything = 1.0
-        for ai in range(matrix_dim):
-            dist_matrix[ai * matrix_dim + UNK_IDX] = 1.0
-            dist_matrix[UNK_IDX * matrix_dim + ai] = 1.0
-        dist_matrix[UNK_IDX * matrix_dim + UNK_IDX] = 0.0
+        # ── Fill distance matrix (shared helper) ──────────────────
+        _fill_dist_matrix(dist_matrix, all_phonemes, num_ph, matrix_dim, UNK_IDX, merged_feats)
 
         # ── Build inventory translation table ─────────────────────
-        # Maps PTD inventory index -> distance matrix index (one-time)
         for pi in range(ptd_inv_size):
             inv_to_mat[pi] = ph_to_idx.get(ptd_inventory[pi], UNK_IDX)
 
@@ -608,7 +670,6 @@ cdef list _batch_scan_ptd(
             overlap_count = 0
             min_overlap = src_unique_count if src_unique_count < tgt_unique_count else tgt_unique_count
             if min_overlap > 0:
-                # Count overlap using bitmask AND
                 for pi in range(matrix_dim):
                     if src_mask[pi] != 0 and tgt_mask[pi] != 0:
                         overlap_count += 1
@@ -622,37 +683,16 @@ cdef list _batch_scan_ptd(
             for pi in range(target_len):
                 tgt_idx[pi] = inv_to_mat[ti_view[tgt_start + pi]]
 
-            # ── DP with matrix lookup ─────────────────────────────
-            dp_size = (source_len + 1) * (target_len + 1)
-            dp = <double*>malloc(dp_size * sizeof(double))
-            if dp == NULL:
-                free(tgt_idx)
-                raise MemoryError("Could not allocate DP table")
-
-            dp[0] = 0.0
-            for i in range(1, source_len + 1):
-                dp[i * (target_len + 1)] = <double>i
-            for j in range(1, target_len + 1):
-                dp[j] = <double>j
-
-            for i in range(1, source_len + 1):
-                for j in range(1, target_len + 1):
-                    sub_cost = dist_matrix[src_idx[i - 1] * matrix_dim + tgt_idx[j - 1]]
-
-                    del_val = dp[(i - 1) * (target_len + 1) + j] + 1.0
-                    ins_val = dp[i * (target_len + 1) + (j - 1)] + 1.0
-                    sub_val = dp[(i - 1) * (target_len + 1) + (j - 1)] + sub_cost
-
-                    if del_val <= ins_val and del_val <= sub_val:
-                        dp[i * (target_len + 1) + j] = del_val
-                    elif ins_val <= sub_val:
-                        dp[i * (target_len + 1) + j] = ins_val
-                    else:
-                        dp[i * (target_len + 1) + j] = sub_val
-
-            raw = dp[source_len * (target_len + 1) + target_len]
-            free(dp)
+            # ── DP via shared nogil kernel ────────────────────────
+            raw = _dp_edit_distance_nogil(
+                src_idx, source_len,
+                tgt_idx, target_len,
+                dist_matrix, matrix_dim,
+            )
             free(tgt_idx)
+
+            if raw < 0.0:
+                continue  # allocation failure inside kernel
 
             max_len = source_len if source_len >= target_len else target_len
             d = raw / (<double>max_len)
@@ -691,21 +731,14 @@ cdef list _batch_scan_generic(
     cdef list target_tokens
     cdef Py_ssize_t max_len
 
-    cdef dict fa, fb
-    cdef set all_keys, all_phonemes_set, source_set, target_set
-    cdef Py_ssize_t num_keys, mismatches
-    cdef str k
-    cdef Py_ssize_t ai, bi, pi
+    cdef set all_phonemes_set, source_set, target_set
+    cdef Py_ssize_t pi
     cdef list all_phonemes
     cdef dict ph_to_idx
     cdef Py_ssize_t num_ph, UNK_IDX, matrix_dim
     cdef double* dist_matrix
     cdef Py_ssize_t* src_idx
     cdef Py_ssize_t* tgt_idx
-    cdef double* dp
-    cdef Py_ssize_t dp_size
-    cdef double sub_cost, del_val, ins_val, sub_val
-    cdef Py_ssize_t i, j
     cdef Py_ssize_t overlap, min_overlap
 
     # ── Pre-compute phoneme distance matrix ────────────────────────
@@ -735,29 +768,8 @@ cdef list _batch_scan_generic(
         raise MemoryError("Could not allocate source index array")
 
     try:
-        # Fill the matrix
-        for ai in range(num_ph):
-            fa = merged_feats.get(all_phonemes[ai], {})
-            for bi in range(ai, num_ph):
-                fb = merged_feats.get(all_phonemes[bi], {})
-                all_keys = set(fa) | set(fb)
-                num_keys = len(all_keys)
-                if num_keys == 0:
-                    dist_matrix[ai * matrix_dim + bi] = 0.0
-                    dist_matrix[bi * matrix_dim + ai] = 0.0
-                else:
-                    mismatches = 0
-                    for k in all_keys:
-                        if fa.get(k) != fb.get(k):
-                            mismatches += 1
-                    d = (<double>mismatches) / (<double>num_keys)
-                    dist_matrix[ai * matrix_dim + bi] = d
-                    dist_matrix[bi * matrix_dim + ai] = d
-        # Unknown vs anything = 1.0
-        for ai in range(matrix_dim):
-            dist_matrix[ai * matrix_dim + UNK_IDX] = 1.0
-            dist_matrix[UNK_IDX * matrix_dim + ai] = 1.0
-        dist_matrix[UNK_IDX * matrix_dim + UNK_IDX] = 0.0
+        # Fill the matrix (shared helper)
+        _fill_dist_matrix(dist_matrix, all_phonemes, num_ph, matrix_dim, UNK_IDX, merged_feats)
 
         # Convert source tokens to index array
         for pi in range(source_len):
@@ -799,37 +811,16 @@ cdef list _batch_scan_generic(
             for pi in range(target_len):
                 tgt_idx[pi] = ph_to_idx.get(target_tokens[pi], UNK_IDX)
 
-            # DP with matrix lookup
-            dp_size = (source_len + 1) * (target_len + 1)
-            dp = <double*>malloc(dp_size * sizeof(double))
-            if dp == NULL:
-                free(tgt_idx)
-                raise MemoryError("Could not allocate DP table")
-
-            dp[0] = 0.0
-            for i in range(1, source_len + 1):
-                dp[i * (target_len + 1)] = <double>i
-            for j in range(1, target_len + 1):
-                dp[j] = <double>j
-
-            for i in range(1, source_len + 1):
-                for j in range(1, target_len + 1):
-                    sub_cost = dist_matrix[src_idx[i - 1] * matrix_dim + tgt_idx[j - 1]]
-
-                    del_val = dp[(i - 1) * (target_len + 1) + j] + 1.0
-                    ins_val = dp[i * (target_len + 1) + (j - 1)] + 1.0
-                    sub_val = dp[(i - 1) * (target_len + 1) + (j - 1)] + sub_cost
-
-                    if del_val <= ins_val and del_val <= sub_val:
-                        dp[i * (target_len + 1) + j] = del_val
-                    elif ins_val <= sub_val:
-                        dp[i * (target_len + 1) + j] = ins_val
-                    else:
-                        dp[i * (target_len + 1) + j] = sub_val
-
-            raw = dp[source_len * (target_len + 1) + target_len]
-            free(dp)
+            # DP via shared nogil kernel
+            raw = _dp_edit_distance_nogil(
+                src_idx, source_len,
+                tgt_idx, target_len,
+                dist_matrix, matrix_dim,
+            )
             free(tgt_idx)
+
+            if raw < 0.0:
+                continue  # allocation failure inside kernel
 
             max_len = source_len if source_len >= target_len else target_len
             d = raw / (<double>max_len)
@@ -1023,10 +1014,6 @@ def prange_batch_dictionary_scan(
         free(c_dist_matrix)
         raise MemoryError("Could not allocate source mask")
 
-    cdef dict fa, fb
-    cdef set all_keys
-    cdef Py_ssize_t num_keys, mismatches, ai, bi
-    cdef str k
     cdef double d
 
     # Variables used inside the try block (must be declared before try)
@@ -1064,29 +1051,8 @@ def prange_batch_dictionary_scan(
         raise MemoryError("Could not allocate offsets C array")
 
     try:
-        # --- Fill distance matrix ---
-        for ai in range(num_ph):
-            fa = merged_feats.get(all_phonemes[ai], {})
-            for bi in range(ai, num_ph):
-                fb = merged_feats.get(all_phonemes[bi], {})
-                all_keys = set(fa) | set(fb)
-                num_keys = len(all_keys)
-                if num_keys == 0:
-                    c_dist_matrix[ai * matrix_dim + bi] = 0.0
-                    c_dist_matrix[bi * matrix_dim + ai] = 0.0
-                else:
-                    mismatches = 0
-                    for k in all_keys:
-                        if fa.get(k) != fb.get(k):
-                            mismatches += 1
-                    d = (<double>mismatches) / (<double>num_keys)
-                    c_dist_matrix[ai * matrix_dim + bi] = d
-                    c_dist_matrix[bi * matrix_dim + ai] = d
-        # Unknown vs anything = 1.0
-        for ai in range(matrix_dim):
-            c_dist_matrix[ai * matrix_dim + UNK_IDX] = 1.0
-            c_dist_matrix[UNK_IDX * matrix_dim + ai] = 1.0
-        c_dist_matrix[UNK_IDX * matrix_dim + UNK_IDX] = 0.0
+        # --- Fill distance matrix (shared helper) ---
+        _fill_dist_matrix(c_dist_matrix, all_phonemes, num_ph, matrix_dim, UNK_IDX, merged_feats)
 
         # --- Build inventory translation table ---
         for pi in range(ptd_inv_size):
@@ -1421,3 +1387,218 @@ def batch_cython_syllabify(
         )
 
     return results
+
+
+# ===================================================================
+# Co-articulated phoneme distance (float-vector variant)
+# ===================================================================
+
+DEF _NUM_COART_FEATURES = 24
+
+
+cdef double _coarticulated_phoneme_distance_c(
+    const double* va,
+    const double* vb,
+    Py_ssize_t n_feat,
+    bint either_fric,
+    bint either_sib,
+    double fric_w,
+    double sib_w,
+    Py_ssize_t cont_idx,
+    Py_ssize_t strid_idx,
+) noexcept nogil:
+    """Phoneme distance between two co-articulated float vectors.
+
+    Mirrors ``coarticulated_phoneme_distance`` in ``coarticulation.py``
+    but operates entirely on C arrays without the GIL.
+
+    Features where both values are near zero (|v| < 0.01) are skipped.
+    Differences on ``cont`` and ``strid`` are weighted by *fric_w* and
+    *sib_w* respectively when the corresponding fricative/sibilant flag
+    is set.
+
+    Returns normalised distance in [0, 1].
+    """
+    cdef Py_ssize_t idx
+    cdef int comparable = 0
+    cdef double total_diff = 0.0
+    cdef double a_val, b_val, diff
+
+    for idx in range(n_feat):
+        a_val = va[idx]
+        b_val = vb[idx]
+        # Skip features where both are near-zero (unspecified)
+        if -0.01 < a_val < 0.01 and -0.01 < b_val < 0.01:
+            continue
+        comparable += 1
+        diff = a_val - b_val
+        if diff < 0.0:
+            diff = -diff
+        diff *= 0.5
+
+        if either_fric and idx == cont_idx:
+            diff *= fric_w
+        elif either_sib and idx == strid_idx:
+            diff *= sib_w
+
+        total_diff += diff
+
+    if comparable == 0:
+        return 0.0
+    return total_diff / <double>comparable
+
+
+def coarticulated_feature_edit_distance_c(
+    list vecs_a,
+    list vecs_b,
+    double fric_w,
+    double sib_w,
+    Py_ssize_t son_idx,
+    Py_ssize_t cont_idx,
+    Py_ssize_t strid_idx,
+    double insert_cost = 1.0,
+    double delete_cost = 1.0,
+) -> float:
+    """DP edit distance on pre-computed co-articulated float vectors.
+
+    This is the Cython-accelerated inner loop for
+    ``coarticulated_feature_edit_distance``.  The caller (Python) is
+    responsible for running ``perturb_sequence`` and passing the
+    resulting list-of-24-float-tuples here.
+
+    Parameters
+    ----------
+    vecs_a, vecs_b : list of tuple[float, ...]
+        Co-articulated 24-float feature vectors.
+    fric_w, sib_w : float
+        Weights from ``FricativeConfig.fricative_weight`` / ``sibilant_weight``.
+    son_idx, cont_idx, strid_idx : int
+        Indices of the ``son``, ``cont``, and ``strid`` features in the
+        24-feature vector.
+    insert_cost, delete_cost : float
+        Indel costs (default 1.0).
+
+    Returns
+    -------
+    float
+        Raw (unnormalised) edit distance.
+    """
+    cdef Py_ssize_t len_a = len(vecs_a)
+    cdef Py_ssize_t len_b = len(vecs_b)
+    cdef Py_ssize_t n_feat = _NUM_COART_FEATURES
+
+    # --- Allocate flat C arrays for vectors --------------------------------
+    cdef double* flat_a = NULL
+    cdef double* flat_b = NULL
+    # --- Fricative/sibilant classification flags per token -----------------
+    cdef bint* fric_a = NULL
+    cdef bint* fric_b = NULL
+    cdef bint* sib_a = NULL
+    cdef bint* sib_b = NULL
+    # --- DP table ----------------------------------------------------------
+    cdef double* prev_row = NULL
+    cdef double* curr_row = NULL
+
+    cdef Py_ssize_t i, j, k
+    cdef double a_val, b_val
+    cdef bint is_fric, is_sib
+    cdef bint ef, es, ef_pair, es_pair
+    cdef double sub_cost, d_val, ins_val, sub_val
+    cdef double result
+    cdef tuple vec
+
+    flat_a = <double*>malloc(len_a * n_feat * sizeof(double))
+    flat_b = <double*>malloc(len_b * n_feat * sizeof(double))
+    fric_a = <bint*>malloc(len_a * sizeof(bint))
+    fric_b = <bint*>malloc(len_b * sizeof(bint))
+    sib_a = <bint*>malloc(len_a * sizeof(bint))
+    sib_b = <bint*>malloc(len_b * sizeof(bint))
+    prev_row = <double*>malloc((len_b + 1) * sizeof(double))
+    curr_row = <double*>malloc((len_b + 1) * sizeof(double))
+
+    if (flat_a == NULL or flat_b == NULL or
+            fric_a == NULL or fric_b == NULL or
+            sib_a == NULL or sib_b == NULL or
+            prev_row == NULL or curr_row == NULL):
+        free(flat_a); free(flat_b)
+        free(fric_a); free(fric_b)
+        free(sib_a); free(sib_b)
+        free(prev_row); free(curr_row)
+        raise MemoryError("coarticulated_feature_edit_distance_c: malloc failed")
+
+    try:
+        # --- Unpack Python tuples into flat C arrays -----------------------
+        for i in range(len_a):
+            vec = vecs_a[i]
+            for k in range(n_feat):
+                flat_a[i * n_feat + k] = <double>vec[k]
+            # Classify: fricative = [son < -0.5 AND cont > 0.5]
+            a_val = flat_a[i * n_feat + son_idx]
+            b_val = flat_a[i * n_feat + cont_idx]
+            is_fric = (a_val < -0.5 and b_val > 0.5)
+            fric_a[i] = is_fric
+            # Sibilant = fricative AND strid > 0.5
+            sib_a[i] = is_fric and (flat_a[i * n_feat + strid_idx] > 0.5)
+
+        for j in range(len_b):
+            vec = vecs_b[j]
+            for k in range(n_feat):
+                flat_b[j * n_feat + k] = <double>vec[k]
+            a_val = flat_b[j * n_feat + son_idx]
+            b_val = flat_b[j * n_feat + cont_idx]
+            is_fric = (a_val < -0.5 and b_val > 0.5)
+            fric_b[j] = is_fric
+            sib_b[j] = is_fric and (flat_b[j * n_feat + strid_idx] > 0.5)
+
+        # --- DP edit distance (two-row) -----------------------------------
+        for j in range(len_b + 1):
+            prev_row[j] = insert_cost * <double>j
+
+        for i in range(1, len_a + 1):
+            curr_row[0] = prev_row[0] + delete_cost
+            ef = fric_a[i - 1]
+            es = sib_a[i - 1]
+
+            for j in range(1, len_b + 1):
+                # Combined fric/sib flags for this pair
+                ef_pair = ef or fric_b[j - 1]
+                es_pair = es or sib_b[j - 1]
+
+                sub_cost = _coarticulated_phoneme_distance_c(
+                    &flat_a[(i - 1) * n_feat],
+                    &flat_b[(j - 1) * n_feat],
+                    n_feat,
+                    ef_pair,
+                    es_pair,
+                    fric_w,
+                    sib_w,
+                    cont_idx,
+                    strid_idx,
+                )
+
+                d_val = prev_row[j] + delete_cost
+                ins_val = curr_row[j - 1] + insert_cost
+                sub_val = prev_row[j - 1] + sub_cost
+
+                if ins_val < d_val:
+                    d_val = ins_val
+                if sub_val < d_val:
+                    d_val = sub_val
+                curr_row[j] = d_val
+
+            # Swap rows
+            prev_row, curr_row = curr_row, prev_row
+
+        result = prev_row[len_b]
+
+    finally:
+        free(flat_a)
+        free(flat_b)
+        free(fric_a)
+        free(fric_b)
+        free(sib_a)
+        free(sib_b)
+        free(prev_row)
+        free(curr_row)
+
+    return result

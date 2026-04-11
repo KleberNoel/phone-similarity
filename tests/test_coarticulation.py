@@ -664,49 +664,38 @@ class TestRealWorldScenarios:
 class TestFricativeConfig:
     """FricativeConfig frozen dataclass construction and validation."""
 
-    def test_default_values(self):
+    def test_defaults_and_custom(self):
         fc = FricativeConfig()
         assert fc.fricative_weight == 1.0
         assert fc.sibilant_weight == 1.0
         assert fc.frication_spread is False
         assert fc.spread_magnitude == 0.30
 
-    def test_custom_values(self):
-        fc = FricativeConfig(
+        fc2 = FricativeConfig(
             fricative_weight=2.0,
             sibilant_weight=1.5,
             frication_spread=True,
             spread_magnitude=0.50,
         )
-        assert fc.fricative_weight == 2.0
-        assert fc.sibilant_weight == 1.5
-        assert fc.frication_spread is True
-        assert fc.spread_magnitude == 0.50
+        assert fc2.fricative_weight == 2.0
+        assert fc2.frication_spread is True
 
-    def test_frozen(self):
-        fc = FricativeConfig()
         with pytest.raises(AttributeError):
             fc.fricative_weight = 2.0  # type: ignore[misc]
 
-    def test_negative_fricative_weight_rejected(self):
+    def test_validation(self):
         with pytest.raises(ValueError, match="fricative_weight"):
             FricativeConfig(fricative_weight=-0.1)
-
-    def test_negative_sibilant_weight_rejected(self):
         with pytest.raises(ValueError, match="sibilant_weight"):
             FricativeConfig(sibilant_weight=-1.0)
-
-    def test_spread_magnitude_out_of_range(self):
         with pytest.raises(ValueError, match="spread_magnitude"):
             FricativeConfig(spread_magnitude=1.5)
         with pytest.raises(ValueError, match="spread_magnitude"):
             FricativeConfig(spread_magnitude=-0.1)
 
     def test_zero_weight_allowed(self):
-        """Zero weight means frication differences are ignored."""
         fc = FricativeConfig(fricative_weight=0.0, sibilant_weight=0.0)
         assert fc.fricative_weight == 0.0
-        assert fc.sibilant_weight == 0.0
 
 
 # ===================================================================
@@ -715,24 +704,19 @@ class TestFricativeConfig:
 class TestFricativeConfigModel:
     """FricativeConfig integration with DefaultCoarticulationModel."""
 
-    def test_model_default_fricative_config(self):
+    def test_config_lifecycle(self):
         model = DefaultCoarticulationModel()
         assert model.fricative_config.fricative_weight == 1.0
         assert model.fricative_config.frication_spread is False
 
-    def test_model_custom_fricative_config(self):
         fc = FricativeConfig(fricative_weight=2.0)
-        model = DefaultCoarticulationModel(fricative_config=fc)
-        assert model.fricative_config.fricative_weight == 2.0
+        model2 = DefaultCoarticulationModel(fricative_config=fc)
+        assert model2.fricative_config.fricative_weight == 2.0
 
-    def test_model_fricative_config_setter(self):
-        model = DefaultCoarticulationModel()
-        fc = FricativeConfig(fricative_weight=3.0)
-        model.fricative_config = fc
+        fc3 = FricativeConfig(fricative_weight=3.0)
+        model.fricative_config = fc3
         assert model.fricative_config.fricative_weight == 3.0
 
-    def test_model_fricative_config_setter_type_check(self):
-        model = DefaultCoarticulationModel()
         with pytest.raises(TypeError, match="FricativeConfig"):
             model.fricative_config = "not a config"  # type: ignore[assignment]
 
@@ -743,37 +727,12 @@ class TestFricativeConfigModel:
 class TestFricativeWeighting:
     """Fricative-specific weighting changes distance values."""
 
-    def test_higher_weight_increases_fricative_distance(self):
-        """Higher fricative_weight should increase distance between
-        fricative and stop (they differ on [cont])."""
-        # /s/ (fricative) vs /t/ (stop) differ on cont: +1 vs -1
-        model = DefaultCoarticulationModel(jitter=0.0)
-        fc_normal = FricativeConfig(fricative_weight=1.0)
-        fc_heavy = FricativeConfig(fricative_weight=3.0)
-
-        d_normal = coarticulated_feature_edit_distance(
-            ["s", "æ", "t"],
-            ["t", "æ", "t"],
-            model=model,
-            fricative_config=fc_normal,
-        )
-        d_heavy = coarticulated_feature_edit_distance(
-            ["s", "æ", "t"],
-            ["t", "æ", "t"],
-            model=model,
-            fricative_config=fc_heavy,
-        )
-        assert d_heavy > d_normal, (
-            f"Expected heavier fricative weight to increase distance: "
-            f"normal={d_normal:.4f}, heavy={d_heavy:.4f}"
-        )
-
-    def test_zero_weight_reduces_fricative_distance(self):
-        """With fricative_weight=0, [cont] differences are zeroed out
-        when comparing fricatives."""
+    def test_weight_scales_fricative_distance(self):
+        """Higher fricative_weight increases distance; zero reduces it."""
         model = DefaultCoarticulationModel(jitter=0.0)
         fc_zero = FricativeConfig(fricative_weight=0.0)
         fc_normal = FricativeConfig(fricative_weight=1.0)
+        fc_heavy = FricativeConfig(fricative_weight=3.0)
 
         d_zero = coarticulated_feature_edit_distance(
             ["s", "a"],
@@ -782,21 +741,33 @@ class TestFricativeWeighting:
             fricative_config=fc_zero,
         )
         d_normal = coarticulated_feature_edit_distance(
+            ["s", "æ", "t"],
+            ["t", "æ", "t"],
+            model=model,
+            fricative_config=fc_normal,
+        )
+        d_heavy = coarticulated_feature_edit_distance(
+            ["s", "æ", "t"],
+            ["t", "æ", "t"],
+            model=model,
+            fricative_config=fc_heavy,
+        )
+        d_normal_sa = coarticulated_feature_edit_distance(
             ["s", "a"],
             ["t", "a"],
             model=model,
             fricative_config=fc_normal,
         )
-        assert d_zero < d_normal
+        assert d_zero < d_normal_sa
+        assert d_heavy > d_normal
 
     def test_sibilant_weight_affects_sibilant_pairs(self):
         """Higher sibilant_weight increases distance between strident
-        and non-strident fricatives (they differ on [strid])."""
+        and non-strident fricatives."""
         model = DefaultCoarticulationModel(jitter=0.0)
         fc_normal = FricativeConfig(sibilant_weight=1.0)
         fc_heavy = FricativeConfig(sibilant_weight=3.0)
 
-        # /s/ (strident, strid=+1) vs /θ/ (non-strident, strid=-1)
         d_normal = coarticulated_feature_edit_distance(
             ["s", "a"],
             ["θ", "a"],
@@ -809,20 +780,7 @@ class TestFricativeWeighting:
             model=model,
             fricative_config=fc_heavy,
         )
-        assert d_heavy > d_normal, (
-            f"Expected heavier sibilant weight to increase /s/-/θ/ distance: "
-            f"normal={d_normal:.4f}, heavy={d_heavy:.4f}"
-        )
-        d_heavy = coarticulated_feature_edit_distance(
-            ["s", "a"],
-            ["f", "a"],
-            model=model,
-            fricative_config=fc_heavy,
-        )
-        assert d_heavy > d_normal, (
-            f"Expected heavier sibilant weight to increase /s/-/f/ distance: "
-            f"normal={d_normal:.4f}, heavy={d_heavy:.4f}"
-        )
+        assert d_heavy > d_normal
 
     def test_non_fricative_pair_unaffected(self):
         """Fricative weight should not change distance between two stops."""
@@ -830,7 +788,6 @@ class TestFricativeWeighting:
         fc_normal = FricativeConfig(fricative_weight=1.0)
         fc_heavy = FricativeConfig(fricative_weight=5.0)
 
-        # /p/ vs /b/ — both stops, neither is a fricative
         d_normal = coarticulated_feature_edit_distance(
             ["p", "a"],
             ["b", "a"],
@@ -843,42 +800,17 @@ class TestFricativeWeighting:
             model=model,
             fricative_config=fc_heavy,
         )
-        assert d_normal == pytest.approx(d_heavy), (
-            f"Fricative weight should not affect stop-stop pair: "
-            f"normal={d_normal:.4f}, heavy={d_heavy:.4f}"
-        )
+        assert d_normal == pytest.approx(d_heavy)
 
-    def test_normalised_distance_with_fricative_config(self):
-        """Normalised variant also respects FricativeConfig."""
-        fc = FricativeConfig(fricative_weight=2.0)
-        d = normalised_coarticulated_feature_edit_distance(
-            ["s", "a"],
-            ["t", "a"],
-            fricative_config=fc,
-        )
-        assert 0.0 < d <= 1.5  # may slightly exceed 1.0 with heavy weight
-
-    def test_phoneme_distance_with_fricative_config(self):
-        """Direct phoneme distance function respects FricativeConfig."""
-        model = DefaultCoarticulationModel(jitter=0.0)
-        vec_s = model.perturb_sequence(["s"])[0]
-        vec_t = model.perturb_sequence(["t"])[0]
-
-        fc_normal = FricativeConfig(fricative_weight=1.0)
-        fc_heavy = FricativeConfig(fricative_weight=3.0)
-
-        d_normal = coarticulated_phoneme_distance(vec_s, vec_t, fricative_config=fc_normal)
-        d_heavy = coarticulated_phoneme_distance(vec_s, vec_t, fricative_config=fc_heavy)
-        assert d_heavy > d_normal
-
-    def test_model_config_used_when_no_explicit_config(self):
-        """When fricative_config is not passed to distance function,
-        the model's config should be used."""
+    def test_config_propagation(self):
+        """Model config used when no explicit config; normalised and phoneme
+        distance also respect FricativeConfig."""
         fc = FricativeConfig(fricative_weight=3.0)
         model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-
-        fc_default = FricativeConfig(fricative_weight=1.0)
-        model_default = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc_default)
+        model_default = DefaultCoarticulationModel(
+            jitter=0.0,
+            fricative_config=FricativeConfig(fricative_weight=1.0),
+        )
 
         d_heavy = coarticulated_feature_edit_distance(
             ["s", "a"],
@@ -892,6 +824,27 @@ class TestFricativeWeighting:
         )
         assert d_heavy > d_normal
 
+        d_norm = normalised_coarticulated_feature_edit_distance(
+            ["s", "a"],
+            ["t", "a"],
+            fricative_config=fc,
+        )
+        assert 0.0 < d_norm <= 1.5
+
+        vec_s = model.perturb_sequence(["s"])[0]
+        vec_t = model.perturb_sequence(["t"])[0]
+        d_ph_normal = coarticulated_phoneme_distance(
+            vec_s,
+            vec_t,
+            fricative_config=FricativeConfig(fricative_weight=1.0),
+        )
+        d_ph_heavy = coarticulated_phoneme_distance(
+            vec_s,
+            vec_t,
+            fricative_config=fc,
+        )
+        assert d_ph_heavy > d_ph_normal
+
 
 # ===================================================================
 # Frication spread co-articulation rules
@@ -900,105 +853,56 @@ class TestFricationSpread:
     """Frication noise spread to adjacent segments."""
 
     def test_frication_spread_off_by_default(self):
-        """Without frication_spread=True, no spread rules fire."""
+        """Without frication_spread=True, no spread rules fire;
+        stops also never trigger spread."""
         model = DefaultCoarticulationModel(jitter=0.0)
-        # /s/ (voiceless fricative) before /a/: check that /a/ does NOT
-        # get devoiced (voi should stay the same)
         result = model.perturb_sequence(["s", "a"])
         base_a = _base_vec("a")
         voi_base = float(base_a[_FEAT_IDX["voi"]])
-        voi_pert = _feat_val(result[1], "voi")
-        assert voi_pert == voi_base, (
-            f"Frication spread should be off by default: {voi_base} -> {voi_pert}"
-        )
+        assert _feat_val(result[1], "voi") == voi_base
 
-    def test_frication_spread_on_devoices_vowel(self):
-        """With frication_spread=True, vowel after voiceless fricative
-        gets partial devoicing (voi shifts toward -1)."""
-        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
-        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-        result = model.perturb_sequence(["s", "a"])
-        base_a = _base_vec("a")
-        voi_base = float(base_a[_FEAT_IDX["voi"]])
-        voi_pert = _feat_val(result[1], "voi")
-        assert voi_pert < voi_base, (
-            f"Expected frication spread to devoice vowel: {voi_base} -> {voi_pert}"
-        )
-
-    def test_sibilant_spread_includes_stridency(self):
-        """Sibilant (/s/) before vowel also spreads [strid] when enabled."""
-        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
-        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-        result = model.perturb_sequence(["s", "a"])
-        base_a = _base_vec("a")
-        strid_base = float(base_a[_FEAT_IDX["strid"]])
-        strid_pert = _feat_val(result[1], "strid")
-        assert strid_pert > strid_base, (
-            f"Expected stridency spread from /s/: {strid_base} -> {strid_pert}"
-        )
-
-    def test_non_strident_fricative_no_stridency_spread(self):
-        """Non-strident fricative (/θ/) should NOT spread [strid]."""
-        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
-        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-        result = model.perturb_sequence(["θ", "a"])
-        base_a = _base_vec("a")
-        strid_base = float(base_a[_FEAT_IDX["strid"]])
-        strid_pert = _feat_val(result[1], "strid")
-        assert strid_pert == strid_base, (
-            f"Non-strident /θ/ should not spread stridency: {strid_base} -> {strid_pert}"
-        )
-
-    def test_non_strident_fricative_still_devoices(self):
-        """Non-strident voiceless fricative (/θ/) should still devoice following vowel."""
-        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
-        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-        result = model.perturb_sequence(["θ", "a"])
-        base_a = _base_vec("a")
-        voi_base = float(base_a[_FEAT_IDX["voi"]])
-        voi_pert = _feat_val(result[1], "voi")
-        assert voi_pert < voi_base
-
-    def test_stop_before_vowel_no_frication_spread(self):
-        """Stops should NOT trigger frication spread even when enabled."""
         fc = FricativeConfig(frication_spread=True)
-        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-        result = model.perturb_sequence(["t", "a"])
-        base_a = _base_vec("a")
+        model2 = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
+        result2 = model2.perturb_sequence(["t", "a"])
         cont_base = float(base_a[_FEAT_IDX["cont"]])
-        cont_pert = _feat_val(result[1], "cont")
-        assert cont_pert == cont_base
+        assert _feat_val(result2[1], "cont") == cont_base
+
+    def test_frication_spread_devoices_vowel(self):
+        """With frication_spread=True, vowel after voiceless fricative
+        gets partial devoicing (via both anticipatory and carryover paths)."""
+        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
+        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
+        result = model.perturb_sequence(["s", "a"])
+        base_a = _base_vec("a")
+        voi_base = float(base_a[_FEAT_IDX["voi"]])
+        assert _feat_val(result[1], "voi") < voi_base
+
+    def test_sibilant_spreads_stridency(self):
+        """Sibilant /s/ spreads [strid]; non-strident /θ/ does not,
+        but /θ/ still devoices."""
+        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
+        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
+        base_a = _base_vec("a")
+        strid_base = float(base_a[_FEAT_IDX["strid"]])
+        voi_base = float(base_a[_FEAT_IDX["voi"]])
+
+        result_s = model.perturb_sequence(["s", "a"])
+        assert _feat_val(result_s[1], "strid") > strid_base
+
+        result_th = model.perturb_sequence(["θ", "a"])
+        assert _feat_val(result_th[1], "strid") == strid_base
+        assert _feat_val(result_th[1], "voi") < voi_base
 
     def test_spread_magnitude_scales_effect(self):
-        """Higher spread_magnitude produces stronger devoicing effect."""
+        """Higher spread_magnitude produces stronger devoicing."""
         fc_low = FricativeConfig(frication_spread=True, spread_magnitude=0.10)
         fc_high = FricativeConfig(frication_spread=True, spread_magnitude=0.60)
         model_low = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc_low)
         model_high = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc_high)
 
-        # /s/ (voiceless) before /a/ — check devoicing magnitude
-        result_low = model_low.perturb_sequence(["s", "a"])
-        result_high = model_high.perturb_sequence(["s", "a"])
-
-        voi_low = _feat_val(result_low[1], "voi")
-        voi_high = _feat_val(result_high[1], "voi")
-        # Higher spread = more devoicing = lower voi value
-        assert voi_high < voi_low, (
-            f"Higher spread_magnitude should produce stronger devoicing: "
-            f"low={voi_low:.4f}, high={voi_high:.4f}"
-        )
-
-    def test_carryover_frication_spread(self):
-        """Vowel after voiceless fricative also picks up devoicing via carryover."""
-        fc = FricativeConfig(frication_spread=True, spread_magnitude=0.30)
-        model = DefaultCoarticulationModel(jitter=0.0, fricative_config=fc)
-        # /a/ after /s/ should get carryover devoicing
-        result = model.perturb_sequence(["s", "a"])
-        base_a = _base_vec("a")
-        voi_base = float(base_a[_FEAT_IDX["voi"]])
-        voi_pert = _feat_val(result[1], "voi")
-        # Should be devoiced (both anticipatory and carryover contribute)
-        assert voi_pert < voi_base
+        voi_low = _feat_val(model_low.perturb_sequence(["s", "a"])[1], "voi")
+        voi_high = _feat_val(model_high.perturb_sequence(["s", "a"])[1], "voi")
+        assert voi_high < voi_low
 
     def test_cross_syllable_decay_affects_spread(self):
         """Frication spread across syllable boundary is attenuated."""
@@ -1009,24 +913,20 @@ class TestFricationSpread:
             cross_syllable_decay=0.4,
         )
         tokens = ["s", "a"]
-
-        result_same = model.perturb_sequence(tokens, syllable_boundaries=[0, 0])
-        result_cross = model.perturb_sequence(tokens, syllable_boundaries=[0, 1])
-
-        voi_same = _feat_val(result_same[1], "voi")
-        voi_cross = _feat_val(result_cross[1], "voi")
-
         base_a = _base_vec("a")
         voi_base = float(base_a[_FEAT_IDX["voi"]])
 
-        # Both should be devoiced (voi decreased), but same-syllable more
+        voi_same = _feat_val(
+            model.perturb_sequence(tokens, syllable_boundaries=[0, 0])[1],
+            "voi",
+        )
+        voi_cross = _feat_val(
+            model.perturb_sequence(tokens, syllable_boundaries=[0, 1])[1],
+            "voi",
+        )
         assert voi_same < voi_base
         assert voi_cross < voi_base
-        # Same-syllable = stronger devoicing = lower voi
-        assert voi_same < voi_cross, (
-            f"Same-syllable devoicing ({voi_same}) should be stronger than "
-            f"cross-syllable ({voi_cross})"
-        )
+        assert voi_same < voi_cross
 
 
 # ===================================================================

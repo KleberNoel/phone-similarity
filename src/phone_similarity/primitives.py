@@ -22,7 +22,13 @@ from phone_similarity._dispatch import (
     HAS_PRANGE,
 )
 from phone_similarity._dispatch import (
+    cy_batch_pairwise_hamming as _c_batch_pairwise_hamming,
+)
+from phone_similarity._dispatch import (
     cy_feature_edit_distance as _c_feature_edit_distance,
+)
+from phone_similarity._dispatch import (
+    cy_hamming_similarity as _c_hamming_similarity,
 )
 from phone_similarity._dispatch import (
     cy_phoneme_feature_distance as _c_phoneme_feature_distance,
@@ -66,6 +72,8 @@ def hamming_similarity(a: bitarray, b: bitarray) -> float:
         ``1 - hamming_distance(a, b) / len(a)``.  Returns 1.0 for empty
         arrays.
     """
+    if HAS_CYTHON:
+        return _c_hamming_similarity(a, b)
     n = len(a)
     if n == 0:
         return 1.0
@@ -197,6 +205,8 @@ def batch_pairwise_hamming(
         Symmetric ``N x N`` matrix where ``result[i][j]`` is the Hamming
         similarity between ``arrays[i]`` and ``arrays[j]``.
     """
+    if HAS_CYTHON:
+        return _c_batch_pairwise_hamming(list(arrays))
     n = len(arrays)
     result = [[0.0] * n for _ in range(n)]
     for i in range(n):

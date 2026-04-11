@@ -694,48 +694,34 @@ def _tokenize_ipa(ipa_str: str, features: dict) -> list[str]:
 class TestPunCaseData:
     """Validate the pun collection data itself."""
 
-    def test_all_puns_have_unique_ids(self):
-        ids = [p.id for p in ALL_PUNS]
-        assert len(ids) == len(set(ids)), f"Duplicate ids: {[x for x in ids if ids.count(x) > 1]}"
-
-    def test_all_puns_have_ipa(self):
-        for p in ALL_PUNS:
-            assert p.source_ipa, f"{p.id}: missing source_ipa"
-            assert p.target_ipa, f"{p.id}: missing target_ipa"
-
-    def test_all_puns_have_valid_category(self):
-        valid = {
+    def test_pun_data_integrity(self):
+        """IDs unique, IPA present, categories valid, counts positive, distances in range."""
+        valid_categories = {
             "interlingual",
             "intralingual_mondegreen",
             "eggcorn",
             "homophonic_translation",
             "soramimi",
         }
+        ids = [p.id for p in ALL_PUNS]
+        assert len(ids) == len(set(ids)), f"Duplicate ids: {[x for x in ids if ids.count(x) > 1]}"
         for p in ALL_PUNS:
-            assert p.category in valid, f"{p.id}: invalid category '{p.category}'"
-
-    def test_word_counts_are_positive(self):
-        for p in ALL_PUNS:
+            assert p.source_ipa, f"{p.id}: missing source_ipa"
+            assert p.target_ipa, f"{p.id}: missing target_ipa"
+            assert p.category in valid_categories, f"{p.id}: invalid category '{p.category}'"
             assert p.n_words_source > 0, f"{p.id}: n_words_source must be > 0"
             assert p.n_words_target > 0, f"{p.id}: n_words_target must be > 0"
-
-    def test_max_expected_distance_in_range(self):
-        for p in ALL_PUNS:
             assert 0.0 <= p.max_expected_distance <= 1.0, (
                 f"{p.id}: max_expected_distance out of [0,1] range"
             )
 
-    @pytest.mark.parametrize("pun", ALL_PUNS, ids=[p.id for p in ALL_PUNS])
-    def test_source_ipa_tokenizable(self, pun):
-        """Source IPA should produce at least 1 token."""
-        tokens = _tokenize_ipa(pun.source_ipa, _SHARED_FEATURES)
-        assert len(tokens) >= 1, f"{pun.id}: source IPA '{pun.source_ipa}' produced no tokens"
-
-    @pytest.mark.parametrize("pun", ALL_PUNS, ids=[p.id for p in ALL_PUNS])
-    def test_target_ipa_tokenizable(self, pun):
-        """Target IPA should produce at least 1 token."""
-        tokens = _tokenize_ipa(pun.target_ipa, _SHARED_FEATURES)
-        assert len(tokens) >= 1, f"{pun.id}: target IPA '{pun.target_ipa}' produced no tokens"
+    def test_all_puns_ipa_tokenizable(self):
+        """Both source and target IPA should produce at least 1 token."""
+        for pun in ALL_PUNS:
+            src = _tokenize_ipa(pun.source_ipa, _SHARED_FEATURES)
+            assert len(src) >= 1, f"{pun.id}: source IPA '{pun.source_ipa}' produced no tokens"
+            tgt = _tokenize_ipa(pun.target_ipa, _SHARED_FEATURES)
+            assert len(tgt) >= 1, f"{pun.id}: target IPA '{pun.target_ipa}' produced no tokens"
 
 
 # ===================================================================

@@ -26,6 +26,11 @@ from phone_similarity.base_bit_array_specification import BaseBitArraySpecificat
 from phone_similarity.pretokenize import PreTokenizedDictionary
 from phone_similarity.primitives import normalised_feature_edit_distance
 
+# Shared pre-filter constants — must match Cython _core.pyx (ratio > 2.0,
+# overlap < 0.20) to guarantee identical results across Python/Cython paths.
+MAX_LENGTH_RATIO: float = 2.0
+MIN_OVERLAP_RATIO: float = 0.20
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,24 +52,20 @@ def _scan_one_language(args):
         max_distance,
     ) = args
 
-    # Re-check Cython availability in the worker process
-    try:
-        from phone_similarity._core import (  # type: ignore[import-not-found]
-            batch_dictionary_scan as _worker_batch_scan,
-        )
-
-        _worker_has_cython = True
-    except ImportError:
-        _worker_has_cython = False
-
-    try:
-        from phone_similarity._core import (  # type: ignore[import-not-found]
-            prange_batch_dictionary_scan as _worker_prange_scan,
-        )
-
-        _worker_has_prange = True
-    except ImportError:
-        _worker_has_prange = False
+    # Re-check Cython availability in the worker process via _dispatch
+    # (import once rather than duplicating try/except blocks)
+    from phone_similarity._dispatch import (
+        HAS_CYTHON_EXT as _worker_has_cython,
+    )
+    from phone_similarity._dispatch import (
+        HAS_PRANGE as _worker_has_prange,
+    )
+    from phone_similarity._dispatch import (
+        cy_batch_dictionary_scan as _worker_batch_scan,
+    )
+    from phone_similarity._dispatch import (
+        cy_prange_batch_dictionary_scan as _worker_prange_scan,
+    )
 
     results = []
     for phrase_key, source_ipa in phrases:
@@ -95,12 +96,19 @@ def _scan_one_language(args):
             )
         else:
             matches = []
+            source_set = set(source_tokens)
             for word, ipa, target_tokens in pre_tokenized:
                 target_len = len(target_tokens)
                 if target_len == 0:
                     continue
                 ratio = max(source_len, target_len) / min(source_len, target_len)
-                if ratio > 2.5:
+                if ratio > MAX_LENGTH_RATIO:
+                    continue
+                # Phoneme-set overlap pre-filter (matches Cython path)
+                target_set = set(target_tokens)
+                overlap = len(source_set & target_set)
+                min_uniq = min(len(source_set), len(target_set))
+                if min_uniq > 0 and overlap / min_uniq < MIN_OVERLAP_RATIO:
                     continue
                 d = normalised_feature_edit_distance(
                     source_tokens,
@@ -310,6 +318,8 @@ def reverse_dictionary_lookup(
     else:
         entries_iter = entries
 
+    source_set = set(source_tokens)
+
     for word, ipa, target_tokens in entries_iter:
         target_len = len(target_tokens)
         if target_len == 0:
@@ -317,7 +327,14 @@ def reverse_dictionary_lookup(
 
         # Quick length-ratio filter
         ratio = max(source_len, target_len) / min(source_len, target_len)
-        if ratio > 2.5:
+        if ratio > MAX_LENGTH_RATIO:
+            continue
+
+        # Phoneme-set overlap pre-filter (matches Cython path)
+        target_set = set(target_tokens)
+        overlap = len(source_set & target_set)
+        min_uniq = min(len(source_set), len(target_set))
+        if min_uniq > 0 and overlap / min_uniq < MIN_OVERLAP_RATIO:
             continue
 
         d = normalised_feature_edit_distance(source_tokens, target_tokens, merged_feats)

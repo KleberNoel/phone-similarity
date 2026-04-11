@@ -33,79 +33,40 @@ class TestSonorityScale:
     def scale(self):
         return SonorityScale()
 
-    @pytest.mark.parametrize(
-        "phoneme, expected_rank",
-        [
-            ("a", RANK_VOWEL),
-            ("i", RANK_VOWEL),
-            ("u", RANK_VOWEL),
-            ("e", RANK_VOWEL),
-            ("o", RANK_VOWEL),
-        ],
-    )
-    def test_vowels_rank_6(self, scale, phoneme, expected_rank):
-        assert scale.rank(phoneme) == expected_rank
-
-    @pytest.mark.parametrize(
-        "phoneme, expected_rank",
-        [
-            ("j", RANK_GLIDE),
-            ("w", RANK_GLIDE),
-        ],
-    )
-    def test_glides_rank_5(self, scale, phoneme, expected_rank):
-        assert scale.rank(phoneme) == expected_rank
-
-    @pytest.mark.parametrize(
-        "phoneme, expected_rank",
-        [
-            ("l", RANK_LIQUID),
-            ("r", RANK_LIQUID),
-            ("ɹ", RANK_LIQUID),
-            ("ɾ", RANK_LIQUID),
-        ],
-    )
-    def test_liquids_rank_4(self, scale, phoneme, expected_rank):
-        assert scale.rank(phoneme) == expected_rank
-
-    @pytest.mark.parametrize(
-        "phoneme, expected_rank",
-        [
-            ("m", RANK_NASAL),
-            ("n", RANK_NASAL),
-            ("ŋ", RANK_NASAL),
-        ],
-    )
-    def test_nasals_rank_3(self, scale, phoneme, expected_rank):
-        assert scale.rank(phoneme) == expected_rank
-
-    @pytest.mark.parametrize(
-        "phoneme, expected_rank",
-        [
-            ("f", RANK_FRICATIVE),
-            ("v", RANK_FRICATIVE),
-            ("s", RANK_FRICATIVE),
-            ("z", RANK_FRICATIVE),
-            ("ʃ", RANK_FRICATIVE),
-            ("θ", RANK_FRICATIVE),
-        ],
-    )
-    def test_fricatives_rank_2(self, scale, phoneme, expected_rank):
-        assert scale.rank(phoneme) == expected_rank
-
-    @pytest.mark.parametrize(
-        "phoneme, expected_rank",
-        [
-            ("p", RANK_STOP),
-            ("b", RANK_STOP),
-            ("t", RANK_STOP),
-            ("d", RANK_STOP),
-            ("k", RANK_STOP),
-            ("g", RANK_STOP),
-        ],
-    )
-    def test_stops_rank_1(self, scale, phoneme, expected_rank):
-        assert scale.rank(phoneme) == expected_rank
+    def test_sonority_ranks(self, scale):
+        """All phoneme classes have correct sonority ranks."""
+        expected = {
+            "a": RANK_VOWEL,
+            "i": RANK_VOWEL,
+            "u": RANK_VOWEL,
+            "e": RANK_VOWEL,
+            "o": RANK_VOWEL,
+            "j": RANK_GLIDE,
+            "w": RANK_GLIDE,
+            "l": RANK_LIQUID,
+            "r": RANK_LIQUID,
+            "ɹ": RANK_LIQUID,
+            "ɾ": RANK_LIQUID,
+            "m": RANK_NASAL,
+            "n": RANK_NASAL,
+            "ŋ": RANK_NASAL,
+            "f": RANK_FRICATIVE,
+            "v": RANK_FRICATIVE,
+            "s": RANK_FRICATIVE,
+            "z": RANK_FRICATIVE,
+            "ʃ": RANK_FRICATIVE,
+            "θ": RANK_FRICATIVE,
+            "p": RANK_STOP,
+            "b": RANK_STOP,
+            "t": RANK_STOP,
+            "d": RANK_STOP,
+            "k": RANK_STOP,
+            "g": RANK_STOP,
+        }
+        for phoneme, rank in expected.items():
+            assert scale.rank(phoneme) == rank, (
+                f"{phoneme!r}: expected rank {rank}, got {scale.rank(phoneme)}"
+            )
 
     def test_rank_tokens(self, scale):
         tokens = ["p", "a", "t"]

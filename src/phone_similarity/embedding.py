@@ -172,6 +172,31 @@ class PhoneticEmbedder:
 # ===================================================================
 
 
+def _embed_ptd(ptd, embedder: PhoneticEmbedder) -> np.ndarray:
+    """Embed all entries from a PreTokenizedDictionary into a matrix.
+
+    Shared helper used by both :class:`BruteForceIndex` and
+    :class:`KDTreeIndex` to avoid duplicating the PTD iteration logic.
+
+    Returns
+    -------
+    np.ndarray
+        Shape ``(N, embedder.dim)``, dtype ``float32``.
+    """
+    inv = ptd.inventory
+    ti = ptd.token_indices
+    off = ptd.offsets
+    n = len(ptd.words)
+    embs = np.empty((n, embedder.dim), dtype=np.float32)
+
+    for i in range(n):
+        start, end = int(off[i]), int(off[i + 1])
+        tokens = [inv[ti[j]] for j in range(start, end)]
+        embs[i] = embedder.embed_sequence(tokens)
+
+    return embs
+
+
 class BruteForceIndex:
     """Exact nearest-neighbor search over phonetic embeddings using numpy.
 
@@ -204,18 +229,10 @@ class BruteForceIndex:
 
         Iterates the PTD once and embeds each entry.
         """
-        inv = ptd.inventory
-        ti = ptd.token_indices
-        off = ptd.offsets
-        n = len(ptd.words)
-        embs = np.empty((n, embedder.dim), dtype=np.float32)
-
-        for i in range(n):
-            start, end = int(off[i]), int(off[i + 1])
-            tokens = [inv[ti[j]] for j in range(start, end)]
-            embs[i] = embedder.embed_sequence(tokens)
-
-        logger.info("Built BruteForceIndex: %d entries, %d dimensions", n, embedder.dim)
+        embs = _embed_ptd(ptd, embedder)
+        logger.info(
+            "Built BruteForceIndex: %d entries, %d dimensions", len(ptd.words), embedder.dim
+        )
         return cls(embs)
 
     @classmethod
@@ -308,18 +325,8 @@ class KDTreeIndex:
     @classmethod
     def from_ptd(cls, ptd, embedder: PhoneticEmbedder) -> KDTreeIndex:
         """Build from a :class:`PreTokenizedDictionary`."""
-        inv = ptd.inventory
-        ti = ptd.token_indices
-        off = ptd.offsets
-        n = len(ptd.words)
-        embs = np.empty((n, embedder.dim), dtype=np.float32)
-
-        for i in range(n):
-            start, end = int(off[i]), int(off[i + 1])
-            tokens = [inv[ti[j]] for j in range(start, end)]
-            embs[i] = embedder.embed_sequence(tokens)
-
-        logger.info("Built KDTreeIndex: %d entries, %d dimensions", n, embedder.dim)
+        embs = _embed_ptd(ptd, embedder)
+        logger.info("Built KDTreeIndex: %d entries, %d dimensions", len(ptd.words), embedder.dim)
         return cls(embs)
 
     def query(
@@ -400,10 +407,7 @@ def ann_dictionary_scan(
     list of (word, ipa, distance)
         Sorted by ascending normalised feature edit distance.
     """
-    from phone_similarity.primitives import (
-        _HAS_CYTHON,
-        normalised_feature_edit_distance,
-    )
+    from phone_similarity.primitives import normalised_feature_edit_distance
 
     source_len = len(source_tokens)
     if source_len == 0:
@@ -431,15 +435,7 @@ def ann_dictionary_scan(
             continue
 
         target_tokens = [inv[ti[j]] for j in range(start, end)]
-
-        if _HAS_CYTHON:
-            from phone_similarity._core import feature_edit_distance as _c_fed
-
-            raw = _c_fed(source_tokens, target_tokens, merged_feats)
-            ml = max(source_len, target_len)
-            d = raw / ml if ml > 0 else 0.0
-        else:
-            d = normalised_feature_edit_distance(source_tokens, target_tokens, merged_feats)
+        d = normalised_feature_edit_distance(source_tokens, target_tokens, merged_feats)
 
         if d <= max_distance:
             candidates.append((ptd.words[idx], ptd.ipas[idx], d))

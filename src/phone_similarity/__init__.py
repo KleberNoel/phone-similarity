@@ -51,8 +51,6 @@ For finer-grained imports, use the sub-modules:
   ``SonorityScale``, ``MaxOnsetSegmenter``, ``batch_syllabify``,
   ``stressed_syllable``, ``stress_pattern``, ``syllable_count``
 
-Legacy imports from :mod:`phone_similarity.distance` still work but emit
-a ``DeprecationWarning``.
 """
 
 from __future__ import annotations
