@@ -1,16 +1,12 @@
-import importlib
 import unicodedata
 import unittest
-from pathlib import Path
 
-import phone_similarity.language
 from phone_similarity.g2p.charsiu.load_dictionary import load_dictionary_tsv
-
-LANGUAGE_PATH = Path(phone_similarity.language.__file__).parent
+from phone_similarity.language import LANGUAGES
 
 # Symbols to ignore in dictionaries as they are typically non-phonemic markers
 # or redundant diacritics for the purpose of this v0/v1 check.
-IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?"
+IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?"
 
 
 # Phoneme *characters* that are valid IPA for a language but are not used in
@@ -35,27 +31,17 @@ def decompose_ligatures(s: str) -> str:
     }
     for k, v in replacements.items():
         s = s.replace(k, v)
-    # Standardize Latin 'g' to IPA 'ɡ' (U+0261) for comparison with dictionaries
     return s.replace("g", "ɡ")
-
-
-def rm_suffix(x: Path):  # pylint: disable=missing-function-docstring
-    return x.with_suffix("")
-
-
-def is_language_module(x: Path):  # pylint: disable=missing-function-docstring
-    return not (str(x.name).startswith("__") or str(x.name).startswith(".") or x.is_dir())
 
 
 class TestLanguagePhonemes(  # pylint: disable=missing-class-docstring
     unittest.TestCase
 ):
     def test_phonemes_in_dictionary(self):  # pylint: disable=missing-function-docstring
-        for lang_file in filter(is_language_module, LANGUAGE_PATH.iterdir()):
-            module_name = str(rm_suffix(lang_file).name)
+        for module_name in sorted(LANGUAGES.keys()):
             lang = module_name.replace("_", "-")
             with self.subTest(lang=lang):
-                lang_module = importlib.import_module(f"phone_similarity.language.{module_name}")
+                lang_module = LANGUAGES[module_name]
                 # Split up the phonemes into constituent parts (e.g. ignore dipthongs for now)
                 # Normalize to NFKD to decompose characters and handle diacritics consistently
                 module_phones: set[str] = set()

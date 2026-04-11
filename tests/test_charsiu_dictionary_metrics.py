@@ -3,6 +3,8 @@ import logging
 import pytest
 from bitarray import frozenbitarray
 
+from phone_similarity.language import LANGUAGES
+
 try:
     from tqdm import tqdm
 except ImportError:
@@ -67,8 +69,6 @@ def _run_dictionary_metrics(charsiu_code, spec):
     ids=["english", "french"],
 )
 def test_dictionary_metrics(charsiu_code, lang_module):
-    import importlib
-
-    mod = importlib.import_module(f"phone_similarity.language.{lang_module}")
+    mod = LANGUAGES[lang_module]
     spec = _make_spec(mod.VOWELS_SET, mod.PHONEME_FEATURES, mod.FEATURES)
     _run_dictionary_metrics(charsiu_code, spec)
