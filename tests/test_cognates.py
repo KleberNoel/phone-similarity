@@ -9,6 +9,8 @@ from itertools import combinations
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.cross_language import compare_cross_language
 from phone_similarity.distance_class import Distance

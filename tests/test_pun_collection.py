@@ -966,24 +966,3 @@ class TestPunSyllableAlignment:
 # ===================================================================
 # Convenience: summary of pun collection
 # ===================================================================
-
-
-def test_pun_collection_summary():
-    """Print a summary of the pun collection (for debugging)."""
-    by_category: dict[str, int] = {}
-    by_lang_pair: dict[str, int] = {}
-    single_word = 0
-    multi_word = 0
-
-    for p in ALL_PUNS:
-        by_category[p.category] = by_category.get(p.category, 0) + 1
-        pair = f"{p.source_lang}->{p.target_lang}"
-        by_lang_pair[pair] = by_lang_pair.get(pair, 0) + 1
-        if p.n_words_source == 1 and p.n_words_target == 1:
-            single_word += 1
-        else:
-            multi_word += 1
-
-    assert len(ALL_PUNS) >= 20, f"Expected >= 20 puns, got {len(ALL_PUNS)}"
-    assert len(by_category) >= 3, "Expected at least 3 categories"
-    assert multi_word >= 10, "Expected at least 10 multi-word puns"

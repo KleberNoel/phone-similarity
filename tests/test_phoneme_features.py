@@ -11,6 +11,8 @@ import unicodedata
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 from phone_similarity.clean_phones import clean_phones
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 from phone_similarity.language import LANGUAGES

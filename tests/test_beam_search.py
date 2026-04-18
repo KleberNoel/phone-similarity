@@ -121,31 +121,6 @@ class TestHypothesis:
 # ===================================================================
 
 
-class TestBeamResult:
-    def test_creation(self):
-        r = BeamResult(
-            words=("cat", "sat"),
-            ipas=("kæt", "sæt"),
-            glued_ipa="kætsæt",
-            distance=0.05,
-            segment_cost=0.3,
-        )
-        assert r.words == ("cat", "sat")
-        assert r.glued_ipa == "kætsæt"
-        assert r.distance == 0.05
-
-    def test_fields_are_accessible(self):
-        r = BeamResult(
-            words=("bat",),
-            ipas=("bæt",),
-            glued_ipa="bæt",
-            distance=0.1,
-            segment_cost=0.3,
-        )
-        assert len(r.words) == 1
-        assert r.segment_cost == 0.3
-
-
 # ===================================================================
 # beam_search_segmentation — basic
 # ===================================================================

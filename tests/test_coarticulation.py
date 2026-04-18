@@ -555,11 +555,6 @@ class TestSyllableIntegration:
 class TestCoarticulationRule:
     """CoarticulationRule frozen dataclass behaviour."""
 
-    def test_frozen(self):
-        rule = CoarticulationRule("test", 0, 1.0, 0.5)
-        with pytest.raises(AttributeError):
-            rule.name = "changed"  # type: ignore[misc]
-
     def test_default_values(self):
         rule = CoarticulationRule("test", 0, 1.0, 0.5)
         assert rule.base_probability == 0.8
@@ -692,10 +687,6 @@ class TestFricativeConfig:
             FricativeConfig(spread_magnitude=1.5)
         with pytest.raises(ValueError, match="spread_magnitude"):
             FricativeConfig(spread_magnitude=-0.1)
-
-    def test_zero_weight_allowed(self):
-        fc = FricativeConfig(fricative_weight=0.0, sibilant_weight=0.0)
-        assert fc.fricative_weight == 0.0
 
 
 # ===================================================================

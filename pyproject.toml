@@ -103,3 +103,6 @@ known-first-party = ["phone_similarity"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "slow: marks tests that load G2P dictionaries or process thousands of words (deselect with '-m \"not slow\"')",
+]

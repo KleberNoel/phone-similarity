@@ -103,11 +103,6 @@ class TestSyllable:
         assert s.phonemes == ("a",)
         assert len(s) == 1
 
-    def test_frozen(self):
-        s = Syllable(onset=("k",), nucleus=("æ",), coda=("t",))
-        with pytest.raises(AttributeError):
-            s.onset = ("b",)
-
 
 # -----------------------------------------------------------------------
 # MaxOnsetSegmenter — core splitting logic

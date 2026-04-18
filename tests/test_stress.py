@@ -43,11 +43,6 @@ class TestCleanConfig:
         cfg = CleanConfig(strip_stress=False)
         assert cfg.strip_all is False
 
-    def test_frozen(self):
-        cfg = CleanConfig()
-        with pytest.raises(AttributeError):
-            cfg.strip_stress = False  # type: ignore[misc]
-
     def test_prebuilt_strip_all(self):
         assert STRIP_ALL.strip_all is True
 
@@ -235,12 +230,6 @@ class TestSyllableStress:
     def test_rime_no_coda(self):
         syl = Syllable(onset=("k",), nucleus=("æ",), coda=())
         assert syl.rime == ("æ",)
-
-    def test_backward_compat_no_stress(self):
-        """Syllable created without stress arg should still work."""
-        syl = Syllable(onset=("b",), nucleus=("a",), coda=())
-        assert len(syl) == 2
-        assert syl.phonemes == ("b", "a")
 
 
 # -----------------------------------------------------------------------

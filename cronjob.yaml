@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: google-ping
+spec:
+  jobTemplate:
+    metadata:
+      name: google-ping
+    spec:
+      template:
+        metadata: {}
+        spec:
+          containers:
+          - command:
+            - curl -L 'www.google.com'
+            image: alpine:3.17.3
+            name: google-ping
+            resources: {}
+          restartPolicy: OnFailure
+  schedule: '*/2 * * * *'
+status: {}
