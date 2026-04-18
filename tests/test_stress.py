@@ -24,9 +24,7 @@ from phone_similarity.syllable import (
     syllable_count,
 )
 
-# -----------------------------------------------------------------------
 # CleanConfig
-# -----------------------------------------------------------------------
 
 
 class TestCleanConfig:
@@ -60,9 +58,7 @@ class TestCleanConfig:
         assert PRESERVE_ALL.strip_liaison is False
 
 
-# -----------------------------------------------------------------------
 # clean_phones backward compatibility
-# -----------------------------------------------------------------------
 
 
 class TestCleanPhonesBackwardCompat:
@@ -87,9 +83,7 @@ class TestCleanPhonesBackwardCompat:
         assert "e" in result
 
 
-# -----------------------------------------------------------------------
 # clean_phones with preserve_stress flag
-# -----------------------------------------------------------------------
 
 
 class TestCleanPhonesPreserveStress:
@@ -115,9 +109,7 @@ class TestCleanPhonesPreserveStress:
         assert "ˈ" in result
 
 
-# -----------------------------------------------------------------------
 # clean_phones with CleanConfig
-# -----------------------------------------------------------------------
 
 
 class TestCleanPhonesConfig:
@@ -163,9 +155,7 @@ class TestCleanPhonesConfig:
         assert result == "kɑːtːo"
 
 
-# -----------------------------------------------------------------------
 # extract_stress_marks
-# -----------------------------------------------------------------------
 
 
 class TestExtractStressMarks:
@@ -200,9 +190,7 @@ class TestExtractStressMarks:
         assert marks == [(0, "primary"), (0, "secondary")]
 
 
-# -----------------------------------------------------------------------
 # Syllable stress field
-# -----------------------------------------------------------------------
 
 
 class TestSyllableStress:
@@ -232,9 +220,7 @@ class TestSyllableStress:
         assert syl.rime == ("æ",)
 
 
-# -----------------------------------------------------------------------
 # syllabify with stress_marks
-# -----------------------------------------------------------------------
 
 
 class TestSyllabifyWithStress:
@@ -287,9 +273,7 @@ class TestSyllabifyWithStress:
         assert syls[2].stress == "secondary"
 
 
-# -----------------------------------------------------------------------
 # stressed_syllable helper
-# -----------------------------------------------------------------------
 
 
 class TestStressedSyllable:
@@ -322,9 +306,7 @@ class TestStressedSyllable:
         assert stressed_syllable([]) is None
 
 
-# -----------------------------------------------------------------------
 # stress_pattern helper
-# -----------------------------------------------------------------------
 
 
 class TestStressPattern:
@@ -353,9 +335,7 @@ class TestStressPattern:
         assert stress_pattern([]) == ""
 
 
-# -----------------------------------------------------------------------
 # syllable_count
-# -----------------------------------------------------------------------
 
 
 class TestSyllableCount:
@@ -373,9 +353,7 @@ class TestSyllableCount:
         assert syllable_count([]) == 0
 
 
-# -----------------------------------------------------------------------
 # Integration: extract_stress_marks + syllabify pipeline
-# -----------------------------------------------------------------------
 
 
 class TestStressPipeline:

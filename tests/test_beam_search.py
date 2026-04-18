@@ -20,9 +20,7 @@ from phone_similarity.beam_search import (
 )
 from phone_similarity.pretokenize import PreTokenizedDictionary
 
-# ===================================================================
 # Shared fixtures
-# ===================================================================
 
 # Minimal phoneme feature set for testing
 FEATURES = {
@@ -98,9 +96,7 @@ def small_ptd():
     return PreTokenizedDictionary.from_entries(entries)
 
 
-# ===================================================================
 # _Hypothesis ordering
-# ===================================================================
 
 
 class TestHypothesis:
@@ -116,14 +112,10 @@ class TestHypothesis:
         assert not (h2 < h1)
 
 
-# ===================================================================
 # BeamResult
-# ===================================================================
 
 
-# ===================================================================
 # beam_search_segmentation — basic
-# ===================================================================
 
 
 class TestBeamSearchSegmentation:
@@ -226,9 +218,7 @@ class TestBeamSearchSegmentation:
         assert results == []
 
 
-# ===================================================================
 # beam_search_segmentation — pruning
-# ===================================================================
 
 
 class TestBeamSearchPruning:
@@ -291,9 +281,7 @@ class TestBeamSearchPruning:
         assert len(results) >= 1
 
 
-# ===================================================================
 # beam_search_segmentation — quality checks
-# ===================================================================
 
 
 class TestBeamSearchQuality:
@@ -352,9 +340,7 @@ class TestBeamSearchQuality:
         assert len(word_tuples) == len(set(word_tuples))
 
 
-# ===================================================================
 # beam_search_phrases — batch interface
-# ===================================================================
 
 
 class TestBeamSearchPhrases:
@@ -436,9 +422,7 @@ class TestBeamSearchPhrases:
         assert results == []
 
 
-# ===================================================================
 # Integration test with real language data
-# ===================================================================
 
 
 class TestBeamSearchIntegration:

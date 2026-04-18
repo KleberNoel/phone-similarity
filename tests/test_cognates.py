@@ -19,9 +19,7 @@ from phone_similarity.language import LANGUAGES
 from phone_similarity.primitives import normalised_feature_edit_distance
 from phone_similarity.universal_features import UniversalFeatureEncoder
 
-# -----------------------------------------------------------------------
 # Fixtures
-# -----------------------------------------------------------------------
 
 # Charsiu dict code -> language module name
 _LANG_MAP: dict[str, str] = {
@@ -91,9 +89,7 @@ def cognate_ipa(g2ps) -> dict[str, dict[str, str]]:
     return result
 
 
-# -----------------------------------------------------------------------
 # Tests
-# -----------------------------------------------------------------------
 
 
 class TestCognateDistances:

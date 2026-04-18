@@ -17,7 +17,6 @@ from phone_similarity.clean_phones import clean_phones
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 from phone_similarity.language import LANGUAGES
 
-# ---------------------------------------------------------------------------
 
 IGNORE_SYMBOLS = ",.[]'ˈˌːˑ̥̩̯̆̃̍͜͡|…\u200b\u2060:ʰʷᶣˀˤ̪̠?\u201c\u201d\u0022"
 

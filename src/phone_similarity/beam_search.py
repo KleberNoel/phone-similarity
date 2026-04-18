@@ -47,9 +47,7 @@ from phone_similarity.primitives import (
     phoneme_feature_distance,
 )
 
-# ===================================================================
 # Pre-computed phoneme distance matrix
-# ===================================================================
 
 _MISSING = -1  # sentinel for unknown phonemes
 
@@ -95,9 +93,7 @@ def _build_dist_matrix(
     return ph_to_idx, dist_flat, dim
 
 
-# ===================================================================
 # Phoneme trie for fast approximate dictionary matching
-# ===================================================================
 
 
 class _TrieNode:

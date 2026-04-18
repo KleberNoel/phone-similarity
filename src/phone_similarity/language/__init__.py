@@ -32,16 +32,12 @@ if TYPE_CHECKING:
     from phone_similarity.distance_class import Distance
     from phone_similarity.language._loader import _LanguageNamespace
 
-# ---------------------------------------------------------------------------
 # Available languages (from JSON keys, no data loaded yet)
-# ---------------------------------------------------------------------------
 LANGUAGE_FILES: list[str] = sorted(available_languages())
 _LANGUAGE_KEY_SET: frozenset[str] = frozenset(LANGUAGE_FILES)
 
 
-# ---------------------------------------------------------------------------
 # Registry (Singleton + Lazy Loading + Builder)
-# ---------------------------------------------------------------------------
 class LanguageRegistry:
     """Registry of language data with lazy loading and spec building.
 
@@ -186,7 +182,5 @@ class LanguageRegistry:
         return Distance(self.build_spec(key, reduce_features=reduce_features))
 
 
-# ---------------------------------------------------------------------------
 # Singleton instance -- the public API
-# ---------------------------------------------------------------------------
 LANGUAGES = LanguageRegistry()

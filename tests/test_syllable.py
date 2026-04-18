@@ -21,9 +21,7 @@ from phone_similarity.syllable import (
     syllabify,
 )
 
-# -----------------------------------------------------------------------
 # SonorityScale
-# -----------------------------------------------------------------------
 
 
 class TestSonorityScale:
@@ -84,9 +82,7 @@ class TestSonorityScale:
         assert rm["n"] == RANK_NASAL
 
 
-# -----------------------------------------------------------------------
 # Syllable dataclass
-# -----------------------------------------------------------------------
 
 
 class TestSyllable:
@@ -104,9 +100,7 @@ class TestSyllable:
         assert len(s) == 1
 
 
-# -----------------------------------------------------------------------
 # MaxOnsetSegmenter — core splitting logic
-# -----------------------------------------------------------------------
 
 
 class TestMaxOnsetSegmenter:
@@ -225,9 +219,7 @@ class TestMaxOnsetSegmenter:
         assert result[2] == Syllable(onset=("n",), nucleus=("a",), coda=())
 
 
-# -----------------------------------------------------------------------
 # High-level syllabify() + batch_syllabify()
-# -----------------------------------------------------------------------
 
 
 class TestSyllabifyFunction:
@@ -291,9 +283,7 @@ class TestBatchSyllabify:
         assert all(isinstance(s, Syllable) for s in results[0])
 
 
-# -----------------------------------------------------------------------
 # Integration with language modules
-# -----------------------------------------------------------------------
 
 
 class TestLanguageIntegration:

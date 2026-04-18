@@ -30,9 +30,7 @@ import json
 import os
 from typing import Any
 
-# ---------------------------------------------------------------------------
 # Singleton raw-data cache (loaded lazily from _data.json)
-# ---------------------------------------------------------------------------
 _DATA: dict[str, Any] | None = None
 _DATA_PATH = os.path.join(os.path.dirname(__file__), "_data.json")
 
@@ -50,9 +48,7 @@ def available_languages() -> frozenset[str]:
     return frozenset(_ensure_loaded())
 
 
-# ---------------------------------------------------------------------------
 # Namespace object returned by get_language()
-# ---------------------------------------------------------------------------
 class _LanguageNamespace:
     """Lightweight stand-in for the old per-language module.
 
@@ -93,9 +89,7 @@ class _LanguageNamespace:
         return f"<Language {self._key!r}: {n} phonemes>"
 
 
-# ---------------------------------------------------------------------------
 # Feature derivation (reduced mode)
-# ---------------------------------------------------------------------------
 def derive_features(
     vowels_set: set[str],
     phoneme_features: dict[str, dict[str, bool | str]],
@@ -139,9 +133,7 @@ def derive_features(
     return result
 
 
-# ---------------------------------------------------------------------------
 # Per-language cache (keyed by (lang, reduce_features))
-# ---------------------------------------------------------------------------
 _NS_CACHE: dict[tuple[str, bool], _LanguageNamespace] = {}
 
 

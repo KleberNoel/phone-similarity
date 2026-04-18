@@ -43,9 +43,6 @@ g2p = [
 alignment = [
     "jiwer>=4",
 ]
-ann = [
-    "scipy>=1.10",
-]
 dev = [
     "Cython>=3.0",
     "pytest>=7",

@@ -42,9 +42,7 @@ from phone_similarity.beam_search import (
 )
 from phone_similarity.pretokenize import PreTokenizedDictionary
 
-# ===================================================================
 # Pun data structures
-# ===================================================================
 
 
 @dataclass(frozen=True)
@@ -96,13 +94,9 @@ class PunCase:
     max_expected_distance: float = 0.50
 
 
-# ===================================================================
 # Curated pun collection
-# ===================================================================
 
-# ------------------------------------------------------------------
 # 1. Inter-lingual homophonic translations (eng <-> fra)
-# ------------------------------------------------------------------
 
 INTERLINGUAL_ENG_FRA = [
     PunCase(
@@ -182,9 +176,7 @@ INTERLINGUAL_ENG_FRA = [
     ),
 ]
 
-# ------------------------------------------------------------------
 # 2. Inter-lingual homophonic translations (eng <-> deu)
-# ------------------------------------------------------------------
 
 INTERLINGUAL_ENG_DEU = [
     PunCase(
@@ -204,9 +196,7 @@ INTERLINGUAL_ENG_DEU = [
     ),
 ]
 
-# ------------------------------------------------------------------
 # 3. Intra-lingual mondegreens (English)
-# ------------------------------------------------------------------
 
 MONDEGREENS_ENG = [
     PunCase(
@@ -331,9 +321,7 @@ MONDEGREENS_ENG = [
     ),
 ]
 
-# ------------------------------------------------------------------
 # 4. Eggcorns (English intra-lingual)
-# ------------------------------------------------------------------
 
 EGGCORNS_ENG = [
     PunCase(
@@ -413,9 +401,7 @@ EGGCORNS_ENG = [
     ),
 ]
 
-# ------------------------------------------------------------------
 # 5. Cross-language soramimi (Romanian -> Japanese)
-# ------------------------------------------------------------------
 
 SORAMIMI = [
     PunCase(
@@ -436,9 +422,7 @@ SORAMIMI = [
     ),
 ]
 
-# ------------------------------------------------------------------
 # 6. Bilingual puns (misc)
-# ------------------------------------------------------------------
 
 BILINGUAL_PUNS_MISC = [
     PunCase(
@@ -489,9 +473,7 @@ BILINGUAL_PUNS_MISC = [
     ),
 ]
 
-# ------------------------------------------------------------------
 # 7. Dog Latin / cross-script homophones
-# ------------------------------------------------------------------
 
 DOG_LATIN = [
     PunCase(
@@ -513,9 +495,7 @@ DOG_LATIN = [
 ]
 
 
-# ===================================================================
 # All puns combined
-# ===================================================================
 
 ALL_PUNS: list[PunCase] = (
     INTERLINGUAL_ENG_FRA
@@ -528,9 +508,7 @@ ALL_PUNS: list[PunCase] = (
 )
 
 
-# ===================================================================
 # Fixtures
-# ===================================================================
 
 # Minimal phoneme feature set that covers the phonemes used in the pun
 # collection.  This avoids requiring real language modules / ONNX model.
@@ -686,9 +664,7 @@ def _tokenize_ipa(ipa_str: str, features: dict) -> list[str]:
     return tokens
 
 
-# ===================================================================
 # Tests: PunCase data integrity
-# ===================================================================
 
 
 class TestPunCaseData:
@@ -724,9 +700,7 @@ class TestPunCaseData:
             assert len(tgt) >= 1, f"{pun.id}: target IPA '{pun.target_ipa}' produced no tokens"
 
 
-# ===================================================================
 # Tests: Feature edit distance between pun pairs
-# ===================================================================
 
 
 class TestPunFeatureDistance:
@@ -753,9 +727,7 @@ class TestPunFeatureDistance:
         )
 
 
-# ===================================================================
 # Tests: Beam search can find pun targets in a mock dictionary
-# ===================================================================
 
 
 class TestPunBeamSearch:
@@ -883,9 +855,7 @@ class TestPunBeamSearch:
         )
 
 
-# ===================================================================
 # Tests: Syllable boundary analysis for pun pairs
-# ===================================================================
 
 
 class TestPunSyllableAlignment:
@@ -963,6 +933,4 @@ class TestPunSyllableAlignment:
         )
 
 
-# ===================================================================
 # Convenience: summary of pun collection
-# ===================================================================

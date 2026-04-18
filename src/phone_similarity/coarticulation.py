@@ -68,9 +68,7 @@ import random
 from collections.abc import Sequence
 from typing import Protocol
 
-# ---------------------------------------------------------------------------
 # Cython dispatch (imported once; flag checked in hot functions)
-# ---------------------------------------------------------------------------
 from phone_similarity._dispatch import (
     HAS_CYTHON_COARTICULATION,
     cy_coarticulated_feature_edit_distance,
@@ -80,9 +78,7 @@ from phone_similarity.universal_features import (
     UniversalFeatureEncoder,
 )
 
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 _NUM_FEATURES = len(PANPHON_FEATURE_NAMES)
 _FEAT_IDX = {name: i for i, name in enumerate(PANPHON_FEATURE_NAMES)}
 
@@ -102,9 +98,7 @@ _ROUND = _FEAT_IDX["round"]
 _STRID = _FEAT_IDX["strid"]
 _DELREL = _FEAT_IDX["delrel"]
 
-# ---------------------------------------------------------------------------
 # Encode cache — avoids repeated NFD + diacritic-strip fallback per token
-# ---------------------------------------------------------------------------
 _encode = UniversalFeatureEncoder.encode
 _encode_cache: dict[str, tuple[int, ...]] = {}
 
@@ -118,9 +112,7 @@ def _cached_encode(phoneme: str) -> tuple[int, ...]:
     return vec
 
 
-# ---------------------------------------------------------------------------
 # FricativeConfig dataclass
-# ---------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)
 class FricativeConfig:
     """Configuration for fricative-specific weighting in distance computation.
@@ -174,9 +166,7 @@ class FricativeConfig:
 _DEFAULT_FRICATIVE_CONFIG = FricativeConfig()
 
 
-# ---------------------------------------------------------------------------
 # Co-articulation rule dataclass
-# ---------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)
 class CoarticulationRule:
     """A single co-articulation perturbation rule.
@@ -207,9 +197,7 @@ class CoarticulationRule:
     within_syllable_only: bool = False
 
 
-# ---------------------------------------------------------------------------
 # Strategy protocol
-# ---------------------------------------------------------------------------
 class CoarticulationStrategy(Protocol):
     """Abstract protocol for co-articulation models."""
 
@@ -222,9 +210,7 @@ class CoarticulationStrategy(Protocol):
         ...
 
 
-# ---------------------------------------------------------------------------
 # Default co-articulation model
-# ---------------------------------------------------------------------------
 class DefaultCoarticulationModel:
     """Co-articulation model with deterministic rules and stochastic jitter.
 
@@ -587,15 +573,11 @@ class DefaultCoarticulationModel:
         return boundaries
 
 
-# ---------------------------------------------------------------------------
 # Module-level convenience instance
-# ---------------------------------------------------------------------------
 _DEFAULT_MODEL = DefaultCoarticulationModel(jitter=0.0)
 
 
-# ---------------------------------------------------------------------------
 # Distance functions with co-articulation
-# ---------------------------------------------------------------------------
 def _coarticulated_vectors(
     tokens: Sequence[str],
     model: DefaultCoarticulationModel | None = None,

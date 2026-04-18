@@ -11,7 +11,6 @@ Computes feature-weighted edit distances between IPA transcriptions, scans forei
 - Pre-tokenized dictionary caching with automatic disk invalidation
 - Parallel multi-language scanning via `ProcessPoolExecutor`
 - Beam search segmentation for multi-word foreign phrase matching
-- Phonetic embeddings with brute-force or KD-tree ANN pre-filtering
 - 100+ languages via CharsiuG2P (dictionary lookup + ONNX neural inference)
 
 ## Installation
@@ -26,7 +25,6 @@ pip install phone-similarity
 |-------|---------|------|
 | Cython acceleration | `pip install phone-similarity[dev]` then `python setup.py build_ext --inplace` | Compiled C hot paths |
 | G2P support | `pip install phone-similarity[g2p]` | transformers + ONNX Runtime |
-| ANN support | `pip install phone-similarity[ann]` | scipy |
 
 ### From source
 
@@ -154,7 +152,6 @@ IPA string
 | `inversion` | Reverse feature-to-phoneme lookup |
 | `cross_language` | Pairwise comparison across languages |
 | `beam_search` | Multi-word segmentation |
-| `embedding` | `PhoneticEmbedder`, brute-force and KD-tree indices |
 | `coarticulation` | Co-articulation distance modelling |
 | `syllable` | Syllabification, sonority scale, max onset segmenter |
 | `universal_features` | Panphon-backed feature encoder |

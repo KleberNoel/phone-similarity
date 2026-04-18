@@ -33,23 +33,17 @@ from typing import Union
 
 import panphon
 
-# ---------------------------------------------------------------------------
 # Singleton FeatureTable (loaded once, reused everywhere)
-# ---------------------------------------------------------------------------
 _FT = panphon.FeatureTable()
 
-# ---------------------------------------------------------------------------
 # 24-feature names in canonical Panphon order
-# ---------------------------------------------------------------------------
 PANPHON_FEATURE_NAMES: tuple[str, ...] = tuple(_FT.names)
 
 _NUM_FEATURES = len(PANPHON_FEATURE_NAMES)
 _ZERO_VECTOR: tuple[int, ...] = (0,) * _NUM_FEATURES
 
 
-# ---------------------------------------------------------------------------
 # Encoder
-# ---------------------------------------------------------------------------
 class UniversalFeatureEncoder:
     """Encode IPA phonemes as 24-dimensional ternary feature vectors.
 
@@ -182,9 +176,7 @@ class UniversalFeatureEncoder:
         return merged
 
 
-# ---------------------------------------------------------------------------
 # Internal helper
-# ---------------------------------------------------------------------------
 
 
 def _resolve(phoneme: str) -> tuple[int, ...] | None:
@@ -201,9 +193,7 @@ def _resolve(phoneme: str) -> tuple[int, ...] | None:
     return tuple(seg[name] for name in PANPHON_FEATURE_NAMES)
 
 
-# ---------------------------------------------------------------------------
 # Module-level convenience aliases
-# ---------------------------------------------------------------------------
 
 encode_phoneme = UniversalFeatureEncoder.encode
 phoneme_feature_dict = UniversalFeatureEncoder.feature_dict

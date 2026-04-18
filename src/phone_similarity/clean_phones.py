@@ -26,9 +26,7 @@ import dataclasses
 import re
 import unicodedata
 
-# ---------------------------------------------------------------------------
 # Marker character sets
-# ---------------------------------------------------------------------------
 _STRESS_CHARS = "ˈˌ"  # primary + secondary stress
 _LENGTH_CHARS = "ːˑ"  # long + half-long
 _LIAISON_CHARS = "‿"  # liaison / linking
@@ -42,9 +40,7 @@ _PAT_LIAISON = re.compile(f"[{re.escape(_LIAISON_CHARS)}]")
 _STRIP_PATTERN = re.compile(r"[ˈˌːˑ‿]")
 
 
-# ---------------------------------------------------------------------------
 # CleanConfig
-# ---------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)
 class CleanConfig:
     """Per-language normalisation settings.
@@ -83,9 +79,7 @@ class CleanConfig:
         return self.strip_stress and self.strip_length and self.strip_liaison
 
 
-# ---------------------------------------------------------------------------
 # Pre-built configs
-# ---------------------------------------------------------------------------
 STRIP_ALL = CleanConfig()
 """Default config: strip everything (backward compatible)."""
 
@@ -103,9 +97,7 @@ PRESERVE_ALL = CleanConfig(
 """Keep all suprasegmental markers (only NFKD-normalise)."""
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 def clean_phones(
     ipa: str,
     *,
@@ -152,9 +144,7 @@ def clean_phones(
     return ipa
 
 
-# ---------------------------------------------------------------------------
 # Stress extraction helpers
-# ---------------------------------------------------------------------------
 _PRIMARY = "ˈ"
 _SECONDARY = "ˌ"
 

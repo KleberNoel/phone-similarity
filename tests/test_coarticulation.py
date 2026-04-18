@@ -31,9 +31,7 @@ from phone_similarity.universal_features import (
 )
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 def _feat_val(vec: tuple[float, ...], name: str) -> float:
     """Extract a named feature value from a vector."""
     return vec[_FEAT_IDX[name]]
@@ -44,9 +42,7 @@ def _base_vec(phoneme: str) -> tuple[int, ...]:
     return UniversalFeatureEncoder.encode(phoneme)
 
 
-# ===================================================================
 # Construction & validation
-# ===================================================================
 class TestConstruction:
     """DefaultCoarticulationModel construction and validation."""
 
@@ -93,9 +89,7 @@ class TestConstruction:
         assert model.perturb_sequence([]) == []
 
 
-# ===================================================================
 # Feature vector basics
-# ===================================================================
 class TestFeatureVectors:
     """Perturbed vectors have correct shape and properties."""
 
@@ -126,9 +120,7 @@ class TestFeatureVectors:
                 assert -1.0 <= val <= 1.0
 
 
-# ===================================================================
 # Anticipatory coarticulation
-# ===================================================================
 class TestAnticipatory:
     """Consonant features shift toward following vowel."""
 
@@ -188,9 +180,7 @@ class TestAnticipatory:
         assert sum([hi_shifted, round_shifted, back_shifted]) >= 2
 
 
-# ===================================================================
 # Carryover coarticulation
-# ===================================================================
 class TestCarryover:
     """Vowel features shift due to preceding consonant."""
 
@@ -250,9 +240,7 @@ class TestCarryover:
         assert nas_pert == nas_base
 
 
-# ===================================================================
 # Consonant cluster assimilation
-# ===================================================================
 class TestAssimilation:
     """Consonant-consonant cluster effects."""
 
@@ -305,9 +293,7 @@ class TestAssimilation:
         assert shifted, "Expected at least one place feature to shift"
 
 
-# ===================================================================
 # Syllable boundary effects
-# ===================================================================
 class TestSyllableBoundary:
     """Effects attenuate across syllable boundaries."""
 
@@ -368,9 +354,7 @@ class TestSyllableBoundary:
         assert boundaries == [0, 0, 0, 1, 1]
 
 
-# ===================================================================
 # Jitter / randomness
-# ===================================================================
 class TestJitter:
     """Stochastic perturbation behaviour."""
 
@@ -419,9 +403,7 @@ class TestJitter:
             assert m1.perturb_sequence(tokens) == m2.perturb_sequence(tokens)
 
 
-# ===================================================================
 # Co-articulated distance functions
-# ===================================================================
 class TestCoarticulatedDistance:
     """Distance computation with co-articulation."""
 
@@ -490,9 +472,7 @@ class TestCoarticulatedDistance:
         assert dist == pytest.approx(1.0)
 
 
-# ===================================================================
 # Integration with syllable module
-# ===================================================================
 class TestSyllableIntegration:
     """Co-articulation with syllable boundary information."""
 
@@ -549,9 +529,7 @@ class TestSyllableIntegration:
             )
 
 
-# ===================================================================
 # CoarticulationRule dataclass
-# ===================================================================
 class TestCoarticulationRule:
     """CoarticulationRule frozen dataclass behaviour."""
 
@@ -568,9 +546,7 @@ class TestCoarticulationRule:
         assert rule.within_syllable_only is True
 
 
-# ===================================================================
 # Real-world phonological scenarios
-# ===================================================================
 class TestRealWorldScenarios:
     """Scenarios grounded in actual phonological phenomena."""
 
@@ -653,9 +629,7 @@ class TestRealWorldScenarios:
         assert nas_pert > nas_base
 
 
-# ===================================================================
 # FricativeConfig dataclass
-# ===================================================================
 class TestFricativeConfig:
     """FricativeConfig frozen dataclass construction and validation."""
 
@@ -689,9 +663,7 @@ class TestFricativeConfig:
             FricativeConfig(spread_magnitude=-0.1)
 
 
-# ===================================================================
 # FricativeConfig integration with model
-# ===================================================================
 class TestFricativeConfigModel:
     """FricativeConfig integration with DefaultCoarticulationModel."""
 
@@ -712,9 +684,7 @@ class TestFricativeConfigModel:
             model.fricative_config = "not a config"  # type: ignore[assignment]
 
 
-# ===================================================================
 # FricativeConfig weighting in distance computation
-# ===================================================================
 class TestFricativeWeighting:
     """Fricative-specific weighting changes distance values."""
 
@@ -837,9 +807,7 @@ class TestFricativeWeighting:
         assert d_ph_heavy > d_ph_normal
 
 
-# ===================================================================
 # Frication spread co-articulation rules
-# ===================================================================
 class TestFricationSpread:
     """Frication noise spread to adjacent segments."""
 
@@ -920,9 +888,7 @@ class TestFricationSpread:
         assert voi_same < voi_cross
 
 
-# ===================================================================
 # Real-world fricative scenarios
-# ===================================================================
 class TestFricativeRealWorld:
     """Real phonological scenarios involving fricatives."""
 

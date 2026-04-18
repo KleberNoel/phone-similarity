@@ -17,9 +17,7 @@ from phone_similarity.universal_features import (
     universal_phoneme_distance,
 )
 
-# -----------------------------------------------------------------------
 # Encoder basics
-# -----------------------------------------------------------------------
 
 
 class TestEncode:
@@ -97,9 +95,7 @@ class TestFeatureDict:
         assert all(v in (-1, 0, 1) for v in fd.values())
 
 
-# -----------------------------------------------------------------------
 # Distance
-# -----------------------------------------------------------------------
 
 
 class TestUniversalPhonemeDistance:
@@ -132,9 +128,7 @@ class TestUniversalPhonemeDistance:
         assert d == 0.0
 
 
-# -----------------------------------------------------------------------
 # Inventory conversion & merging
-# -----------------------------------------------------------------------
 
 
 class TestConvertInventory:
@@ -206,9 +200,7 @@ class TestMergeInventories:
             )
 
 
-# -----------------------------------------------------------------------
 # Integration with existing API
-# -----------------------------------------------------------------------
 
 
 class TestCrossLanguageIntegration:
