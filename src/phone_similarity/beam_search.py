@@ -30,22 +30,18 @@ Pruning
   the remaining source sub-sequence by more than ``max_len_ratio`` (default 3.0).
 """
 
-from __future__ import annotations
-
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Union
 
-from phone_similarity._dispatch import (
-    HAS_CYTHON_DIST_MATRIX,
-    cy_build_phoneme_dist_matrix,
-)
-from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
+from phone_similarity._dispatch import (HAS_CYTHON_DIST_MATRIX,
+                                        cy_build_phoneme_dist_matrix)
+from phone_similarity.base_bit_array_specification import \
+    BaseBitArraySpecification
 from phone_similarity.pretokenize import PreTokenizedDictionary
-from phone_similarity.primitives import (
-    normalised_feature_edit_distance,
-    phoneme_feature_distance,
-)
+from phone_similarity.primitives import (normalised_feature_edit_distance,
+                                         phoneme_feature_distance)
 
 # Pre-computed phoneme distance matrix
 
@@ -168,7 +164,9 @@ def _trie_expand(
     unk_idx = dim - 1  # UNK sentinel is the last row/col
 
     # Pre-resolve source token indices for the remaining segment
-    src_indices = [ph_to_idx.get(source_tokens[consumed + i], unk_idx) for i in range(remaining)]
+    src_indices = [
+        ph_to_idx.get(source_tokens[consumed + i], unk_idx) for i in range(remaining)
+    ]
 
     # Initial DP column (depth 0): source prefix vs empty target = deletions
     init_col = [float(i) for i in range(remaining + 1)]
@@ -267,7 +265,6 @@ class BeamResult:
 
 def beam_search_segmentation(
     source_tokens: Sequence[str],
-    source_spec: BaseBitArraySpecification,
     source_features: dict[str, dict[str, Union[bool, str]]],
     target_ptd: PreTokenizedDictionary,
     target_spec: BaseBitArraySpecification,
@@ -287,9 +284,6 @@ def beam_search_segmentation(
     ----------
     source_tokens : sequence of str
         Tokenised IPA of the source phrase (e.g. English).
-    source_spec : BaseBitArraySpecification
-        Specification for the source language (used only for end-to-end
-        re-scoring via ``ipa_tokenizer``).
     source_features : dict
         ``PHONEME_FEATURES`` of the source language.
     target_ptd : PreTokenizedDictionary
@@ -338,7 +332,9 @@ def beam_search_segmentation(
     if not trie_root.children:
         return []
 
-    beam: list[_Hypothesis] = [_Hypothesis(score=0.0, consumed=0, words=(), ipas=(), raw_cost=0.0)]
+    beam: list[_Hypothesis] = [
+        _Hypothesis(score=0.0, consumed=0, words=(), ipas=(), raw_cost=0.0)
+    ]
 
     complete: list[_Hypothesis] = []
     best_complete_score = float("inf")
@@ -346,6 +342,7 @@ def beam_search_segmentation(
     score_ceil = max_distance * prune_ratio
 
     for _round in range(max_words):
+        logging.debug("Round %s", _round)
         if not beam:
             break
 
@@ -422,7 +419,9 @@ def beam_search_segmentation(
         if not glued_tokens:
             continue
 
-        e2e_dist = normalised_feature_edit_distance(list(source_tokens), glued_tokens, merged)
+        e2e_dist = normalised_feature_edit_distance(
+            list(source_tokens), glued_tokens, merged
+        )
 
         if e2e_dist <= max_distance:
             results.append(
@@ -497,7 +496,6 @@ def beam_search_phrases(
         for lang_code, (t_spec, t_features, t_ptd) in targets.items():
             segmentations = beam_search_segmentation(
                 source_tokens,
-                source_spec,
                 source_features,
                 t_ptd,
                 t_spec,

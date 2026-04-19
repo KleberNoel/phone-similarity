@@ -25,15 +25,12 @@ Usage::
     merged = enc.merge_inventories(eng_features, fra_features)
 """
 
-from __future__ import annotations
-
 import unicodedata
 from functools import lru_cache
 from typing import Union
 
 import panphon
 
-# Singleton FeatureTable (loaded once, reused everywhere)
 _FT = panphon.FeatureTable()
 
 # 24-feature names in canonical Panphon order
@@ -43,7 +40,6 @@ _NUM_FEATURES = len(PANPHON_FEATURE_NAMES)
 _ZERO_VECTOR: tuple[int, ...] = (0,) * _NUM_FEATURES
 
 
-# Encoder
 class UniversalFeatureEncoder:
     """Encode IPA phonemes as 24-dimensional ternary feature vectors.
 
@@ -59,7 +55,7 @@ class UniversalFeatureEncoder:
     """
 
     @staticmethod
-    @lru_cache(maxsize=2048)
+    @lru_cache(maxsize=2048)  # FIXME: TODO - tune maxsize based on objective(S)
     def encode(phoneme: str) -> tuple[int, ...]:
         """Return the 24-feature ternary vector for *phoneme*.
 
@@ -102,8 +98,6 @@ class UniversalFeatureEncoder:
         vec = UniversalFeatureEncoder.encode(phoneme)
         return dict(zip(PANPHON_FEATURE_NAMES, vec, strict=False))
 
-    # ----- bulk conversion ------------------------------------------------
-
     @staticmethod
     def convert_inventory(
         phoneme_features: dict[str, dict[str, Union[bool, str]]],
@@ -121,8 +115,6 @@ class UniversalFeatureEncoder:
             ``{phoneme: {panphon_feature: int}}`` using the 24-feature set.
         """
         return {ph: UniversalFeatureEncoder.feature_dict(ph) for ph in phoneme_features}
-
-    # ----- distance -------------------------------------------------------
 
     @staticmethod
     def universal_phoneme_distance(ph_a: str, ph_b: str) -> float:
@@ -144,8 +136,6 @@ class UniversalFeatureEncoder:
         if comparable == 0:
             return 0.0
         return mismatches / comparable
-
-    # ----- cross-language merging -----------------------------------------
 
     @staticmethod
     def merge_inventories(
@@ -176,9 +166,6 @@ class UniversalFeatureEncoder:
         return merged
 
 
-# Internal helper
-
-
 def _resolve(phoneme: str) -> tuple[int, ...] | None:
     """Try to look up *phoneme* in Panphon's FeatureTable.
 
@@ -192,8 +179,6 @@ def _resolve(phoneme: str) -> tuple[int, ...] | None:
         return None
     return tuple(seg[name] for name in PANPHON_FEATURE_NAMES)
 
-
-# Module-level convenience aliases
 
 encode_phoneme = UniversalFeatureEncoder.encode
 phoneme_feature_dict = UniversalFeatureEncoder.feature_dict

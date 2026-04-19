@@ -154,9 +154,13 @@ class FricativeConfig:
 
     def __post_init__(self) -> None:
         if self.fricative_weight < 0.0:
-            raise ValueError(f"fricative_weight must be >= 0.0, got {self.fricative_weight}")
+            raise ValueError(
+                f"fricative_weight must be >= 0.0, got {self.fricative_weight}"
+            )
         if self.sibilant_weight < 0.0:
-            raise ValueError(f"sibilant_weight must be >= 0.0, got {self.sibilant_weight}")
+            raise ValueError(
+                f"sibilant_weight must be >= 0.0, got {self.sibilant_weight}"
+            )
         if not 0.0 <= self.spread_magnitude <= 1.0:
             raise ValueError(
                 f"spread_magnitude must be in [0.0, 1.0], got {self.spread_magnitude}"
@@ -386,8 +390,6 @@ class DefaultCoarticulationModel:
             return True
         return syl_boundaries[idx_a] == syl_boundaries[idx_b]
 
-    # ----- Core perturbation logic ----------------------------------------
-
     def _apply_shift(
         self,
         base: list[float],
@@ -406,18 +408,20 @@ class DefaultCoarticulationModel:
         boundary_factor = 1.0 if same_syllable else self._cross_syllable_decay
 
         if self._jitter > 0.0:
-            fire_prob = prob * (1.0 - self._jitter) + prob * self._jitter * self._rng.random()
+            fire_prob = (
+                prob * (1.0 - self._jitter) + prob * self._jitter * self._rng.random()
+            )
             if self._rng.random() > fire_prob:
                 return
-            mag = rule.magnitude * (1.0 - self._jitter + self._jitter * self._rng.random())
+            mag = rule.magnitude * (
+                1.0 - self._jitter + self._jitter * self._rng.random()
+            )
         else:
             mag = rule.magnitude
 
         shift = direction * mag * boundary_factor
         new_val = base[rule.target_feature] + shift
         base[rule.target_feature] = max(-1.0, min(1.0, new_val))
-
-    # ----- Sequence perturbation ------------------------------------------
 
     def perturb_sequence(
         self,
@@ -475,7 +479,11 @@ class DefaultCoarticulationModel:
                         for rule in _antic["back_vowel"]:
                             _apply(perturbed[i], rule, rule.direction, same_syl)
 
-                if _fric_spread and self._is_fricative(feats_i) and self._is_vowel(feats_next):
+                if (
+                    _fric_spread
+                    and self._is_fricative(feats_i)
+                    and self._is_vowel(feats_next)
+                ):
                     mag_scale = _fric_cfg.spread_magnitude / 0.30
                     is_sib = self._is_sibilant(feats_i)
                     is_voiceless = feats_i[_VOI] == -1
@@ -548,8 +556,6 @@ class DefaultCoarticulationModel:
 
         return [tuple(v) for v in perturbed]
 
-    # ----- Syllable boundary builder helper --------------------------------
-
     @staticmethod
     def syllable_boundary_map(
         syllables: Sequence[object],
@@ -575,17 +581,6 @@ class DefaultCoarticulationModel:
 
 # Module-level convenience instance
 _DEFAULT_MODEL = DefaultCoarticulationModel(jitter=0.0)
-
-
-# Distance functions with co-articulation
-def _coarticulated_vectors(
-    tokens: Sequence[str],
-    model: DefaultCoarticulationModel | None = None,
-    syllable_boundaries: Sequence[int] | None = None,
-) -> list[tuple[float, ...]]:
-    """Get co-articulated feature vectors for a token sequence."""
-    m = model or _DEFAULT_MODEL
-    return m.perturb_sequence(tokens, syllable_boundaries)
 
 
 def _is_fricative_vec(vec: tuple[float, ...]) -> bool:
@@ -707,7 +702,6 @@ def coarticulated_feature_edit_distance(
     vecs_a = m.perturb_sequence(seq_a, syl_boundaries_a)
     vecs_b = m.perturb_sequence(seq_b, syl_boundaries_b)
 
-    # --- Cython fast path: delegate DP loop to C --------------------------
     if HAS_CYTHON_COARTICULATION:
         return cy_coarticulated_feature_edit_distance(
             vecs_a,
@@ -721,7 +715,6 @@ def coarticulated_feature_edit_distance(
             delete_cost,
         )
 
-    # --- Python fallback ---------------------------------------------------
     len_a = len(vecs_a)
     len_b = len(vecs_b)
 

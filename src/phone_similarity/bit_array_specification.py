@@ -1,11 +1,3 @@
-"""
-Concrete bitarray specification for phonological feature encoding.
-
-Extends :class:`BaseBitArraySpecification` to convert IPA strings into
-syllable-structured bitarrays via naive syllabification (onset-nucleus-coda
-decomposition) and feature-to-bit mapping.
-"""
-
 import logging
 
 from bitarray import bitarray
@@ -36,7 +28,9 @@ class BitArraySpecification(BaseBitArraySpecification):
         if hasattr(self, "empty_vector"):
             return len(self._features["consonant"]) * 2 + len(self._features["vowel"])
 
-        raise ValueError("Max Syllable Length cannot be calculated using BitArrayGenerator")
+        raise ValueError(
+            "Max Syllable Length cannot be calculated using BitArrayGenerator"
+        )
 
     @property
     def features(self):
@@ -127,7 +121,9 @@ class BitArraySpecification(BaseBitArraySpecification):
             feature_type = "consonant"
             onset: bitarray = self.empty_vector(feature_type)
             while i < n and tokens[i] not in self._vowels:
-                onset = self.update_array_segment(tokens[i], onset, feature_type="consonant")
+                onset = self.update_array_segment(
+                    tokens[i], onset, feature_type="consonant"
+                )
                 i += 1
 
             # 2. Check if current token is final. If so, merge onset with previous coda.
@@ -152,7 +148,9 @@ class BitArraySpecification(BaseBitArraySpecification):
             nucleus: bitarray = self.empty_vector(feature_type)
             _vowel_start: int = i
             if tokens[i] not in self._vowels:
-                raise ValueError(f"Expected vowel at position {i} but got {tokens[i]!r}")
+                raise ValueError(
+                    f"Expected vowel at position {i} but got {tokens[i]!r}"
+                )
             while i < n and tokens[i] in self._vowels:
                 if i != _vowel_start:
                     logging.warning(
@@ -170,7 +168,9 @@ class BitArraySpecification(BaseBitArraySpecification):
             feature_type = "consonant"
             coda: bitarray = self.empty_vector(feature_type)
             while i < n and tokens[i] not in self._vowels:
-                coda = self.update_array_segment(tokens[i], coda, feature_type="consonant")
+                coda = self.update_array_segment(
+                    tokens[i], coda, feature_type="consonant"
+                )
                 i += 1
 
             # 5. Combine onset + coda and store the result for this syllable
@@ -283,6 +283,8 @@ class BitArraySpecification(BaseBitArraySpecification):
             self._max_syllables_per_text_chunk * self.max_syllable_length,
             self.max_syllable_length,
         ):
-            new_arr ^= arr[syllable_bit_idx : syllable_bit_idx + self.max_syllable_length]
+            new_arr ^= arr[
+                syllable_bit_idx : syllable_bit_idx + self.max_syllable_length
+            ]
 
         return new_arr

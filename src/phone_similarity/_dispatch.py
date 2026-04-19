@@ -25,11 +25,8 @@ Usage::
         result = _python_fallback(...)
 """
 
-from __future__ import annotations
-
 from typing import Any
 
-# Sentinel for unavailable functions
 _UNAVAILABLE: Any = None
 
 # Level 1: Core Cython (hamming, edit distance, batch pairwise)
@@ -37,15 +34,9 @@ try:
     from phone_similarity._core import (
         batch_pairwise_hamming as cy_batch_pairwise_hamming,
     )
-    from phone_similarity._core import (
-        feature_edit_distance as cy_feature_edit_distance,
-    )
-    from phone_similarity._core import (
-        hamming_distance as cy_hamming_distance,
-    )
-    from phone_similarity._core import (
-        hamming_similarity as cy_hamming_similarity,
-    )
+    from phone_similarity._core import feature_edit_distance as cy_feature_edit_distance
+    from phone_similarity._core import hamming_distance as cy_hamming_distance
+    from phone_similarity._core import hamming_similarity as cy_hamming_similarity
 
     HAS_CYTHON = True
 except ImportError:
@@ -57,12 +48,8 @@ except ImportError:
 
 # Level 2: Extended Cython (dictionary scan, feature inversion, phoneme dist)
 try:
-    from phone_similarity._core import (
-        batch_dictionary_scan as cy_batch_dictionary_scan,
-    )
-    from phone_similarity._core import (
-        invert_features as cy_invert_features,
-    )
+    from phone_similarity._core import batch_dictionary_scan as cy_batch_dictionary_scan
+    from phone_similarity._core import invert_features as cy_invert_features
     from phone_similarity._core import (
         phoneme_feature_distance as cy_phoneme_feature_distance,
     )
@@ -87,12 +74,8 @@ except ImportError:
 
 # Level 4: Cython IPA tokenizer
 try:
-    from phone_similarity._core import (
-        batch_ipa_tokenize as cy_batch_ipa_tokenize,
-    )
-    from phone_similarity._core import (
-        cython_ipa_tokenizer as cy_ipa_tokenizer,
-    )
+    from phone_similarity._core import batch_ipa_tokenize as cy_batch_ipa_tokenize
+    from phone_similarity._core import cython_ipa_tokenizer as cy_ipa_tokenizer
 
     HAS_CYTHON_TOKENIZER = True
 except ImportError:
@@ -102,12 +85,8 @@ except ImportError:
 
 # Level 5: Cython syllabifier
 try:
-    from phone_similarity._core import (
-        batch_cython_syllabify as cy_batch_syllabify,
-    )
-    from phone_similarity._core import (
-        cython_syllabify as cy_syllabify,
-    )
+    from phone_similarity._core import batch_cython_syllabify as cy_batch_syllabify
+    from phone_similarity._core import cython_syllabify as cy_syllabify
 
     HAS_CYTHON_SYLLABIFIER = True
 except ImportError:

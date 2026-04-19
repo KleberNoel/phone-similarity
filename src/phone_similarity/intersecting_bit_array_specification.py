@@ -2,15 +2,13 @@
 Merged (union) bitarray specification for cross-language comparisons.
 
 Combines the vowel, consonant, and feature inventories of multiple
-:class:`BitArraySpecification` instances so that phonemes from different
-languages can be encoded into a shared bitarray space.
+:class:`BitArraySpecification` instances so phonemes from diff
+langs are encoded into a shared bitarray space.
 
 When multiple specifications define the same phoneme with different
 feature dicts, the universal Panphon 24-feature representation is used
-to ensure a single, consistent encoding for each phoneme.
+to ensure a single, consistent encoding for each phoneme. (# FIXME - WHERE?)
 """
-
-from __future__ import annotations
 
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.universal_features import UniversalFeatureEncoder
@@ -57,11 +55,13 @@ class IntersectingBitArraySpecification(BaseBitArraySpecification):
         # dict per phoneme — shared phonemes (e.g. /e/) will always get
         # the same 24-feature Panphon encoding regardless of which
         # language defined them.
-        features_per_phoneme = UniversalFeatureEncoder.merge_inventories(*raw_inventories)
+        features_per_phoneme = UniversalFeatureEncoder.merge_inventories(
+            *raw_inventories
+        )
 
         super().__init__(
             vowels=vowels,
             consonants=consonants,
-            features_per_phoneme=features_per_phoneme,
+            features_per_phoneme=features_per_phoneme,  # TODO fixme (type hint broken)
             max_syllables_per_text=max_syllables_per_text,
         )

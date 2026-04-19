@@ -20,8 +20,6 @@ Usage::
     >>> clean_phones("ˈhɛːloʊ", config=cfg)           # "ˈhɛloʊ"
 """
 
-from __future__ import annotations
-
 import dataclasses
 import re
 import unicodedata
@@ -79,7 +77,6 @@ class CleanConfig:
         return self.strip_stress and self.strip_length and self.strip_liaison
 
 
-# Pre-built configs
 STRIP_ALL = CleanConfig()
 """Default config: strip everything (backward compatible)."""
 

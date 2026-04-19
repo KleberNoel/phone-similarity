@@ -4,16 +4,10 @@ These stubs allow mypy / pyright to check callers without needing the
 compiled ``.so`` available at type-checking time.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from typing import Union
 
 from bitarray import bitarray
-
-# ---------------------------------------------------------------------------
-# Hamming distance / similarity
-# ---------------------------------------------------------------------------
 
 def hamming_distance(a: bitarray, b: bitarray) -> int:
     """Hamming distance (number of differing bits) between two bitarrays.
@@ -25,10 +19,6 @@ def hamming_distance(a: bitarray, b: bitarray) -> int:
 def hamming_similarity(a: bitarray, b: bitarray) -> float:
     """Normalised bit-match ratio.  1.0 = identical, 0.0 = max different."""
     ...
-
-# ---------------------------------------------------------------------------
-# Feature-weighted edit distance
-# ---------------------------------------------------------------------------
 
 def feature_edit_distance(
     seq_a: Sequence[str],
@@ -44,17 +34,9 @@ def feature_edit_distance(
     """
     ...
 
-# ---------------------------------------------------------------------------
-# Batch pairwise Hamming
-# ---------------------------------------------------------------------------
-
 def batch_pairwise_hamming(arrays: list[bitarray]) -> list[list[float]]:
     """Pairwise Hamming similarity matrix (N x N) for a list of bitarrays."""
     ...
-
-# ---------------------------------------------------------------------------
-# Phoneme feature distance
-# ---------------------------------------------------------------------------
 
 def phoneme_feature_distance(
     fa: dict[str, Union[bool, str]],
@@ -62,10 +44,6 @@ def phoneme_feature_distance(
 ) -> float:
     """Normalised feature-mismatch ratio between two phoneme feature dicts."""
     ...
-
-# ---------------------------------------------------------------------------
-# Feature-vector inversion
-# ---------------------------------------------------------------------------
 
 def invert_features(
     feature_vector: dict[str, Union[bool, str]],
@@ -78,10 +56,6 @@ def invert_features(
     Returns list of ``(phoneme, distance)`` tuples sorted ascending.
     """
     ...
-
-# ---------------------------------------------------------------------------
-# IPA tokenizer
-# ---------------------------------------------------------------------------
 
 def cython_ipa_tokenizer(
     ipa_str: str,
@@ -103,10 +77,6 @@ def batch_ipa_tokenize(
     """
     ...
 
-# ---------------------------------------------------------------------------
-# Batch dictionary scan
-# ---------------------------------------------------------------------------
-
 def batch_dictionary_scan(
     source_tokens: list[str],
     source_len: int,
@@ -120,10 +90,6 @@ def batch_dictionary_scan(
     Returns list of ``(word, ipa, distance)`` sorted by ascending distance.
     """
     ...
-
-# ---------------------------------------------------------------------------
-# OpenMP-parallel dictionary scan
-# ---------------------------------------------------------------------------
 
 def prange_batch_dictionary_scan(
     source_tokens: list[str],

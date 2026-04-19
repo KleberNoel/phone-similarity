@@ -57,18 +57,10 @@ import dataclasses
 from collections.abc import Sequence
 from typing import ClassVar, Protocol, Union
 
-from phone_similarity._dispatch import (
-    HAS_CYTHON_SYLLABIFIER as _HAS_CYTHON_SYLLABLE,
-)
-from phone_similarity._dispatch import (
-    cy_batch_syllabify as _cy_batch_syllabify,
-)
-from phone_similarity._dispatch import (
-    cy_syllabify as _cy_syllabify,
-)
-from phone_similarity.universal_features import (
-    UniversalFeatureEncoder,
-)
+from phone_similarity._dispatch import HAS_CYTHON_SYLLABIFIER as _HAS_CYTHON_SYLLABLE
+from phone_similarity._dispatch import cy_batch_syllabify as _cy_batch_syllabify
+from phone_similarity._dispatch import cy_syllabify as _cy_syllabify
+from phone_similarity.universal_features import UniversalFeatureEncoder
 
 # Sonority ranks
 RANK_STOP = 1
@@ -128,8 +120,7 @@ class Syllable:
         return len(self.onset) + len(self.nucleus) + len(self.coda)
 
 
-# Sonority scale
-class SonorityScale:
+class SonorityScale:  # TODO: check this isn't already available in panphon..? FIXME
     """Maps IPA phonemes to integer sonority ranks via universal features.
 
     Ranks (highest to lowest):
@@ -206,7 +197,6 @@ class SonorityScale:
         return {ph: self.rank(ph) for ph in phonemes}
 
 
-# Segmentation strategy protocol
 class SyllabificationStrategy(Protocol):
     """Strategy interface for syllabification algorithms.
 
@@ -222,7 +212,6 @@ class SyllabificationStrategy(Protocol):
     ) -> list[Syllable]: ...
 
 
-# Maximum Onset segmenter (concrete strategy)
 class MaxOnsetSegmenter:
     """Syllabification using the Maximum Onset Principle (MOP).
 
@@ -268,7 +257,6 @@ class MaxOnsetSegmenter:
         if n == 0:
             return []
 
-        # --- Phase 1: identify vowel-span boundaries -----------------------
         spans: list[tuple[int, int]] = []
         i = 0
         while i < n:
@@ -284,7 +272,6 @@ class MaxOnsetSegmenter:
             # No vowels — treat everything as a single degenerate syllable
             return [Syllable(onset=tuple(tokens), nucleus=(), coda=())]
 
-        # --- Phase 2: split inter-vocalic clusters --------------------------
         syllables: list[Syllable] = []
 
         for idx, (v_start, v_end) in enumerate(spans):
@@ -351,12 +338,10 @@ class MaxOnsetSegmenter:
         return onset_start
 
 
-# Module-level default instances
 _DEFAULT_SCALE = SonorityScale()
 _DEFAULT_SEGMENTER = MaxOnsetSegmenter()
 
 
-# Stress assignment helper
 def _assign_stress(
     syllables: list[Syllable],
     stress_marks: Sequence[tuple[int, str]],
@@ -395,7 +380,6 @@ def _assign_stress(
     ]
 
 
-# Public API
 def syllabify(
     tokens: Sequence[str],
     vowels: Union[frozenset[str], set[str]],
@@ -450,7 +434,9 @@ def syllabify(
             son_map,
             seg._sibilant_appendix,
         )
-        result = [Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c)) for o, n, c in raw]
+        result = [
+            Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c)) for o, n, c in raw
+        ]
     else:
         son = scale.rank_tokens(tokens)
         result = seg.syllabify(tokens, vowel_fs, son)
@@ -507,13 +493,17 @@ def batch_syllabify(
             seg._sibilant_appendix,
         )
         results = [
-            [Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c)) for o, n, c in word]
+            [
+                Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c))
+                for o, n, c in word
+            ]
             for word in raw_batch
         ]
     else:
         # Pure-Python fallback
         results = [
-            syllabify(tl, vowel_fs, sonority_scale=scale, strategy=seg) for tl in token_lists
+            syllabify(tl, vowel_fs, sonority_scale=scale, strategy=seg)
+            for tl in token_lists
         ]
 
     if stress_marks_list is not None:

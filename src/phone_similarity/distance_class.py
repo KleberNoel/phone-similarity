@@ -6,8 +6,6 @@ to provide convenient methods for Hamming similarity, feature-weighted
 edit distance, and pairwise matrices.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from typing import Union
 
@@ -56,11 +54,11 @@ class Distance:
         phoneme_features: dict[str, dict[str, Union[bool, str]]] | None = None,
     ):
         self._spec = spec
-        self._phoneme_features: dict[str, dict[str, Union[bool, str]]] = (
+        self._phoneme_features: dict[
+            str, dict[str, Union[bool, str]]
+        ] = (  # TODO: ensure types are correct FIXME
             phoneme_features if phoneme_features is not None else spec._phoneme_features
         )
-
-    # ----- Bitarray-level metrics ------------------------------------------
 
     def hamming(self, ipa_a: str, ipa_b: str, max_syllables: int = 6) -> float:
         """Hamming similarity between two IPA strings' bitarray encodings.
@@ -80,8 +78,6 @@ class Distance:
         arr_a = self._spec.ipa_to_bitarray(ipa_a, max_syllables)
         arr_b = self._spec.ipa_to_bitarray(ipa_b, max_syllables)
         return hamming_similarity(arr_a, arr_b)
-
-    # ----- Phoneme-sequence-level metrics ----------------------------------
 
     def edit_distance(self, ipa_a: str, ipa_b: str) -> float:
         """Feature-weighted edit distance between two IPA strings.
@@ -107,9 +103,9 @@ class Distance:
         """Normalised feature-weighted edit distance in ``[0.0, 1.0]``."""
         tokens_a = self._spec.ipa_tokenizer(ipa_a)
         tokens_b = self._spec.ipa_tokenizer(ipa_b)
-        return normalised_feature_edit_distance(tokens_a, tokens_b, self._phoneme_features)
-
-    # ----- Batch / corpus methods ------------------------------------------
+        return normalised_feature_edit_distance(
+            tokens_a, tokens_b, self._phoneme_features
+        )
 
     def pairwise_hamming(
         self, ipa_strings: Sequence[str], max_syllables: int = 6
