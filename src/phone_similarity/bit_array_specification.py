@@ -22,9 +22,6 @@ class BitArraySpecification(BaseBitArraySpecification):
 
     @property
     def max_syllable_length(self) -> int:
-        """
-        max_syllable_length
-        """
         if hasattr(self, "empty_vector"):
             return len(self._features["consonant"]) * 2 + len(self._features["vowel"])
 
@@ -32,9 +29,6 @@ class BitArraySpecification(BaseBitArraySpecification):
 
     @property
     def features(self):
-        """
-        features
-        """
         return self._features
 
     def ipa_to_bitarray(self, ipa: str, max_syllables: int) -> "bitarray":

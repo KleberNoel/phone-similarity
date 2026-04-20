@@ -233,7 +233,7 @@ class DefaultCoarticulationModel:
         across boundaries as within a syllable.
     """
 
-    # --- Anticipatory rules: consonant features shift toward following vowel
+    # Anticipatory rules: consonant features shift toward following vowel
     # Keyed by trigger condition for O(1) lookup instead of linear scan.
     _ANTICIPATORY_RULES: dict[str, list[CoarticulationRule]] = {
         "high_vowel": [
@@ -247,7 +247,7 @@ class DefaultCoarticulationModel:
         ],
     }
 
-    # --- Carryover rules: vowel features shift due to preceding consonant
+    # Carryover rules: vowel features shift due to preceding consonant
     _CARRYOVER_RULES: dict[str, list[CoarticulationRule]] = {
         "nasal_consonant": [
             CoarticulationRule("nasalization", _NAS, +1.0, 0.50, 0.90),
@@ -261,7 +261,7 @@ class DefaultCoarticulationModel:
         ],
     }
 
-    # --- Assimilation rules: consonant-consonant cluster effects
+    # Assimilation rules: consonant-consonant cluster effects
     _ASSIMILATION_VOICING: list[CoarticulationRule] = [
         CoarticulationRule("voice_spread", _VOI, 0.0, 0.40, 0.75),
     ]
@@ -272,7 +272,7 @@ class DefaultCoarticulationModel:
         CoarticulationRule("nasal_place_lab", _LAB, 0.0, 0.55, 0.85),
     ]
 
-    # --- Frication spread rules: fricative noise bleeds to adjacent segments
+    # Frication spread rules: fricative noise bleeds to adjacent segments
     # These only activate when FricativeConfig.frication_spread is True.
     # Note: vowels already have [cont=+1], so we model frication spread as:
     # 1. Partial devoicing of following vowels by voiceless fricatives
@@ -324,8 +324,6 @@ class DefaultCoarticulationModel:
             raise ValueError(f"jitter must be in [0.0, 1.0], got {value}")
         self._jitter = value
 
-    # ----- Feature classification helpers ----------------------------------
-
     @staticmethod
     def _is_vowel(feats: tuple[int, ...]) -> bool:
         return feats[_SYL] == 1
@@ -372,8 +370,6 @@ class DefaultCoarticulationModel:
     def _is_sibilant(feats: tuple[int, ...]) -> bool:
         """Sibilant: fricative with [+strident] (s, z, ʃ, ʒ, ...)."""
         return feats[_SON] == -1 and feats[_CONT] == 1 and feats[_STRID] == 1
-
-    # ----- Syllable boundary check ----------------------------------------
 
     def _same_syllable(
         self,

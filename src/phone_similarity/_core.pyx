@@ -42,9 +42,6 @@ cimport numpy as cnp
 cnp.import_array()
 
 
-# ===================================================================
-# Hamming distance / similarity
-# ===================================================================
 
 cpdef int hamming_distance(a, b) except -1:
     """Hamming distance between two bitarrays (number of differing bits).
@@ -69,9 +66,6 @@ cpdef double hamming_similarity(a, b):
     return 1.0 - (<double>dist) / (<double>n)
 
 
-# ===================================================================
-# Feature-weighted edit distance (DP) — cdef for internal use
-# ===================================================================
 
 cdef double _cdef_feature_edit_distance(
     object seq_a,
@@ -134,9 +128,6 @@ cdef double _cdef_feature_edit_distance(
         free(dp)
 
 
-# ===================================================================
-# Feature-weighted edit distance (DP) — public def wrapper
-# ===================================================================
 
 cpdef double feature_edit_distance(
     object seq_a,
@@ -166,9 +157,6 @@ cpdef double feature_edit_distance(
     )
 
 
-# ===================================================================
-# Batch pairwise Hamming similarity
-# ===================================================================
 
 cpdef list batch_pairwise_hamming(list arrays):
     """Pairwise Hamming similarity matrix for a list of bitarrays.
@@ -201,9 +189,6 @@ cpdef list batch_pairwise_hamming(list arrays):
     return result
 
 
-# ===================================================================
-# Standalone phoneme-feature distance
-# ===================================================================
 
 def phoneme_feature_distance(dict fa, dict fb) -> float:
     """Normalised feature-mismatch ratio between two phoneme feature dicts.
@@ -223,9 +208,6 @@ def phoneme_feature_distance(dict fa, dict fb) -> float:
     return (<double>mismatches) / (<double>num_keys)
 
 
-# ===================================================================
-# Shared distance matrix helpers (deduplicates _batch_scan_* + prange)
-# ===================================================================
 
 cdef void _fill_dist_matrix(
     double* dist_matrix,
@@ -314,9 +296,6 @@ def build_phoneme_dist_matrix(dict merged_feats) -> tuple:
     return (ph_to_idx, dist_flat, matrix_dim)
 
 
-# ===================================================================
-# Feature-vector → phoneme inversion
-# ===================================================================
 
 def invert_features(
     dict feature_vector,
@@ -371,9 +350,6 @@ def invert_features(
     return ranked
 
 
-# ===================================================================
-# IPA tokenizer (set-based greedy longest-match)
-# ===================================================================
 
 def cython_ipa_tokenizer(str ipa_str, frozenset phone_set, int max_phoneme_size):
     """Tokenize an IPA string using greedy longest-match against a phoneme set.
@@ -461,9 +437,6 @@ def batch_ipa_tokenize(
     return result
 
 
-# ===================================================================
-# Batch dictionary scan
-# ===================================================================
 
 def batch_dictionary_scan(
     list source_tokens,
@@ -521,9 +494,6 @@ def batch_dictionary_scan(
     )
 
 
-# -------------------------------------------------------------------
-# Fast path: operate directly on PreTokenizedDictionary numpy arrays
-# -------------------------------------------------------------------
 
 cdef list _batch_scan_ptd(
     list source_tokens,
@@ -554,7 +524,7 @@ cdef list _batch_scan_ptd(
     cdef Py_ssize_t j
     cdef Py_ssize_t overlap, min_overlap
 
-    # --- PTD-specific: read numpy arrays once ---
+    # PTD-specific: read numpy arrays once
     cdef list ptd_words = ptd.words
     cdef list ptd_ipas = ptd.ipas
     cdef list ptd_inventory = ptd.inventory
@@ -711,9 +681,6 @@ cdef list _batch_scan_ptd(
     return candidates[:top_n]
 
 
-# -------------------------------------------------------------------
-# Generic fallback: iterate pre_tokenized as list of tuples
-# -------------------------------------------------------------------
 
 cdef list _batch_scan_generic(
     list source_tokens,
@@ -836,9 +803,6 @@ cdef list _batch_scan_generic(
     return candidates[:top_n]
 
 
-# ===================================================================
-# GIL-free DP kernel for prange parallelism
-# ===================================================================
 
 cdef double _dp_edit_distance_nogil(
     const Py_ssize_t* src_idx,
@@ -888,9 +852,6 @@ cdef double _dp_edit_distance_nogil(
     return result
 
 
-# ===================================================================
-# OpenMP-parallel dictionary scan
-# ===================================================================
 
 def prange_batch_dictionary_scan(
     list source_tokens,
@@ -941,7 +902,7 @@ def prange_batch_dictionary_scan(
     if source_len == 0:
         return []
 
-    # === PTD data ===
+    # PTD data
     cdef list ptd_words = pre_tokenized.words
     cdef list ptd_ipas = pre_tokenized.ipas
     cdef list ptd_inventory = pre_tokenized.inventory
@@ -953,7 +914,7 @@ def prange_batch_dictionary_scan(
     cdef const cnp.int16_t[:] ti_view = ti_arr
     cdef const cnp.int32_t[:] off_view = off_arr
 
-    # === Build phoneme universe ===
+    # Build phoneme universe
     cdef set all_phonemes_set = set(source_tokens)
     cdef Py_ssize_t pi
     for pi in range(ptd_inv_size):
@@ -970,7 +931,7 @@ def prange_batch_dictionary_scan(
     cdef Py_ssize_t UNK_IDX = num_ph
     cdef Py_ssize_t matrix_dim = num_ph + 1
 
-    # === Build flat C arrays for the parallel section ===
+    # Build flat C arrays for the parallel section
     cdef double* c_dist_matrix = <double*>malloc(matrix_dim * matrix_dim * sizeof(double))
     if c_dist_matrix == NULL:
         raise MemoryError("Could not allocate distance matrix")
@@ -1051,14 +1012,14 @@ def prange_batch_dictionary_scan(
         raise MemoryError("Could not allocate offsets C array")
 
     try:
-        # --- Fill distance matrix (shared helper) ---
+        # Fill distance matrix (shared helper)
         _fill_dist_matrix(c_dist_matrix, all_phonemes, num_ph, matrix_dim, UNK_IDX, merged_feats)
 
-        # --- Build inventory translation table ---
+        # Build inventory translation table
         for pi in range(ptd_inv_size):
             inv_to_mat[pi] = ph_to_idx.get(ptd_inventory[pi], UNK_IDX)
 
-        # --- Convert source tokens to matrix indices ---
+        # Convert source tokens to matrix indices
         src_unique_count = 0
         memset(src_mask, 0, matrix_dim * sizeof(unsigned char))
         for pi in range(source_len):
@@ -1067,15 +1028,15 @@ def prange_batch_dictionary_scan(
                 src_mask[src_idx_arr[pi]] = 1
                 src_unique_count += 1
 
-        # --- Pre-translate ALL target tokens to matrix indices ---
+        # Pre-translate ALL target tokens to matrix indices
         for ti in range(total_tokens):
             all_tgt_idx[ti] = inv_to_mat[ti_view[ti]]
 
-        # --- Copy offsets to C array ---
+        # Copy offsets to C array
         for pi in range(n_entries + 1):
             c_offsets[pi] = off_view[pi]
 
-        # --- Sequential pre-filter: length ratio + overlap ---
+        # Sequential pre-filter: length ratio + overlap
         tgt_mask = <unsigned char*>malloc(matrix_dim * sizeof(unsigned char))
         if tgt_mask == NULL:
             raise MemoryError("Could not allocate target mask")
@@ -1131,7 +1092,7 @@ def prange_batch_dictionary_scan(
         free(tgt_mask)
         tgt_mask = NULL
 
-        # --- Parallel DP phase (nogil) ---
+        # Parallel DP phase (nogil)
         if n_pass > 0:
             # Clamp chunksize: at least 1, at most ceil(n_pass / n_threads_c)
             chunk_sz = (n_pass + n_threads_c - 1) // n_threads_c
@@ -1161,7 +1122,7 @@ def prange_batch_dictionary_scan(
         free(pass_entries)
         pass_entries = NULL
 
-        # --- Collect results ---
+        # Collect results
         candidates = []
         for entry_idx in range(n_entries):
             d = result_distances[entry_idx]
@@ -1185,9 +1146,6 @@ def prange_batch_dictionary_scan(
     return candidates[:top_n]
 
 
-# ===================================================================
-# Syllabification — Maximum Onset Principle (Cython-accelerated)
-# ===================================================================
 
 cdef Py_ssize_t _split_cluster_nogil(
     const int* son,
@@ -1250,7 +1208,7 @@ def cython_syllabify(
     if n == 0:
         return []
 
-    # --- All cdef declarations up front (Cython requirement) ---
+    # All cdef declarations up front (Cython requirement)
     cdef int* son = <int*>malloc(n * sizeof(int))
     if son == NULL:
         raise MemoryError("Could not allocate sonority array")
@@ -1279,7 +1237,7 @@ def cython_syllabify(
             son[i] = sonority_map.get(ph, 0)
             is_vowel[i] = (ph in vowels)
 
-        # --- Phase 1: find vowel spans ---
+        # Phase 1: find vowel spans
         span_starts = <Py_ssize_t*>malloc(max_spans * sizeof(Py_ssize_t))
         span_ends = <Py_ssize_t*>malloc(max_spans * sizeof(Py_ssize_t))
         if span_starts == NULL or span_ends == NULL:
@@ -1305,7 +1263,7 @@ def cython_syllabify(
             free(son)
             return results
 
-        # --- Phase 2: split inter-vocalic clusters ---
+        # Phase 2: split inter-vocalic clusters
         for idx in range(n_spans):
             v_start = span_starts[idx]
             v_end = span_ends[idx]
@@ -1389,9 +1347,6 @@ def batch_cython_syllabify(
     return results
 
 
-# ===================================================================
-# Co-articulated phoneme distance (float-vector variant)
-# ===================================================================
 
 DEF _NUM_COART_FEATURES = 24
 
@@ -1487,15 +1442,15 @@ def coarticulated_feature_edit_distance_c(
     cdef Py_ssize_t len_b = len(vecs_b)
     cdef Py_ssize_t n_feat = _NUM_COART_FEATURES
 
-    # --- Allocate flat C arrays for vectors --------------------------------
+    # Allocate flat C arrays for vectors
     cdef double* flat_a = NULL
     cdef double* flat_b = NULL
-    # --- Fricative/sibilant classification flags per token -----------------
+    # Fricative/sibilant classification flags per token
     cdef bint* fric_a = NULL
     cdef bint* fric_b = NULL
     cdef bint* sib_a = NULL
     cdef bint* sib_b = NULL
-    # --- DP table ----------------------------------------------------------
+    # DP table
     cdef double* prev_row = NULL
     cdef double* curr_row = NULL
 
@@ -1527,7 +1482,7 @@ def coarticulated_feature_edit_distance_c(
         raise MemoryError("coarticulated_feature_edit_distance_c: malloc failed")
 
     try:
-        # --- Unpack Python tuples into flat C arrays -----------------------
+        # Unpack Python tuples into flat C arrays
         for i in range(len_a):
             vec = vecs_a[i]
             for k in range(n_feat):
@@ -1550,7 +1505,7 @@ def coarticulated_feature_edit_distance_c(
             fric_b[j] = is_fric
             sib_b[j] = is_fric and (flat_b[j * n_feat + strid_idx] > 0.5)
 
-        # --- DP edit distance (two-row) -----------------------------------
+        # DP edit distance (two-row)
         for j in range(len_b + 1):
             prev_row[j] = insert_cost * <double>j
 

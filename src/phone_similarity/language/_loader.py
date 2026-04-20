@@ -70,8 +70,6 @@ class _LanguageNamespace:
         self._phoneme_features = phoneme_features
         self._features = features
 
-    # --- public attributes (match old module interface) --------------------
-
     @property
     def VOWELS_SET(self) -> set[str]:
         return self._vowels_set

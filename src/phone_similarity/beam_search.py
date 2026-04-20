@@ -56,11 +56,9 @@ def _build_dist_matrix(
     dist_flat : flat list of floats (dim * dim), row-major
     dim : matrix dimension (number of phonemes + 1 for UNK)
     """
-    # --- Cython fast path --------------------------------------------------
     if HAS_CYTHON_DIST_MATRIX:
         return cy_build_phoneme_dist_matrix(merged)
 
-    # --- Python fallback ---------------------------------------------------
     phonemes = sorted(merged)
     n = len(phonemes)
     dim = n + 1  # extra row/col for unknown phonemes
