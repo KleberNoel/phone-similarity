@@ -112,10 +112,10 @@ jobs:
             CFLAGS="-I$(brew --prefix libomp)/include"
             LDFLAGS="-L$(brew --prefix libomp)/lib"
             MACOSX_DEPLOYMENT_TARGET="14.0"
-          # Smoke-test: import the package and verify Cython loaded
+          # Smoke-test: import the Cython extension only (full deps tested in test job)
           CIBW_TEST_COMMAND: >-
-            python -c "from phone_similarity._dispatch import HAS_CYTHON; assert HAS_CYTHON"
-          CIBW_TEST_REQUIRES: "bitarray langcodes[data] numpy panphon"
+            python -c "import phone_similarity._core"
+          CIBW_TEST_REQUIRES: "numpy"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
