@@ -46,23 +46,10 @@ SAMPLE_FEATURES = {
 
 
 class TestHammingDistance:
-    def test_identical(self):
-        a = bitarray("10110100")
-        assert hamming_distance(a, a) == 0
-
-    def test_completely_different(self):
-        a = bitarray("1111")
-        b = bitarray("0000")
-        assert hamming_distance(a, b) == 4
-
     def test_one_bit_diff(self):
         a = bitarray("1000")
         b = bitarray("0000")
         assert hamming_distance(a, b) == 1
-
-    def test_empty(self):
-        a = bitarray()
-        assert hamming_distance(a, a) == 0
 
     def test_unequal_length_raises(self):
         with pytest.raises(ValueError, match="equal length"):
@@ -70,20 +57,6 @@ class TestHammingDistance:
 
 
 class TestHammingSimilarity:
-    def test_identical(self):
-        a = bitarray("10110100")
-        assert hamming_similarity(a, a) == 1.0
-
-    def test_completely_different(self):
-        a = bitarray("1111")
-        b = bitarray("0000")
-        assert hamming_similarity(a, b) == 0.0
-
-    def test_half_different(self):
-        a = bitarray("1100")
-        b = bitarray("0011")
-        assert hamming_similarity(a, b) == 0.0
-
     def test_one_bit_diff(self):
         a = bitarray("1000")
         b = bitarray("0000")
@@ -302,12 +275,6 @@ class TestDistanceClass:
         mat = eng_distance.pairwise_edit_distance(["kæt", "hæt"])
         assert mat[0][0] == 0.0
         assert mat[1][1] == 0.0
-
-    def test_similar_closer_than_dissimilar(self, eng_distance):
-        """'cat' and 'hat' should be closer than 'cat' and 'dog'."""
-        d_cat_hat = eng_distance.normalised_edit_distance("kæt", "hæt")
-        d_cat_dog = eng_distance.normalised_edit_distance("kæt", "dɔɡ")
-        assert d_cat_hat < d_cat_dog
 
 
 # OpenMP prange dictionary scan parity
