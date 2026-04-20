@@ -35,13 +35,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Union
 
-from phone_similarity._dispatch import (HAS_CYTHON_DIST_MATRIX,
-                                        cy_build_phoneme_dist_matrix)
-from phone_similarity.base_bit_array_specification import \
-    BaseBitArraySpecification
+from phone_similarity._dispatch import HAS_CYTHON_DIST_MATRIX, cy_build_phoneme_dist_matrix
+from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.pretokenize import PreTokenizedDictionary
-from phone_similarity.primitives import (normalised_feature_edit_distance,
-                                         phoneme_feature_distance)
+from phone_similarity.primitives import normalised_feature_edit_distance, phoneme_feature_distance
 
 # Pre-computed phoneme distance matrix
 

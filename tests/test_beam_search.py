@@ -123,7 +123,6 @@ class TestBeamSearchSegmentation:
         """Source 'kæt' should find 'cat' with distance ~0."""
         results = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -141,7 +140,6 @@ class TestBeamSearchSegmentation:
         """Source 'bæt' should find 'bat' exactly, 'cat' close."""
         results = beam_search_segmentation(
             ["b", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -161,7 +159,6 @@ class TestBeamSearchSegmentation:
         """Source 'kætsæt' (cat+sat) should find a 2-word segmentation."""
         results = beam_search_segmentation(
             ["k", "æ", "t", "s", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -181,7 +178,6 @@ class TestBeamSearchSegmentation:
     def test_returns_sorted_by_distance(self, mock_spec, small_ptd):
         results = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -197,7 +193,6 @@ class TestBeamSearchSegmentation:
     def test_empty_source_returns_empty(self, mock_spec, small_ptd):
         results = beam_search_segmentation(
             [],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -209,7 +204,6 @@ class TestBeamSearchSegmentation:
         empty_ptd = PreTokenizedDictionary.from_entries([])
         results = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             empty_ptd,
             mock_spec,
@@ -226,7 +220,6 @@ class TestBeamSearchPruning:
         """With max_words=1, only single-word segmentations should appear."""
         results = beam_search_segmentation(
             ["k", "æ", "t", "s", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -243,7 +236,6 @@ class TestBeamSearchPruning:
         """Very tight distance threshold should reduce results."""
         tight = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -254,7 +246,6 @@ class TestBeamSearchPruning:
         )
         loose = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -269,7 +260,6 @@ class TestBeamSearchPruning:
         """Beam width 1 should still find something (greedy)."""
         results = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -289,7 +279,6 @@ class TestBeamSearchQuality:
         """An exact match in the dictionary should have distance ~0."""
         results = beam_search_segmentation(
             ["s", "i", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -307,7 +296,6 @@ class TestBeamSearchQuality:
         # ɡæt isn't in the dict, but kæt→cat should match well
         results = beam_search_segmentation(
             ["ɡ", "æ", "t"],  # voiced version of 'cat'
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -327,7 +315,6 @@ class TestBeamSearchQuality:
         """Same word-tuple shouldn't appear multiple times in results."""
         results = beam_search_segmentation(
             ["k", "æ", "t"],
-            mock_spec,
             FEATURES,
             small_ptd,
             mock_spec,
@@ -457,7 +444,6 @@ class TestBeamSearchIntegration:
         source_tokens = spec.ipa_tokenizer("kæt")
         results = beam_search_segmentation(
             source_tokens,
-            spec,
             features,
             ptd,
             spec,

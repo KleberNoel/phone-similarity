@@ -788,7 +788,6 @@ class TestPunBeamSearch:
 
         results = beam_search_segmentation(
             source_tokens,
-            pun_spec,
             _SHARED_FEATURES,
             ptd,
             pun_spec,
@@ -836,7 +835,6 @@ class TestPunBeamSearch:
 
         results = beam_search_segmentation(
             source_tokens,
-            pun_spec,
             _SHARED_FEATURES,
             ptd,
             pun_spec,
