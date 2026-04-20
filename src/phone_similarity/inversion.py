@@ -7,8 +7,6 @@ find the closest phonemes in a target language's inventory.  Also provides
 target-language equivalents.
 """
 
-from __future__ import annotations
-
 from typing import Union
 
 from phone_similarity._dispatch import HAS_CYTHON_EXT, cy_invert_features

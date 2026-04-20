@@ -1,44 +1,20 @@
-"""
-Cross-language phonological comparison.
-
-Compares the pronunciation of a word across multiple languages using
-either Hamming similarity on bitarray encodings or feature-weighted
-edit distance.
-"""
-
-from __future__ import annotations
+# pylint: disable=missing-docstring
+from typing import Literal
 
 from phone_similarity.bit_array_specification import BitArraySpecification
-from phone_similarity.primitives import normalised_feature_edit_distance
+from phone_similarity.intersecting_bit_array_specification import (
+    IntersectingBitArraySpecification,
+)
+from phone_similarity.primitives import _HAS_CYTHON, normalised_feature_edit_distance
 from phone_similarity.universal_features import UniversalFeatureEncoder
 
-
-class _DistanceLite:
-    """Minimal Distance-like wrapper for cross-language Hamming comparison.
-
-    Avoids importing the full :class:`Distance` to break circular
-    dependencies (Distance lives in distance_class.py).
-    """
-
-    def __init__(self, spec: BitArraySpecification):
-        from phone_similarity.primitives import _HAS_CYTHON
-
-        self._spec = spec
-        self._has_cython = _HAS_CYTHON
-
-    def hamming(self, ipa_a: str, ipa_b: str, max_syllables: int = 6) -> float:
-        arr_a = self._spec.ipa_to_bitarray(ipa_a, max_syllables)
-        arr_b = self._spec.ipa_to_bitarray(ipa_b, max_syllables)
-        if self._has_cython:
-            from phone_similarity.primitives import _c_hamming_similarity
-
-            return _c_hamming_similarity(arr_a, arr_b)
-        from phone_similarity.primitives import hamming_similarity
-
-        return hamming_similarity(arr_a, arr_b)
+if _HAS_CYTHON:
+    from phone_similarity.primitives import _c_hamming_similarity as hamming_similarity
+else:
+    from phone_similarity.primitives import hamming_similarity
 
 
-def compare_cross_language(
+def compare_cross_language(  # pylint: disable=too-many-locals
     word_ipa_by_lang: dict[str, str],
     specs_by_lang: dict[str, BitArraySpecification],
     features_by_lang: dict[str, dict[str, dict]],
@@ -62,38 +38,57 @@ def compare_cross_language(
     dict
         ``{(lang_a, lang_b): distance}`` for every unordered pair.
     """
-    from phone_similarity.intersecting_bit_array_specification import (
-        IntersectingBitArraySpecification,
-    )
 
     langs = sorted(word_ipa_by_lang)
     results: dict[tuple[str, str], float] = {}
 
-    for i, la in enumerate(langs):
-        for lb in langs[i + 1 :]:
+    def bit_union(
+        lang_a,
+        lang_b,
+        spec: dict[str, BitArraySpecification],
+        features_part: Literal["consonant", "vowel"],
+    ):
+        return set(spec[lang_a].features[features_part]) | set(
+            spec[lang_b].features[features_part]
+        )
+
+    # TODO: improve with collections library e.g. do pairwise comparison using
+    # -> product or combinations...  # pylint: disable=fixme
+    for i, lang_a in enumerate(langs):
+        for lang_b in langs[i + 1 :]:
             if metric == "hamming":
-                merged = IntersectingBitArraySpecification([specs_by_lang[la], specs_by_lang[lb]])
-                merged_bit = BitArraySpecification(
-                    vowels=merged._vowels,
-                    consonants=merged._consonants,
-                    features_per_phoneme=merged._phoneme_features,
+                merged = IntersectingBitArraySpecification(
+                    [specs_by_lang[lang_a], specs_by_lang[lang_b]]
+                )
+                merged_bit = BitArraySpecification(  # Merging=comparison btwn bitarray lang specs
+                    vowels=merged.vowels,
+                    consonants=merged.consonants,
+                    features_per_phoneme=merged.phoneme_features,
                     features={
-                        "consonant": set(specs_by_lang[la]._features.get("consonant", ()))
-                        | set(specs_by_lang[lb]._features.get("consonant", ())),
-                        "vowel": set(specs_by_lang[la]._features.get("vowel", ()))
-                        | set(specs_by_lang[lb]._features.get("vowel", ())),
+                        "consonant": bit_union(
+                            lang_a, lang_b, specs_by_lang, features_part="consonant"
+                        ),
+                        "vowel": bit_union(lang_a, lang_b, specs_by_lang, features_part="vowel"),
                     },
                 )
-                d = _DistanceLite(merged_bit)
-                results[(la, lb)] = d.hamming(word_ipa_by_lang[la], word_ipa_by_lang[lb])
+
+                arr_a = merged_bit.ipa_to_bitarray(
+                    word_ipa_by_lang[lang_a],
+                    max_syllables=6,  #  TODO: FIXME - reassess this number of syllables (is it good for all languages?) - parameterize if needed...
+                )
+                arr_b = merged_bit.ipa_to_bitarray(word_ipa_by_lang[lang_b], max_syllables=6)
+
+                results[(lang_a, lang_b)] = hamming_similarity(arr_a, arr_b)
             else:
                 merged_feats = UniversalFeatureEncoder.merge_inventories(
-                    features_by_lang[la], features_by_lang[lb]
+                    features_by_lang[lang_a], features_by_lang[lang_b]
                 )
-                tokens_a = specs_by_lang[la].ipa_tokenizer(word_ipa_by_lang[la])
-                tokens_b = specs_by_lang[lb].ipa_tokenizer(word_ipa_by_lang[lb])
-                results[(la, lb)] = normalised_feature_edit_distance(
-                    tokens_a, tokens_b, merged_feats
+                tokens_a = specs_by_lang[lang_a].ipa_tokenizer(word_ipa_by_lang[lang_a])
+                tokens_b = specs_by_lang[lang_b].ipa_tokenizer(word_ipa_by_lang[lang_b])
+                results[(lang_a, lang_b)] = normalised_feature_edit_distance(
+                    tokens_a,
+                    tokens_b,
+                    merged_feats,  # type: ignore
                 )
 
     return results

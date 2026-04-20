@@ -201,9 +201,7 @@ class PreTokenizedDictionary:
         return dict(zip(self.words, self.ipas, strict=False))
 
 
-# ===================================================================
 # Disk cache helpers
-# ===================================================================
 
 _DEFAULT_CACHE_DIR = Path(os.path.expanduser("~/.cache/phone_similarity"))
 

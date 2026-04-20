@@ -25,31 +25,18 @@ Usage::
         result = _python_fallback(...)
 """
 
-from __future__ import annotations
-
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Sentinel for unavailable functions
-# ---------------------------------------------------------------------------
 _UNAVAILABLE: Any = None
 
-# ---------------------------------------------------------------------------
 # Level 1: Core Cython (hamming, edit distance, batch pairwise)
-# ---------------------------------------------------------------------------
 try:
     from phone_similarity._core import (
         batch_pairwise_hamming as cy_batch_pairwise_hamming,
     )
-    from phone_similarity._core import (
-        feature_edit_distance as cy_feature_edit_distance,
-    )
-    from phone_similarity._core import (
-        hamming_distance as cy_hamming_distance,
-    )
-    from phone_similarity._core import (
-        hamming_similarity as cy_hamming_similarity,
-    )
+    from phone_similarity._core import feature_edit_distance as cy_feature_edit_distance
+    from phone_similarity._core import hamming_distance as cy_hamming_distance
+    from phone_similarity._core import hamming_similarity as cy_hamming_similarity
 
     HAS_CYTHON = True
 except ImportError:
@@ -59,16 +46,10 @@ except ImportError:
     cy_feature_edit_distance = _UNAVAILABLE
     cy_batch_pairwise_hamming = _UNAVAILABLE
 
-# ---------------------------------------------------------------------------
 # Level 2: Extended Cython (dictionary scan, feature inversion, phoneme dist)
-# ---------------------------------------------------------------------------
 try:
-    from phone_similarity._core import (
-        batch_dictionary_scan as cy_batch_dictionary_scan,
-    )
-    from phone_similarity._core import (
-        invert_features as cy_invert_features,
-    )
+    from phone_similarity._core import batch_dictionary_scan as cy_batch_dictionary_scan
+    from phone_similarity._core import invert_features as cy_invert_features
     from phone_similarity._core import (
         phoneme_feature_distance as cy_phoneme_feature_distance,
     )
@@ -80,9 +61,7 @@ except ImportError:
     cy_invert_features = _UNAVAILABLE
     cy_phoneme_feature_distance = _UNAVAILABLE
 
-# ---------------------------------------------------------------------------
 # Level 3: OpenMP prange (parallel dictionary scan)
-# ---------------------------------------------------------------------------
 try:
     from phone_similarity._core import (
         prange_batch_dictionary_scan as cy_prange_batch_dictionary_scan,
@@ -93,16 +72,10 @@ except ImportError:
     HAS_PRANGE = False
     cy_prange_batch_dictionary_scan = _UNAVAILABLE
 
-# ---------------------------------------------------------------------------
 # Level 4: Cython IPA tokenizer
-# ---------------------------------------------------------------------------
 try:
-    from phone_similarity._core import (
-        batch_ipa_tokenize as cy_batch_ipa_tokenize,
-    )
-    from phone_similarity._core import (
-        cython_ipa_tokenizer as cy_ipa_tokenizer,
-    )
+    from phone_similarity._core import batch_ipa_tokenize as cy_batch_ipa_tokenize
+    from phone_similarity._core import cython_ipa_tokenizer as cy_ipa_tokenizer
 
     HAS_CYTHON_TOKENIZER = True
 except ImportError:
@@ -110,16 +83,10 @@ except ImportError:
     cy_ipa_tokenizer = _UNAVAILABLE
     cy_batch_ipa_tokenize = _UNAVAILABLE
 
-# ---------------------------------------------------------------------------
 # Level 5: Cython syllabifier
-# ---------------------------------------------------------------------------
 try:
-    from phone_similarity._core import (
-        batch_cython_syllabify as cy_batch_syllabify,
-    )
-    from phone_similarity._core import (
-        cython_syllabify as cy_syllabify,
-    )
+    from phone_similarity._core import batch_cython_syllabify as cy_batch_syllabify
+    from phone_similarity._core import cython_syllabify as cy_syllabify
 
     HAS_CYTHON_SYLLABIFIER = True
 except ImportError:
@@ -127,9 +94,7 @@ except ImportError:
     cy_syllabify = _UNAVAILABLE
     cy_batch_syllabify = _UNAVAILABLE
 
-# ---------------------------------------------------------------------------
 # Level 6: Cython co-articulated edit distance
-# ---------------------------------------------------------------------------
 try:
     from phone_similarity._core import (
         coarticulated_feature_edit_distance_c as cy_coarticulated_feature_edit_distance,
@@ -140,9 +105,7 @@ except ImportError:
     HAS_CYTHON_COARTICULATION = False
     cy_coarticulated_feature_edit_distance = _UNAVAILABLE
 
-# ---------------------------------------------------------------------------
 # Level 7: Cython phoneme distance matrix builder
-# ---------------------------------------------------------------------------
 try:
     from phone_similarity._core import (
         build_phoneme_dist_matrix as cy_build_phoneme_dist_matrix,

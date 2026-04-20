@@ -68,9 +68,7 @@ import random
 from collections.abc import Sequence
 from typing import Protocol
 
-# ---------------------------------------------------------------------------
 # Cython dispatch (imported once; flag checked in hot functions)
-# ---------------------------------------------------------------------------
 from phone_similarity._dispatch import (
     HAS_CYTHON_COARTICULATION,
     cy_coarticulated_feature_edit_distance,
@@ -80,9 +78,7 @@ from phone_similarity.universal_features import (
     UniversalFeatureEncoder,
 )
 
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 _NUM_FEATURES = len(PANPHON_FEATURE_NAMES)
 _FEAT_IDX = {name: i for i, name in enumerate(PANPHON_FEATURE_NAMES)}
 
@@ -102,9 +98,7 @@ _ROUND = _FEAT_IDX["round"]
 _STRID = _FEAT_IDX["strid"]
 _DELREL = _FEAT_IDX["delrel"]
 
-# ---------------------------------------------------------------------------
 # Encode cache — avoids repeated NFD + diacritic-strip fallback per token
-# ---------------------------------------------------------------------------
 _encode = UniversalFeatureEncoder.encode
 _encode_cache: dict[str, tuple[int, ...]] = {}
 
@@ -118,9 +112,7 @@ def _cached_encode(phoneme: str) -> tuple[int, ...]:
     return vec
 
 
-# ---------------------------------------------------------------------------
 # FricativeConfig dataclass
-# ---------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)
 class FricativeConfig:
     """Configuration for fricative-specific weighting in distance computation.
@@ -174,9 +166,7 @@ class FricativeConfig:
 _DEFAULT_FRICATIVE_CONFIG = FricativeConfig()
 
 
-# ---------------------------------------------------------------------------
 # Co-articulation rule dataclass
-# ---------------------------------------------------------------------------
 @dataclasses.dataclass(frozen=True)
 class CoarticulationRule:
     """A single co-articulation perturbation rule.
@@ -207,9 +197,7 @@ class CoarticulationRule:
     within_syllable_only: bool = False
 
 
-# ---------------------------------------------------------------------------
 # Strategy protocol
-# ---------------------------------------------------------------------------
 class CoarticulationStrategy(Protocol):
     """Abstract protocol for co-articulation models."""
 
@@ -222,9 +210,7 @@ class CoarticulationStrategy(Protocol):
         ...
 
 
-# ---------------------------------------------------------------------------
 # Default co-articulation model
-# ---------------------------------------------------------------------------
 class DefaultCoarticulationModel:
     """Co-articulation model with deterministic rules and stochastic jitter.
 
@@ -247,7 +233,7 @@ class DefaultCoarticulationModel:
         across boundaries as within a syllable.
     """
 
-    # --- Anticipatory rules: consonant features shift toward following vowel
+    # Anticipatory rules: consonant features shift toward following vowel
     # Keyed by trigger condition for O(1) lookup instead of linear scan.
     _ANTICIPATORY_RULES: dict[str, list[CoarticulationRule]] = {
         "high_vowel": [
@@ -261,7 +247,7 @@ class DefaultCoarticulationModel:
         ],
     }
 
-    # --- Carryover rules: vowel features shift due to preceding consonant
+    # Carryover rules: vowel features shift due to preceding consonant
     _CARRYOVER_RULES: dict[str, list[CoarticulationRule]] = {
         "nasal_consonant": [
             CoarticulationRule("nasalization", _NAS, +1.0, 0.50, 0.90),
@@ -275,7 +261,7 @@ class DefaultCoarticulationModel:
         ],
     }
 
-    # --- Assimilation rules: consonant-consonant cluster effects
+    # Assimilation rules: consonant-consonant cluster effects
     _ASSIMILATION_VOICING: list[CoarticulationRule] = [
         CoarticulationRule("voice_spread", _VOI, 0.0, 0.40, 0.75),
     ]
@@ -286,7 +272,7 @@ class DefaultCoarticulationModel:
         CoarticulationRule("nasal_place_lab", _LAB, 0.0, 0.55, 0.85),
     ]
 
-    # --- Frication spread rules: fricative noise bleeds to adjacent segments
+    # Frication spread rules: fricative noise bleeds to adjacent segments
     # These only activate when FricativeConfig.frication_spread is True.
     # Note: vowels already have [cont=+1], so we model frication spread as:
     # 1. Partial devoicing of following vowels by voiceless fricatives
@@ -338,8 +324,6 @@ class DefaultCoarticulationModel:
             raise ValueError(f"jitter must be in [0.0, 1.0], got {value}")
         self._jitter = value
 
-    # ----- Feature classification helpers ----------------------------------
-
     @staticmethod
     def _is_vowel(feats: tuple[int, ...]) -> bool:
         return feats[_SYL] == 1
@@ -387,8 +371,6 @@ class DefaultCoarticulationModel:
         """Sibilant: fricative with [+strident] (s, z, ʃ, ʒ, ...)."""
         return feats[_SON] == -1 and feats[_CONT] == 1 and feats[_STRID] == 1
 
-    # ----- Syllable boundary check ----------------------------------------
-
     def _same_syllable(
         self,
         idx_a: int,
@@ -399,8 +381,6 @@ class DefaultCoarticulationModel:
         if syl_boundaries is None:
             return True
         return syl_boundaries[idx_a] == syl_boundaries[idx_b]
-
-    # ----- Core perturbation logic ----------------------------------------
 
     def _apply_shift(
         self,
@@ -430,8 +410,6 @@ class DefaultCoarticulationModel:
         shift = direction * mag * boundary_factor
         new_val = base[rule.target_feature] + shift
         base[rule.target_feature] = max(-1.0, min(1.0, new_val))
-
-    # ----- Sequence perturbation ------------------------------------------
 
     def perturb_sequence(
         self,
@@ -562,8 +540,6 @@ class DefaultCoarticulationModel:
 
         return [tuple(v) for v in perturbed]
 
-    # ----- Syllable boundary builder helper --------------------------------
-
     @staticmethod
     def syllable_boundary_map(
         syllables: Sequence[object],
@@ -587,23 +563,8 @@ class DefaultCoarticulationModel:
         return boundaries
 
 
-# ---------------------------------------------------------------------------
 # Module-level convenience instance
-# ---------------------------------------------------------------------------
 _DEFAULT_MODEL = DefaultCoarticulationModel(jitter=0.0)
-
-
-# ---------------------------------------------------------------------------
-# Distance functions with co-articulation
-# ---------------------------------------------------------------------------
-def _coarticulated_vectors(
-    tokens: Sequence[str],
-    model: DefaultCoarticulationModel | None = None,
-    syllable_boundaries: Sequence[int] | None = None,
-) -> list[tuple[float, ...]]:
-    """Get co-articulated feature vectors for a token sequence."""
-    m = model or _DEFAULT_MODEL
-    return m.perturb_sequence(tokens, syllable_boundaries)
 
 
 def _is_fricative_vec(vec: tuple[float, ...]) -> bool:
@@ -725,7 +686,6 @@ def coarticulated_feature_edit_distance(
     vecs_a = m.perturb_sequence(seq_a, syl_boundaries_a)
     vecs_b = m.perturb_sequence(seq_b, syl_boundaries_b)
 
-    # --- Cython fast path: delegate DP loop to C --------------------------
     if HAS_CYTHON_COARTICULATION:
         return cy_coarticulated_feature_edit_distance(
             vecs_a,
@@ -739,7 +699,6 @@ def coarticulated_feature_edit_distance(
             delete_cost,
         )
 
-    # --- Python fallback ---------------------------------------------------
     len_a = len(vecs_a)
     len_b = len(vecs_b)
 

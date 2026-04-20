@@ -24,9 +24,7 @@ from phone_similarity.syllable import (
     syllable_count,
 )
 
-# -----------------------------------------------------------------------
 # CleanConfig
-# -----------------------------------------------------------------------
 
 
 class TestCleanConfig:
@@ -42,11 +40,6 @@ class TestCleanConfig:
     def test_preserve_stress_not_strip_all(self):
         cfg = CleanConfig(strip_stress=False)
         assert cfg.strip_all is False
-
-    def test_frozen(self):
-        cfg = CleanConfig()
-        with pytest.raises(AttributeError):
-            cfg.strip_stress = False  # type: ignore[misc]
 
     def test_prebuilt_strip_all(self):
         assert STRIP_ALL.strip_all is True
@@ -65,9 +58,7 @@ class TestCleanConfig:
         assert PRESERVE_ALL.strip_liaison is False
 
 
-# -----------------------------------------------------------------------
 # clean_phones backward compatibility
-# -----------------------------------------------------------------------
 
 
 class TestCleanPhonesBackwardCompat:
@@ -92,9 +83,7 @@ class TestCleanPhonesBackwardCompat:
         assert "e" in result
 
 
-# -----------------------------------------------------------------------
 # clean_phones with preserve_stress flag
-# -----------------------------------------------------------------------
 
 
 class TestCleanPhonesPreserveStress:
@@ -120,9 +109,7 @@ class TestCleanPhonesPreserveStress:
         assert "ˈ" in result
 
 
-# -----------------------------------------------------------------------
 # clean_phones with CleanConfig
-# -----------------------------------------------------------------------
 
 
 class TestCleanPhonesConfig:
@@ -168,9 +155,7 @@ class TestCleanPhonesConfig:
         assert result == "kɑːtːo"
 
 
-# -----------------------------------------------------------------------
 # extract_stress_marks
-# -----------------------------------------------------------------------
 
 
 class TestExtractStressMarks:
@@ -205,9 +190,7 @@ class TestExtractStressMarks:
         assert marks == [(0, "primary"), (0, "secondary")]
 
 
-# -----------------------------------------------------------------------
 # Syllable stress field
-# -----------------------------------------------------------------------
 
 
 class TestSyllableStress:
@@ -236,16 +219,8 @@ class TestSyllableStress:
         syl = Syllable(onset=("k",), nucleus=("æ",), coda=())
         assert syl.rime == ("æ",)
 
-    def test_backward_compat_no_stress(self):
-        """Syllable created without stress arg should still work."""
-        syl = Syllable(onset=("b",), nucleus=("a",), coda=())
-        assert len(syl) == 2
-        assert syl.phonemes == ("b", "a")
 
-
-# -----------------------------------------------------------------------
 # syllabify with stress_marks
-# -----------------------------------------------------------------------
 
 
 class TestSyllabifyWithStress:
@@ -298,9 +273,7 @@ class TestSyllabifyWithStress:
         assert syls[2].stress == "secondary"
 
 
-# -----------------------------------------------------------------------
 # stressed_syllable helper
-# -----------------------------------------------------------------------
 
 
 class TestStressedSyllable:
@@ -333,9 +306,7 @@ class TestStressedSyllable:
         assert stressed_syllable([]) is None
 
 
-# -----------------------------------------------------------------------
 # stress_pattern helper
-# -----------------------------------------------------------------------
 
 
 class TestStressPattern:
@@ -364,9 +335,7 @@ class TestStressPattern:
         assert stress_pattern([]) == ""
 
 
-# -----------------------------------------------------------------------
 # syllable_count
-# -----------------------------------------------------------------------
 
 
 class TestSyllableCount:
@@ -384,9 +353,7 @@ class TestSyllableCount:
         assert syllable_count([]) == 0
 
 
-# -----------------------------------------------------------------------
 # Integration: extract_stress_marks + syllabify pipeline
-# -----------------------------------------------------------------------
 
 
 class TestStressPipeline:

@@ -38,8 +38,6 @@ For finer-grained imports, use the sub-modules:
 * :mod:`phone_similarity.cross_language` -- ``compare_cross_language``
 * :mod:`phone_similarity.beam_search` -- ``beam_search_segmentation``,
   ``beam_search_phrases``, ``BeamResult``
-* :mod:`phone_similarity.embedding` -- ``PhoneticEmbedder``,
-  ``BruteForceIndex``, ``KDTreeIndex``, ``ann_dictionary_scan``
 * :mod:`phone_similarity.universal_features` -- ``UniversalFeatureEncoder``,
   ``encode_phoneme``, ``universal_phoneme_distance``, ``merge_inventories``
 * :mod:`phone_similarity.coarticulation` -- ``DefaultCoarticulationModel``,
@@ -63,11 +61,9 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0.dev0"
 
-# ---------------------------------------------------------------------------
 # Lazy public API (PEP 562) — submodules are imported on first attribute
 # access so that ``import phone_similarity`` is cheap and does not pull in
 # heavy dependencies (panphon, pandas, …) until they are actually needed.
-# ---------------------------------------------------------------------------
 
 # Map public name → (module, attribute)
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
@@ -106,10 +102,6 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         "reverse_dictionary_lookup",
     ),
     "Distance": ("phone_similarity.distance_class", "Distance"),
-    "BruteForceIndex": ("phone_similarity.embedding", "BruteForceIndex"),
-    "KDTreeIndex": ("phone_similarity.embedding", "KDTreeIndex"),
-    "PhoneticEmbedder": ("phone_similarity.embedding", "PhoneticEmbedder"),
-    "ann_dictionary_scan": ("phone_similarity.embedding", "ann_dictionary_scan"),
     "invert_features": ("phone_similarity.inversion", "invert_features"),
     "invert_ipa": ("phone_similarity.inversion", "invert_ipa"),
     "PreTokenizedDictionary": ("phone_similarity.pretokenize", "PreTokenizedDictionary"),
@@ -166,21 +158,17 @@ __all__ = [
     "PRESERVE_STRESS",
     "STRIP_ALL",
     "BeamResult",
-    "BruteForceIndex",
     "CleanConfig",
     "CoarticulationRule",
     "DefaultCoarticulationModel",
     "Distance",
     "FricativeConfig",
-    "KDTreeIndex",
     "MaxOnsetSegmenter",
-    "PhoneticEmbedder",
     "PreTokenizedDictionary",
     "SonorityScale",
     "Syllable",
     "UniversalFeatureEncoder",
     "__version__",
-    "ann_dictionary_scan",
     "batch_pairwise_hamming",
     "batch_syllabify",
     "beam_search_phrases",

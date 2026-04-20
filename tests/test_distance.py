@@ -21,9 +21,7 @@ from phone_similarity.primitives import (
     phoneme_feature_distance,
 )
 
-# ===================================================================
 # Fixtures
-# ===================================================================
 
 SAMPLE_FEATURES = {
     "p": {"voiced": False, "manner": "plosive", "labial": True},
@@ -44,9 +42,7 @@ SAMPLE_FEATURES = {
 }
 
 
-# ===================================================================
 # hamming_distance / hamming_similarity
-# ===================================================================
 
 
 class TestHammingDistance:
@@ -97,9 +93,7 @@ class TestHammingSimilarity:
         assert hamming_similarity(bitarray(), bitarray()) == 1.0
 
 
-# ===================================================================
 # phoneme_feature_distance
-# ===================================================================
 
 
 class TestPhonemeFeatureDistance:
@@ -122,9 +116,7 @@ class TestPhonemeFeatureDistance:
         assert phoneme_feature_distance({}, {}) == 0.0
 
 
-# ===================================================================
 # feature_edit_distance
-# ===================================================================
 
 
 class TestFeatureEditDistance:
@@ -182,9 +174,7 @@ class TestNormalisedFeatureEditDistance:
         assert normalised_feature_edit_distance([], [], SAMPLE_FEATURES) == 0.0
 
 
-# ===================================================================
 # batch_pairwise_hamming
-# ===================================================================
 
 
 class TestBatchPairwiseHamming:
@@ -221,9 +211,7 @@ class TestBatchPairwiseHamming:
         assert batch_pairwise_hamming([]) == []
 
 
-# ===================================================================
 # Cython / pure-Python parity
-# ===================================================================
 
 
 class TestCythonParity:
@@ -264,9 +252,7 @@ class TestCythonParity:
                 assert py_mat[i][j] == pytest.approx(cy_mat[i][j])
 
 
-# ===================================================================
 # High-level Distance class (integration)
-# ===================================================================
 
 
 class TestDistanceClass:
@@ -324,9 +310,7 @@ class TestDistanceClass:
         assert d_cat_hat < d_cat_dog
 
 
-# ===================================================================
 # OpenMP prange dictionary scan parity
-# ===================================================================
 
 
 class TestPrangeDictionaryScan:

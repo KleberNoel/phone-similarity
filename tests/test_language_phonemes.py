@@ -1,6 +1,10 @@
 import unicodedata
 import unittest
 
+import pytest
+
+pytestmark = pytest.mark.slow
+
 from phone_similarity.g2p.charsiu.load_dictionary import load_dictionary_tsv
 from phone_similarity.language import LANGUAGES
 

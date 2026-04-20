@@ -7,15 +7,10 @@ parallel scans, and :func:`parallel_dictionary_scan` for fanning out
 scans across multiple target languages.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Union
 
-from phone_similarity._dispatch import (
-    HAS_CYTHON_EXT,
-    HAS_PRANGE,
-)
+from phone_similarity._dispatch import HAS_CYTHON_EXT, HAS_PRANGE
 from phone_similarity._dispatch import (
     cy_batch_dictionary_scan as _c_batch_dictionary_scan,
 )
@@ -54,12 +49,8 @@ def _scan_one_language(args):
 
     # Re-check Cython availability in the worker process via _dispatch
     # (import once rather than duplicating try/except blocks)
-    from phone_similarity._dispatch import (
-        HAS_CYTHON_EXT as _worker_has_cython,
-    )
-    from phone_similarity._dispatch import (
-        HAS_PRANGE as _worker_has_prange,
-    )
+    from phone_similarity._dispatch import HAS_CYTHON_EXT as _worker_has_cython
+    from phone_similarity._dispatch import HAS_PRANGE as _worker_has_prange
     from phone_similarity._dispatch import (
         cy_batch_dictionary_scan as _worker_batch_scan,
     )
@@ -102,7 +93,7 @@ def _scan_one_language(args):
                 if target_len == 0:
                     continue
                 ratio = max(source_len, target_len) / min(source_len, target_len)
-                if ratio > MAX_LENGTH_RATIO:
+                if ratio > MAX_LENGTH_RATIO:  # FIXME: why are we doing this?
                     continue
                 # Phoneme-set overlap pre-filter (matches Cython path)
                 target_set = set(target_tokens)
@@ -327,7 +318,7 @@ def reverse_dictionary_lookup(
 
         # Quick length-ratio filter
         ratio = max(source_len, target_len) / min(source_len, target_len)
-        if ratio > MAX_LENGTH_RATIO:
+        if ratio > MAX_LENGTH_RATIO:  # TODO FIXME: Why are we doing this??
             continue
 
         # Phoneme-set overlap pre-filter (matches Cython path)

@@ -9,6 +9,8 @@ from itertools import combinations
 
 import pytest
 
+pytestmark = pytest.mark.slow
+
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.cross_language import compare_cross_language
 from phone_similarity.distance_class import Distance
@@ -17,9 +19,7 @@ from phone_similarity.language import LANGUAGES
 from phone_similarity.primitives import normalised_feature_edit_distance
 from phone_similarity.universal_features import UniversalFeatureEncoder
 
-# -----------------------------------------------------------------------
 # Fixtures
-# -----------------------------------------------------------------------
 
 # Charsiu dict code -> language module name
 _LANG_MAP: dict[str, str] = {
@@ -89,9 +89,7 @@ def cognate_ipa(g2ps) -> dict[str, dict[str, str]]:
     return result
 
 
-# -----------------------------------------------------------------------
 # Tests
-# -----------------------------------------------------------------------
 
 
 class TestCognateDistances:

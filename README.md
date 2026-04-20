@@ -2,50 +2,16 @@
 
 Phonological distance and similarity metrics for cross-lingual analysis.
 
-`phone-similarity` computes feature-weighted edit distances between IPA
-transcriptions, scans foreign-language dictionaries for phonological
-near-matches, and discovers multi-word interlingual puns via beam search
-segmentation -- all accelerated by a Cython backend.
+Computes feature-weighted edit distances between IPA transcriptions, scans foreign-language dictionaries for phonological near-matches, and discovers multi-word interlingual puns via beam search segmentation. Accelerated by a Cython backend.
 
-## Why phone-similarity?
+## Key Capabilities
 
-**phone-similarity lets you measure how similar two words *sound* across
-any pair of 101 languages, using articulatory phonetics rather than
-string matching.**
-
-- **Cross-language phonological search** -- "find me words in Japanese
-  that sound like the English word 'cat'" -- not by spelling, but by how
-  the mouth produces them
-- **Linguistically grounded** -- distances based on panphon's 24
-  articulatory features (voicing, place, manner, ...), not ad-hoc edit
-  distance on characters; co-articulation modelling adds realism
-- **Fast enough for dictionary-scale** -- Cython + OpenMP makes scanning
-  100k+ entry dictionaries practical; beam search makes multi-word phrase
-  matching tractable
-- **101 languages out of the box** -- each with curated phoneme
-  inventories and G2P
-
-Target use cases: computational pun detection, loanword identification,
-cognate discovery, cross-linguistic phonological typology,
-foreign-language word selection for mnemonic / pedagogical tools.
-
-## Features
-
-- **Feature-weighted edit distance** -- substitution cost is proportional to
-  articulatory difference, not a flat 1.0
-- **Cython-accelerated hot paths** -- Hamming distance, edit distance,
-  dictionary scanning, IPA tokenization, and feature inversion all dispatch
-  to compiled C when available (4--10x faster)
-- **Pre-tokenized dictionary caching** -- numpy-backed compact storage with
-  automatic disk caching and invalidation
-- **Parallel multi-language scanning** -- fan out across target languages
-  with `ProcessPoolExecutor`
-- **Beam search segmentation** -- find optimal multi-word foreign
-  segmentations for a source phrase
-- **Phonetic embeddings & ANN** -- approximate nearest-neighbor pre-filtering
-  with brute-force or KD-tree indices
-- **100+ languages** via the CharsiuG2P grapheme-to-phoneme backend
-  (dictionary lookup + ONNX neural inference)
+- Feature-weighted edit distance using 24 articulatory features (voicing, place, manner, etc.)
+- Cython + OpenMP acceleration for dictionary-scale scanning (4-10x faster)
+- Pre-tokenized dictionary caching with automatic disk invalidation
+- Parallel multi-language scanning via `ProcessPoolExecutor`
+- Beam search segmentation for multi-word foreign phrase matching
+- 100+ languages via CharsiuG2P (dictionary lookup + ONNX neural inference)
 
 ## Installation
 
@@ -53,66 +19,45 @@ foreign-language word selection for mnemonic / pedagogical tools.
 pip install phone-similarity
 ```
 
-With Cython acceleration (recommended):
+### Optional extras
 
-```bash
-pip install phone-similarity[dev]
-python setup.py build_ext --inplace   # compile Cython extension
-```
+| Extra | Command | Adds |
+|-------|---------|------|
+| Cython acceleration | `pip install phone-similarity[dev]` then `python setup.py build_ext --inplace` | Compiled C hot paths |
+| G2P support | `pip install phone-similarity[g2p]` | transformers + ONNX Runtime |
 
-For G2P (grapheme-to-phoneme) support:
-
-```bash
-pip install phone-similarity[g2p]   # adds transformers + ONNX Runtime
-```
-
-For approximate nearest-neighbour support:
-
-```bash
-pip install phone-similarity[ann]   # adds scipy
-```
-
-Development install from source:
+### From source
 
 ```bash
 git clone https://github.com/klebster2/phono-sim.git
 cd phono-sim
 pip install -e ".[dev,g2p]"
-python setup.py build_ext --inplace   # compile Cython extension
+python setup.py build_ext --inplace
 ```
 
-> **Note**: The G2P backend uses ONNX Runtime (via HuggingFace Optimum)
-> instead of PyTorch, so no PyTorch installation is needed.
+> The G2P backend uses ONNX Runtime (via HuggingFace Optimum). No PyTorch installation required.
 
-## Quick start
+## Quick Start
 
 ### Compare two IPA strings
 
 ```python
 from phone_similarity.language import LANGUAGES
 
-# Builder pattern — one call creates a full Distance object:
 dist = LANGUAGES.build_distance("eng_us")
 
-# Hamming similarity (bitarray-level, fixed-width)
-print(dist.hamming("kæt", "kæb"))        # ~0.97
-
-# Feature-weighted edit distance (phoneme-sequence-level)
-print(dist.edit_distance("kæt", "kæb"))  # ~0.12
-print(dist.normalised_edit_distance("kæt", "kæb"))  # ~0.04
+dist.hamming("kæt", "kæb")                    # ~0.97
+dist.edit_distance("kæt", "kæb")              # ~0.12
+dist.normalised_edit_distance("kæt", "kæb")   # ~0.04
 ```
 
 ### Scan a foreign dictionary
 
 ```python
-from phone_similarity import (
-    cached_pretokenize_dictionary,
-    reverse_dictionary_lookup,
-)
+from phone_similarity import cached_pretokenize_dictionary, reverse_dictionary_lookup
 from phone_similarity.language import LANGUAGES
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 
-# Build specs via registry
 eng_spec = LANGUAGES.build_spec("eng_us")
 eng = LANGUAGES["eng_us"]
 
@@ -120,12 +65,10 @@ fra_spec = LANGUAGES.build_spec("fra")
 fra = LANGUAGES["fra"]
 fra_g2p = CharsiuGraphemeToPhonemeGenerator("fra")
 
-# Pre-tokenize and cache the French dictionary
 ptd = cached_pretokenize_dictionary(
     lambda: fra_g2p.pdict, fra_spec, lang="fra",
 )
 
-# Find French words closest to English "music" (/mjuzɪk/)
 matches = reverse_dictionary_lookup(
     source_ipa="mjuzɪk",
     source_lang_code="eng-us",
@@ -134,7 +77,7 @@ matches = reverse_dictionary_lookup(
     target_lang_code="fra",
     target_spec=fra_spec,
     target_phoneme_features=fra.PHONEME_FEATURES,
-    target_dictionary={},  # ignored when pre_tokenized is given
+    target_dictionary={},
     pre_tokenized=ptd,
     top_n=5,
     max_distance=0.40,
@@ -142,8 +85,6 @@ matches = reverse_dictionary_lookup(
 for word, ipa, dist in matches:
     print(f"  {word:20s} /{ipa}/  d={dist:.3f}")
 ```
-
-Output:
 
 ```
   bionique             /bjɔnik/  d=0.253
@@ -183,98 +124,63 @@ for r in results:
 ```python
 from phone_similarity import invert_features
 
-# What French phonemes are closest to English /r/?
-candidates = invert_features(
-    eng.PHONEME_FEATURES["ɹ"],
-    fra.PHONEME_FEATURES,
-    top_n=3,
-)
+candidates = invert_features(eng.PHONEME_FEATURES["ɹ"], fra.PHONEME_FEATURES, top_n=3)
 for phoneme, dist in candidates:
     print(f"  /{phoneme}/  d={dist:.3f}")
 ```
-
-## Multilingual support
-
-The library ships phoneme features for multiple languages.
-
-G2P dictionaries and neural inference cover 100+ languages via
-[CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P).
 
 ## Architecture
 
 ```
 IPA string
-  |
-  v
-clean_phones()          Strip stress markers, NFKD normalise
-  |
-  v
-ipa_tokenizer()         Greedy longest-match against phoneme inventory
-  |
-  v
-feature_edit_distance()  Levenshtein DP with gradient substitution cost
-  |
-  v
-reverse_dictionary_lookup() / parallel_dictionary_scan()
-  |                            |
-  v                            v
-beam_search_segmentation()   Multi-word segmentation via beam search
+  -> clean_phones()                  Strip stress markers, NFKD normalise
+  -> ipa_tokenizer()                 Greedy longest-match against phoneme inventory
+  -> feature_edit_distance()         Levenshtein DP with gradient substitution cost
+  -> reverse_dictionary_lookup()     Single-language scan
+     or parallel_dictionary_scan()   Multi-language fan-out
+  -> beam_search_segmentation()      Multi-word segmentation
 ```
 
-### Module map
+## Module Map
 
 | Module | Purpose |
 |--------|---------|
-| `primitives` | Hamming distance/similarity, phoneme feature distance, feature edit distance, batch pairwise Hamming |
-| `distance_class` | `Distance` high-level API wrapping a `BitArraySpecification` |
-| `pretokenize` | `PreTokenizedDictionary`, disk caching with `cached_pretokenize_dictionary` |
+| `primitives` | Hamming distance, phoneme feature distance, feature edit distance |
+| `distance_class` | High-level `Distance` API wrapping `BitArraySpecification` |
+| `pretokenize` | `PreTokenizedDictionary`, disk caching |
 | `dictionary_scan` | `reverse_dictionary_lookup`, `parallel_dictionary_scan` |
-| `inversion` | `invert_features`, `invert_ipa` -- reverse feature-to-phoneme lookup |
-| `cross_language` | `compare_cross_language` -- pairwise comparison across languages |
-| `beam_search` | `beam_search_segmentation`, `beam_search_phrases` -- multi-word segmentation |
-| `embedding` | `PhoneticEmbedder`, `BruteForceIndex`, `KDTreeIndex`, `ann_dictionary_scan` |
-| `coarticulation` | `DefaultCoarticulationModel`, `FricativeConfig`, co-articulation distance |
-| `syllable` | `syllabify`, `Syllable`, `SonorityScale`, `MaxOnsetSegmenter` |
-| `universal_features` | `UniversalFeatureEncoder` backed by [Panphon](https://github.com/dmort27/panphon) |
-| `bit_array_specification` | `BitArraySpecification` -- phoneme-to-bitarray encoding |
-| `clean_phones` | IPA cleaning, stress extraction, and NFKD normalisation |
+| `inversion` | Reverse feature-to-phoneme lookup |
+| `cross_language` | Pairwise comparison across languages |
+| `beam_search` | Multi-word segmentation |
+| `coarticulation` | Co-articulation distance modelling |
+| `syllable` | Syllabification, sonority scale, max onset segmenter |
+| `universal_features` | Panphon-backed feature encoder |
+| `bit_array_specification` | Phoneme-to-bitarray encoding |
+| `clean_phones` | IPA cleaning, stress extraction, NFKD normalisation |
 | `language` | Per-language phoneme feature tables (lazy-loaded registry) |
-| `analysis` | `PhonemeEntropyAnalyzer` -- entropy and bit utilisation diagnostics |
-| `_dispatch` | Centralised Cython extension detection (Chain of Responsibility) |
+| `analysis` | Entropy and bit utilisation diagnostics |
+| `_dispatch` | Cython extension detection (Chain of Responsibility) |
 | `g2p` | CharsiuG2P grapheme-to-phoneme backend |
 
 ## Performance
 
-With Cython compiled (`_HAS_CYTHON = True`):
+With Cython compiled:
 
-- Dictionary scan (French, 245K entries): ~31 ms
-- Dictionary scan (Dutch, 148K entries): ~9 ms
-- Feature edit distance: ~4x faster than pure Python
-- No memory leaks: +0.001 MB delta over repeated scan cycles
+| Benchmark | Time |
+|-----------|------|
+| Dictionary scan (French, 245K entries) | ~31 ms |
+| Dictionary scan (Dutch, 148K entries) | ~9 ms |
+| Feature edit distance vs pure Python | ~4x faster |
+| Memory delta over repeated scans | +0.001 MB |
 
-## G2P model
+## G2P Model
 
-The grapheme-to-phoneme backend uses an ONNX-exported ByT5-tiny model from
-[CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P), hosted at
-[`klebster/g2p_multilingual_byT5_tiny_onnx`](https://huggingface.co/klebster/g2p_multilingual_byT5_tiny_onnx)
-on HuggingFace Hub.
-
-The model loads **lazily** -- only downloaded on the first `.generate()` call.
-Dictionary-only usage (`.pdict`) does not require the ML runtime.
+Uses an ONNX-exported ByT5-tiny model from [CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P), hosted at [`klebster/g2p_multilingual_byT5_tiny_onnx`](https://huggingface.co/klebster/g2p_multilingual_byT5_tiny_onnx) on HuggingFace Hub. Loads lazily on first `.generate()` call. Dictionary-only usage does not require the ML runtime.
 
 ## Attribution
 
-> Mortensen, D. R., Dalmia, S., & Littell, P. (2018). Epitran:
-> Precision G2P for many languages. *Proceedings of LREC 2018*.
->
-> Mortensen, D. R. (2017). PanPhon: A resource for mapping IPA segments
-> to articulatory feature vectors.
-> [GitHub](https://github.com/dmort27/panphon)
-
-> Zhu, J., Zhang, C., & Jurgens, D. (2022). ByT5 model for massively
-> multilingual grapheme-to-phoneme conversion. *Proceedings of
-> INTERSPEECH 2022*.
-> [GitHub](https://github.com/lingjzhu/CharsiuG2P)
+- Mortensen, D. R., Dalmia, S., & Littell, P. (2018). Epitran: Precision G2P for many languages. *LREC 2018*. [GitHub](https://github.com/dmort27/panphon)
+- Zhu, J., Zhang, C., & Jurgens, D. (2022). ByT5 model for massively multilingual grapheme-to-phoneme conversion. *INTERSPEECH 2022*. [GitHub](https://github.com/lingjzhu/CharsiuG2P)
 
 ## License
 

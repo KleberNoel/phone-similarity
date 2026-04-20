@@ -3,6 +3,10 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.slow
+
 from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
 
 

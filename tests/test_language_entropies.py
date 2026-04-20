@@ -1,6 +1,8 @@
 import logging
 
 import pytest
+
+pytestmark = pytest.mark.slow
 from bitarray import frozenbitarray
 from tqdm import tqdm
 

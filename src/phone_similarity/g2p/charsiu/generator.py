@@ -84,10 +84,6 @@ class CharsiuGraphemeToPhonemeGenerator:
         self._model = None
         self._tokenizer = None
 
-    # ------------------------------------------------------------------
-    # Lazy resource loading
-    # ------------------------------------------------------------------
-
     def _ensure_dict_loaded(self) -> None:
         """Load the pronunciation dictionary on first use.
 
@@ -128,10 +124,6 @@ class CharsiuGraphemeToPhonemeGenerator:
 
         self._model = ORTModelForSeq2SeqLM.from_pretrained(self.DEFAULT_ONNX_MODEL_NAME)
         self._tokenizer = AutoTokenizer.from_pretrained(self.DEFAULT_TOKENIZER_MODEL_NAME)
-
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
 
     @property
     def pdict(self) -> dict[str, str]:

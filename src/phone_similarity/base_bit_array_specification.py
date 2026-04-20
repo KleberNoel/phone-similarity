@@ -1,11 +1,3 @@
-"""
-Abstract base class for phoneme-to-bitarray mapping specifications.
-
-Defines the interface and shared logic for tokenising IPA strings and
-converting phonological feature dictionaries into fixed-width bitarray
-representations suitable for Hamming distance computation.
-"""
-
 import abc
 import logging
 from functools import lru_cache
@@ -16,9 +8,7 @@ from bitarray import bitarray
 from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER, cy_ipa_tokenizer
 
 
-class BaseBitArraySpecification(  # noqa: B024
-    abc.ABC
-):  # pylint: disable=too-many-instance-attributes
+class BaseBitArraySpecification(abc.ABC):  # noqa: B024
     """
     Base Abstract class that maps from character based phonological units to bitarray representation
     """
@@ -51,6 +41,27 @@ class BaseBitArraySpecification(  # noqa: B024
         self._phone_set = frozenset(features_per_phoneme.keys())
         self._max_phoneme_size = max(len(p) for p in self._phones_sorted)
 
+    @property
+    def vowels(self):  # TODO: return type
+        """
+        Vowels associated with the bitarray
+        """
+        return self._vowels
+
+    @property
+    def consonants(self):  # TODO: return type
+        """
+        Consonants associated with the bitarray
+        """
+        return self._consonants
+
+    @property
+    def phoneme_features(self):  # TODO: return type
+        """
+        Return entire set of phoneme features (dict)
+        """
+        return self._phoneme_features
+
     @staticmethod
     def sort_features(
         features: dict[str, set[str]],
@@ -74,7 +85,7 @@ class BaseBitArraySpecification(  # noqa: B024
         return _features
 
     @lru_cache(maxsize=128)
-    def get_phoneme_features(self, phoneme: str) -> tuple:
+    def get_phoneme_features(self, phoneme: str) -> tuple | dict[str, dict[str, bool]]:
         """Retrieves the feature set for a given phoneme.
 
         Parameters
@@ -97,9 +108,11 @@ class BaseBitArraySpecification(  # noqa: B024
             return tuple(self._phoneme_features[phoneme].items())
         raise ValueError(f"Unknown Phoneme input '{phoneme}'")
 
-    @lru_cache(128)
+    @lru_cache(128)  # TODO: optimize for maxsize
     def features_to_bitarray(
-        self, feature_dict: Union[tuple[tuple[str, bool]], dict[str, bool]], columns: tuple[str]
+        self,
+        feature_dict: Union[tuple[tuple[str, bool]], dict[str, bool]],
+        columns: tuple[str],
     ) -> "bitarray":
         """Converts a feature dictionary to a bitarray.
 
@@ -135,7 +148,7 @@ class BaseBitArraySpecification(  # noqa: B024
 
         return bitarray(bits)
 
-    @lru_cache(maxsize=256)
+    @lru_cache(maxsize=256)  # TODO: optimize for maxsize
     def search_phonemes(self, ipa_str: str) -> str | None:
         """Searches for the longest matching phoneme in the internal list.
 
@@ -188,6 +201,7 @@ class BaseBitArraySpecification(  # noqa: B024
 
         """
         if HAS_CYTHON_TOKENIZER:
+            logging.debug("Using Cython based tokenizer")
             return cy_ipa_tokenizer(ipa_str, self._phone_set, self._max_phoneme_size)
 
         tokens = []
@@ -197,9 +211,12 @@ class BaseBitArraySpecification(  # noqa: B024
             phoneme = self.search_phonemes(ipa_str[start:end_idx])
             if phoneme is None:
                 logging.warning(
-                    f"IPA string contains phonemes outside usual range {ipa_str} "
-                    f"(max phoneme length = {self._max_phoneme_size}) "
-                    f"Searched: {ipa_str[start:end_idx]}"
+                    "IPA string contains phonemes outside usual range %s "
+                    "(max phoneme length = %s) "
+                    "Searched: %s",
+                    ipa_str,
+                    self._max_phoneme_size,
+                    ipa_str[start:end_idx],
                 )
                 start += 1
             else:

@@ -43,9 +43,6 @@ g2p = [
 alignment = [
     "jiwer>=4",
 ]
-ann = [
-    "scipy>=1.10",
-]
 dev = [
     "Cython>=3.0",
     "pytest>=7",
@@ -92,7 +89,8 @@ ignore = [
 "src/phone_similarity/clean_phones.py" = ["RUF001", "RUF002"]  # IPA chars in code and docstrings
 "src/phone_similarity/syllable.py" = ["RUF001", "RUF002"]  # IPA chars in docstrings
 "src/phone_similarity/beam_search.py" = ["RUF002", "RUF003"]  # Unicode math symbols in docstrings
-"tests/*" = ["F811", "RUF001", "RUF002", "RUF003", "E701", "E402", "B007", "SIM114"]  # pytest fixtures; IPA chars; style in tests
+"scripts/*" = ["RUF001", "RUF002", "RUF003", "B007"]  # IPA chars in pun data; unused loop vars
+"tests/*" = ["F811", "RUF001", "RUF002", "RUF003", "RUF012", "E701", "E402", "B007", "SIM114"]  # pytest fixtures; IPA chars; mutable class attrs; style in tests
 
 [tool.ruff.lint.isort]
 known-first-party = ["phone_similarity"]
@@ -103,3 +101,6 @@ known-first-party = ["phone_similarity"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "slow: marks tests that load G2P dictionaries or process thousands of words (deselect with '-m \"not slow\"')",
+]

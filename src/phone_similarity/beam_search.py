@@ -30,26 +30,17 @@ Pruning
   the remaining source sub-sequence by more than ``max_len_ratio`` (default 3.0).
 """
 
-from __future__ import annotations
-
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Union
 
-from phone_similarity._dispatch import (
-    HAS_CYTHON_DIST_MATRIX,
-    cy_build_phoneme_dist_matrix,
-)
+from phone_similarity._dispatch import HAS_CYTHON_DIST_MATRIX, cy_build_phoneme_dist_matrix
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.pretokenize import PreTokenizedDictionary
-from phone_similarity.primitives import (
-    normalised_feature_edit_distance,
-    phoneme_feature_distance,
-)
+from phone_similarity.primitives import normalised_feature_edit_distance, phoneme_feature_distance
 
-# ===================================================================
 # Pre-computed phoneme distance matrix
-# ===================================================================
 
 _MISSING = -1  # sentinel for unknown phonemes
 
@@ -65,11 +56,9 @@ def _build_dist_matrix(
     dist_flat : flat list of floats (dim * dim), row-major
     dim : matrix dimension (number of phonemes + 1 for UNK)
     """
-    # --- Cython fast path --------------------------------------------------
     if HAS_CYTHON_DIST_MATRIX:
         return cy_build_phoneme_dist_matrix(merged)
 
-    # --- Python fallback ---------------------------------------------------
     phonemes = sorted(merged)
     n = len(phonemes)
     dim = n + 1  # extra row/col for unknown phonemes
@@ -95,9 +84,7 @@ def _build_dist_matrix(
     return ph_to_idx, dist_flat, dim
 
 
-# ===================================================================
 # Phoneme trie for fast approximate dictionary matching
-# ===================================================================
 
 
 class _TrieNode:
@@ -271,7 +258,6 @@ class BeamResult:
 
 def beam_search_segmentation(
     source_tokens: Sequence[str],
-    source_spec: BaseBitArraySpecification,
     source_features: dict[str, dict[str, Union[bool, str]]],
     target_ptd: PreTokenizedDictionary,
     target_spec: BaseBitArraySpecification,
@@ -291,9 +277,6 @@ def beam_search_segmentation(
     ----------
     source_tokens : sequence of str
         Tokenised IPA of the source phrase (e.g. English).
-    source_spec : BaseBitArraySpecification
-        Specification for the source language (used only for end-to-end
-        re-scoring via ``ipa_tokenizer``).
     source_features : dict
         ``PHONEME_FEATURES`` of the source language.
     target_ptd : PreTokenizedDictionary
@@ -350,6 +333,7 @@ def beam_search_segmentation(
     score_ceil = max_distance * prune_ratio
 
     for _round in range(max_words):
+        logging.debug("Round %s", _round)
         if not beam:
             break
 
@@ -501,7 +485,6 @@ def beam_search_phrases(
         for lang_code, (t_spec, t_features, t_ptd) in targets.items():
             segmentations = beam_search_segmentation(
                 source_tokens,
-                source_spec,
                 source_features,
                 t_ptd,
                 t_spec,

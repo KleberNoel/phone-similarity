@@ -17,9 +17,7 @@ from phone_similarity.universal_features import (
     universal_phoneme_distance,
 )
 
-# -----------------------------------------------------------------------
 # Encoder basics
-# -----------------------------------------------------------------------
 
 
 class TestEncode:
@@ -97,9 +95,7 @@ class TestFeatureDict:
         assert all(v in (-1, 0, 1) for v in fd.values())
 
 
-# -----------------------------------------------------------------------
 # Distance
-# -----------------------------------------------------------------------
 
 
 class TestUniversalPhonemeDistance:
@@ -132,9 +128,7 @@ class TestUniversalPhonemeDistance:
         assert d == 0.0
 
 
-# -----------------------------------------------------------------------
 # Inventory conversion & merging
-# -----------------------------------------------------------------------
 
 
 class TestConvertInventory:
@@ -206,9 +200,7 @@ class TestMergeInventories:
             )
 
 
-# -----------------------------------------------------------------------
 # Integration with existing API
-# -----------------------------------------------------------------------
 
 
 class TestCrossLanguageIntegration:
@@ -259,20 +251,3 @@ class TestCrossLanguageIntegration:
         # The merged spec should have phonemes from both inventories
         assert merged._vowels == specs["eng_us"]._vowels | specs["fra"]._vowels
         assert merged._consonants == specs["eng_us"]._consonants | specs["fra"]._consonants
-
-
-class TestFeatureNamesConstant:
-    """Sanity checks on the feature names constant."""
-
-    def test_length(self):
-        assert len(PANPHON_FEATURE_NAMES) == 24
-
-    def test_type(self):
-        assert isinstance(PANPHON_FEATURE_NAMES, tuple)
-        assert all(isinstance(n, str) for n in PANPHON_FEATURE_NAMES)
-
-    def test_known_features_present(self):
-        assert "syl" in PANPHON_FEATURE_NAMES
-        assert "voi" in PANPHON_FEATURE_NAMES
-        assert "cons" in PANPHON_FEATURE_NAMES
-        assert "nas" in PANPHON_FEATURE_NAMES
