@@ -161,9 +161,7 @@ def _trie_expand(
     unk_idx = dim - 1  # UNK sentinel is the last row/col
 
     # Pre-resolve source token indices for the remaining segment
-    src_indices = [
-        ph_to_idx.get(source_tokens[consumed + i], unk_idx) for i in range(remaining)
-    ]
+    src_indices = [ph_to_idx.get(source_tokens[consumed + i], unk_idx) for i in range(remaining)]
 
     # Initial DP column (depth 0): source prefix vs empty target = deletions
     init_col = [float(i) for i in range(remaining + 1)]
@@ -329,9 +327,7 @@ def beam_search_segmentation(
     if not trie_root.children:
         return []
 
-    beam: list[_Hypothesis] = [
-        _Hypothesis(score=0.0, consumed=0, words=(), ipas=(), raw_cost=0.0)
-    ]
+    beam: list[_Hypothesis] = [_Hypothesis(score=0.0, consumed=0, words=(), ipas=(), raw_cost=0.0)]
 
     complete: list[_Hypothesis] = []
     best_complete_score = float("inf")
@@ -416,9 +412,7 @@ def beam_search_segmentation(
         if not glued_tokens:
             continue
 
-        e2e_dist = normalised_feature_edit_distance(
-            list(source_tokens), glued_tokens, merged
-        )
+        e2e_dist = normalised_feature_edit_distance(list(source_tokens), glued_tokens, merged)
 
         if e2e_dist <= max_distance:
             results.append(

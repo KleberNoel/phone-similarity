@@ -47,9 +47,7 @@ def invert_features(
         Phonemes sorted by ascending distance from *feature_vector*.
     """
     if HAS_CYTHON_EXT:
-        return cy_invert_features(
-            feature_vector, target_phoneme_features, top_n, max_distance
-        )
+        return cy_invert_features(feature_vector, target_phoneme_features, top_n, max_distance)
     ranked: list[tuple[str, float]] = []
     for phoneme, feats in target_phoneme_features.items():
         d = phoneme_feature_distance(feature_vector, feats)

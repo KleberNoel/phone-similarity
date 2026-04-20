@@ -55,9 +55,7 @@ class IntersectingBitArraySpecification(BaseBitArraySpecification):
         # dict per phoneme — shared phonemes (e.g. /e/) will always get
         # the same 24-feature Panphon encoding regardless of which
         # language defined them.
-        features_per_phoneme = UniversalFeatureEncoder.merge_inventories(
-            *raw_inventories
-        )
+        features_per_phoneme = UniversalFeatureEncoder.merge_inventories(*raw_inventories)
 
         super().__init__(
             vowels=vowels,

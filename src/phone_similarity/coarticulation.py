@@ -154,13 +154,9 @@ class FricativeConfig:
 
     def __post_init__(self) -> None:
         if self.fricative_weight < 0.0:
-            raise ValueError(
-                f"fricative_weight must be >= 0.0, got {self.fricative_weight}"
-            )
+            raise ValueError(f"fricative_weight must be >= 0.0, got {self.fricative_weight}")
         if self.sibilant_weight < 0.0:
-            raise ValueError(
-                f"sibilant_weight must be >= 0.0, got {self.sibilant_weight}"
-            )
+            raise ValueError(f"sibilant_weight must be >= 0.0, got {self.sibilant_weight}")
         if not 0.0 <= self.spread_magnitude <= 1.0:
             raise ValueError(
                 f"spread_magnitude must be in [0.0, 1.0], got {self.spread_magnitude}"
@@ -408,14 +404,10 @@ class DefaultCoarticulationModel:
         boundary_factor = 1.0 if same_syllable else self._cross_syllable_decay
 
         if self._jitter > 0.0:
-            fire_prob = (
-                prob * (1.0 - self._jitter) + prob * self._jitter * self._rng.random()
-            )
+            fire_prob = prob * (1.0 - self._jitter) + prob * self._jitter * self._rng.random()
             if self._rng.random() > fire_prob:
                 return
-            mag = rule.magnitude * (
-                1.0 - self._jitter + self._jitter * self._rng.random()
-            )
+            mag = rule.magnitude * (1.0 - self._jitter + self._jitter * self._rng.random())
         else:
             mag = rule.magnitude
 
@@ -479,11 +471,7 @@ class DefaultCoarticulationModel:
                         for rule in _antic["back_vowel"]:
                             _apply(perturbed[i], rule, rule.direction, same_syl)
 
-                if (
-                    _fric_spread
-                    and self._is_fricative(feats_i)
-                    and self._is_vowel(feats_next)
-                ):
+                if _fric_spread and self._is_fricative(feats_i) and self._is_vowel(feats_next):
                     mag_scale = _fric_cfg.spread_magnitude / 0.30
                     is_sib = self._is_sibilant(feats_i)
                     is_voiceless = feats_i[_VOI] == -1

@@ -434,9 +434,7 @@ def syllabify(
             son_map,
             seg._sibilant_appendix,
         )
-        result = [
-            Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c)) for o, n, c in raw
-        ]
+        result = [Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c)) for o, n, c in raw]
     else:
         son = scale.rank_tokens(tokens)
         result = seg.syllabify(tokens, vowel_fs, son)
@@ -493,17 +491,13 @@ def batch_syllabify(
             seg._sibilant_appendix,
         )
         results = [
-            [
-                Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c))
-                for o, n, c in word
-            ]
+            [Syllable(onset=tuple(o), nucleus=tuple(n), coda=tuple(c)) for o, n, c in word]
             for word in raw_batch
         ]
     else:
         # Pure-Python fallback
         results = [
-            syllabify(tl, vowel_fs, sonority_scale=scale, strategy=seg)
-            for tl in token_lists
+            syllabify(tl, vowel_fs, sonority_scale=scale, strategy=seg) for tl in token_lists
         ]
 
     if stress_marks_list is not None:

@@ -68,9 +68,7 @@ def compare_cross_language(  # pylint: disable=too-many-locals
                         "consonant": bit_union(
                             lang_a, lang_b, specs_by_lang, features_part="consonant"
                         ),
-                        "vowel": bit_union(
-                            lang_a, lang_b, specs_by_lang, features_part="vowel"
-                        ),
+                        "vowel": bit_union(lang_a, lang_b, specs_by_lang, features_part="vowel"),
                     },
                 )
 
@@ -78,9 +76,7 @@ def compare_cross_language(  # pylint: disable=too-many-locals
                     word_ipa_by_lang[lang_a],
                     max_syllables=6,  #  TODO: FIXME - reassess this number of syllables (is it good for all languages?) - parameterize if needed...
                 )
-                arr_b = merged_bit.ipa_to_bitarray(
-                    word_ipa_by_lang[lang_b], max_syllables=6
-                )
+                arr_b = merged_bit.ipa_to_bitarray(word_ipa_by_lang[lang_b], max_syllables=6)
 
                 results[(lang_a, lang_b)] = hamming_similarity(arr_a, arr_b)
             else:
@@ -90,7 +86,9 @@ def compare_cross_language(  # pylint: disable=too-many-locals
                 tokens_a = specs_by_lang[lang_a].ipa_tokenizer(word_ipa_by_lang[lang_a])
                 tokens_b = specs_by_lang[lang_b].ipa_tokenizer(word_ipa_by_lang[lang_b])
                 results[(lang_a, lang_b)] = normalised_feature_edit_distance(
-                    tokens_a, tokens_b, merged_feats  # type: ignore
+                    tokens_a,
+                    tokens_b,
+                    merged_feats,  # type: ignore
                 )
 
     return results

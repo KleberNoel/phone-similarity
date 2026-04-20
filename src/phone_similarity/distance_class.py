@@ -103,9 +103,7 @@ class Distance:
         """Normalised feature-weighted edit distance in ``[0.0, 1.0]``."""
         tokens_a = self._spec.ipa_tokenizer(ipa_a)
         tokens_b = self._spec.ipa_tokenizer(ipa_b)
-        return normalised_feature_edit_distance(
-            tokens_a, tokens_b, self._phoneme_features
-        )
+        return normalised_feature_edit_distance(tokens_a, tokens_b, self._phoneme_features)
 
     def pairwise_hamming(
         self, ipa_strings: Sequence[str], max_syllables: int = 6

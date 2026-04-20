@@ -11,9 +11,7 @@ PART 4: Bonus oronyms discovered via beam search mining
 
 from __future__ import annotations
 
-import sys
 import time
-from dataclasses import dataclass
 from itertools import product
 
 from phone_similarity.beam_search import beam_search_segmentation
@@ -591,9 +589,7 @@ print(f"  Recall (over all phonetic):   {recall_all:.3f}")
 
 # Identify false negatives for Part 3
 false_negatives = [
-    (label, pw, tw, ipa_a, ipa_b, d)
-    for label, pw, tw, ipa_a, ipa_b, d, hit in results
-    if not hit
+    (label, pw, tw, ipa_a, ipa_b, d) for label, pw, tw, ipa_a, ipa_b, d, hit in results if not hit
 ]
 
 
@@ -641,7 +637,7 @@ print(f"  PTD built in {time.time() - t0:.1f}s  ({len(ptd)} entries)")
 
 
 print(f"\n{'=' * 90}")
-print(f"PART 2: ORONYM BEAM SEARCH RECALL")
+print("PART 2: ORONYM BEAM SEARCH RECALL")
 print(f"{'=' * 90}")
 
 oronym_tp = 0
@@ -714,9 +710,7 @@ for label, expected, top, found, note in oronym_results:
     print(f"    {note}")
     if top:
         for br in top[:3]:
-            print(
-                f"      {' + '.join(br.words):35s} /{br.glued_ipa}/  d={br.distance:.3f}"
-            )
+            print(f"      {' + '.join(br.words):35s} /{br.glued_ipa}/  d={br.distance:.3f}")
 
 oronym_total = len(ORONYMS)
 oronym_recall = oronym_tp / oronym_total if oronym_total > 0 else 0
@@ -766,9 +760,7 @@ for label, pw, tw, ipa_a, ipa_b, d in false_negatives:
         was = f"d={d:.3f}" if d is not None else "d=N/A"
         print(f"\n  {marker} {label:50s}  (was {was})")
         for br in beam_results[:3]:
-            print(
-                f"      {' + '.join(br.words):35s} /{br.glued_ipa}/  d={br.distance:.3f}"
-            )
+            print(f"      {' + '.join(br.words):35s} /{br.glued_ipa}/  d={br.distance:.3f}")
     else:
         print(f"\n  ✗ {label:50s}  no beam results")
 
@@ -805,6 +797,4 @@ for word, ipa in ORONYM_SEEDS:
     if multi:
         print(f"\n  {word} /{ipa}/:")
         for br in multi[:5]:
-            print(
-                f"    {' + '.join(br.words):35s} /{br.glued_ipa}/  d={br.distance:.3f}"
-            )
+            print(f"    {' + '.join(br.words):35s} /{br.glued_ipa}/  d={br.distance:.3f}")
