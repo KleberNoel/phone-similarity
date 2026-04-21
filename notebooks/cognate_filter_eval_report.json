@@ -1,0 +1,71 @@
+{
+  "n_gold": 10,
+  "tp": 4,
+  "fp": 1,
+  "tn": 2,
+  "fn": 3,
+  "precision_remove": 0.8,
+  "recall_remove": 0.5714285714285714,
+  "f1_remove": 0.6666666666666666,
+  "false_positive_examples": [
+    {
+      "family": "shared_history",
+      "source_lang": "ger",
+      "target_lang": "eng_us",
+      "source_page_id": 8432228,
+      "source_title": "Hans Winter (Ingenieur)",
+      "source_word": "hans",
+      "source_ipa": "hans",
+      "target_word": "hance",
+      "target_ipa": "hæns",
+      "distance": 0.0625,
+      "similarity": 0.9375,
+      "gold_label": "chance_homophone"
+    }
+  ],
+  "false_negative_examples": [
+    {
+      "family": "shared_history",
+      "source_lang": "fra",
+      "target_lang": "spa",
+      "source_page_id": 998839,
+      "source_title": "Kibuye Football Club",
+      "source_word": "football",
+      "source_ipa": "futbol",
+      "target_word": "fútbol",
+      "target_ipa": "futβol",
+      "distance": 0.05555555555555555,
+      "similarity": 0.9444444444444444,
+      "gold_label": "loanword"
+    },
+    {
+      "family": "shared_history",
+      "source_lang": "eng_us",
+      "target_lang": "dut",
+      "source_page_id": 47014761,
+      "source_title": "Sheynovo Peak",
+      "source_word": "peak",
+      "source_ipa": "pik",
+      "target_word": "piek",
+      "target_ipa": "pik",
+      "distance": 0.0,
+      "similarity": 1.0,
+      "gold_label": "cognate"
+    },
+    {
+      "family": "shared_history",
+      "source_lang": "spa",
+      "target_lang": "por_po",
+      "source_page_id": 10122457,
+      "source_title": "Plaza de Astaná",
+      "source_word": "plaza",
+      "source_ipa": "plasa",
+      "target_word": "praça",
+      "target_ipa": "pɾasɐ",
+      "distance": 0.06666666666666667,
+      "similarity": 0.9333333333333333,
+      "gold_label": "cognate"
+    }
+  ],
+  "note": "Small seed gold set; expand for robust metrics."
+}
