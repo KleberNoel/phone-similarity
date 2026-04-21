@@ -11,6 +11,13 @@ from typing import Union
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
 
 
+class ResearchUseOnlyError(RuntimeError):
+    """Raised when neural G2P is used without explicit research opt-in."""
+
+
+RESEARCH_OPT_IN_ENV_VAR = "PHONE_SIM_ALLOW_RESEARCH_G2P"
+
+
 class GraphemeToPhonemeResourceType(Enum):
     DICT = 1
     G2P_GENERATOR = 2
@@ -60,7 +67,12 @@ class CharsiuGraphemeToPhonemeGenerator:
     DEFAULT_TOKENIZER_MODEL_NAME: str = "google/byt5-small"
     DEFAULT_ONNX_MODEL_NAME: str = "klebster/g2p_multilingual_byT5_tiny_onnx"
 
-    def __init__(self, language: str, use_cache: bool = True):
+    def __init__(
+        self,
+        language: str,
+        use_cache: bool = True,
+        allow_research_g2p: bool = False,
+    ):
         """Initializes the CharsiuGraphemeToPhonemeGenerator.
 
         Parameters
@@ -70,6 +82,13 @@ class CharsiuGraphemeToPhonemeGenerator:
             language code from `phone_similarity.g2p.charsiu.LANGUAGE_CODES_CHARSIU`.
         use_cache : bool
             Whether to use a pickle cache for the phoneme dictionary.
+        allow_research_g2p : bool
+            Explicit opt-in for neural G2P generation.
+
+            Neural generation with CharsiuG2P is intended for research use.
+            By default this class allows dictionary lookup only. To enable
+            model generation, either pass ``allow_research_g2p=True`` or set
+            environment variable ``PHONE_SIM_ALLOW_RESEARCH_G2P=1``.
         """
         if language not in LANGUAGE_CODES_CHARSIU:
             raise ValueError(
@@ -79,10 +98,28 @@ class CharsiuGraphemeToPhonemeGenerator:
 
         self._language = language
         self._use_cache = use_cache
+        self._allow_research_g2p = allow_research_g2p
 
         self._pdict: dict[str, str] | None = None
         self._model = None
         self._tokenizer = None
+
+    def _research_g2p_enabled(self) -> bool:
+        env_val = os.environ.get(RESEARCH_OPT_IN_ENV_VAR, "")
+        env_enabled = env_val.strip().lower() in {"1", "true", "yes", "on"}
+        return self._allow_research_g2p or env_enabled
+
+    def _ensure_research_opt_in(self) -> None:
+        if self._research_g2p_enabled():
+            return
+        raise ResearchUseOnlyError(
+            "Neural G2P generation is disabled by default because CharsiuG2P "
+            "is intended for research use and has uneven data quality across "
+            "languages. To enable it explicitly, pass "
+            "allow_research_g2p=True when constructing "
+            "CharsiuGraphemeToPhonemeGenerator, or set "
+            f"{RESEARCH_OPT_IN_ENV_VAR}=1."
+        )
 
     def _ensure_dict_loaded(self) -> None:
         """Load the pronunciation dictionary on first use.
@@ -118,6 +155,8 @@ class CharsiuGraphemeToPhonemeGenerator:
         """
         if self._model is not None:
             return
+
+        self._ensure_research_opt_in()
 
         from optimum.onnxruntime import ORTModelForSeq2SeqLM
         from transformers import AutoTokenizer
@@ -172,6 +211,7 @@ class CharsiuGraphemeToPhonemeGenerator:
             is returned, where each tuple contains multiple phonemic
             representations for a single word.
         """
+        self._ensure_research_opt_in()
         self._ensure_model_loaded()
 
         _words = []

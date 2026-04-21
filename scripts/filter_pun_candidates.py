@@ -18,9 +18,18 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.filter_cognates_llm import _decide as llm_decide
+from scripts.filter_cognates_llm import _infer_once as llm_infer_once
+from scripts.filter_cognates_llm import _two_pass_vote as llm_two_pass_vote
 
 
 def _normalize_letters_only(text: str) -> str:
@@ -253,6 +262,39 @@ def main() -> None:
     parser.add_argument("--hub-threshold", type=int, default=4)
     parser.add_argument("--max-distance", type=float, default=0.50)
     parser.add_argument("--max-llm-queue", type=int, default=500)
+    parser.add_argument(
+        "--run-llm-adjudication",
+        action="store_true",
+        help="Run optional LLM adjudication on queued ambiguous candidates",
+    )
+    parser.add_argument(
+        "--llm-backend",
+        choices=["hf", "vllm", "mock"],
+        default="mock",
+        help="LLM backend used when --run-llm-adjudication is enabled",
+    )
+    parser.add_argument("--llm-model", type=str, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument("--llm-hf-token-env", type=str, default="HF_TOKEN")
+    parser.add_argument("--llm-vllm-base-url", type=str, default="http://localhost:8000/v1")
+    parser.add_argument("--llm-temperature", type=float, default=0.0)
+    parser.add_argument("--llm-max-new-tokens", type=int, default=240)
+    parser.add_argument("--llm-retries", type=int, default=3)
+    parser.add_argument("--llm-retry-sleep", type=float, default=1.0)
+    parser.add_argument(
+        "--llm-two-pass-voting",
+        action="store_true",
+        help="Use two-pass conservative voting during integrated adjudication",
+    )
+    parser.add_argument(
+        "--llm-adjudicated-output-jsonl",
+        type=Path,
+        default=Path("notebooks/pun_candidates_llm_adjudicated.jsonl"),
+    )
+    parser.add_argument(
+        "--llm-manual-review-output-jsonl",
+        type=Path,
+        default=Path("notebooks/pun_candidates_manual_review_llm.jsonl"),
+    )
     args = parser.parse_args()
 
     data = json.loads(args.input.read_text(encoding="utf-8"))
@@ -344,6 +386,55 @@ def main() -> None:
         for row in dropped:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
+    llm_adjudicated = []
+    llm_manual_review = []
+    if args.run_llm_adjudication and llm_queue:
+        llm_args = argparse.Namespace(
+            backend=args.llm_backend,
+            model=args.llm_model,
+            hf_token_env=args.llm_hf_token_env,
+            vllm_base_url=args.llm_vllm_base_url,
+            max_new_tokens=args.llm_max_new_tokens,
+            temperature=args.llm_temperature,
+            retries=args.llm_retries,
+            retry_sleep=args.llm_retry_sleep,
+            two_pass_voting=args.llm_two_pass_voting,
+        )
+        for row in llm_queue:
+            result = llm_infer_once(llm_args, row["prompt"])
+            if args.llm_two_pass_voting:
+                prompt2 = (
+                    row["prompt"]
+                    + "\n\nSecond pass instruction: be conservative; if uncertain between "
+                    "cognate/loanword/name-transfer vs chance_homophone, choose unknown."
+                )
+                pass2 = llm_infer_once(llm_args, prompt2)
+                result = llm_two_pass_vote(result, pass2)
+            decision = llm_decide(result)
+            rec = {
+                **row,
+                "llm_label": result.label,
+                "llm_confidence": result.confidence,
+                "llm_reason": result.reason,
+                "remove_from_pun_set": result.remove_from_pun_set,
+                "decision": decision,
+                "backend": args.llm_backend,
+                "model": args.llm_model,
+            }
+            llm_adjudicated.append(rec)
+            if decision == "manual_review":
+                llm_manual_review.append(rec)
+
+        args.llm_adjudicated_output_jsonl.parent.mkdir(parents=True, exist_ok=True)
+        with args.llm_adjudicated_output_jsonl.open("w", encoding="utf-8") as f:
+            for rec in llm_adjudicated:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+        args.llm_manual_review_output_jsonl.parent.mkdir(parents=True, exist_ok=True)
+        with args.llm_manual_review_output_jsonl.open("w", encoding="utf-8") as f:
+            for rec in llm_manual_review:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
     if llm_queue:
         args.llm_queue_output.parent.mkdir(parents=True, exist_ok=True)
         with args.llm_queue_output.open("w", encoding="utf-8") as f:
@@ -359,6 +450,15 @@ def main() -> None:
     print(f"Saved removed-candidates JSONL to {args.removed_output_jsonl}")
     if llm_queue:
         print(f"Saved LLM review queue ({len(llm_queue)}) to {args.llm_queue_output}")
+    if args.run_llm_adjudication and llm_adjudicated:
+        print(
+            "Saved integrated LLM adjudication "
+            f"({len(llm_adjudicated)} rows) to {args.llm_adjudicated_output_jsonl}"
+        )
+        print(
+            "Saved integrated LLM manual-review queue "
+            f"({len(llm_manual_review)} rows) to {args.llm_manual_review_output_jsonl}"
+        )
 
 
 if __name__ == "__main__":
