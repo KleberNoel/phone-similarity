@@ -118,6 +118,16 @@ model-index:
 
 ONNX export of [charsiu/g2p_multilingual_byT5_tiny_16_layers_100](https://huggingface.co/charsiu/g2p_multilingual_byT5_tiny_16_layers_100). Converts written words to IPA transcriptions across ~100 languages.
 
+## Research-use warning
+
+This model is provided for research and exploratory workflows.
+Data sources and quality vary substantially by language, and word-level quality
+is uneven across the full language set.
+
+- Use language-specific evaluation before production use.
+- Prefer dictionary-backed outputs when available.
+- Treat low-resource language outputs as higher-risk.
+
 | | |
 | --- | --- |
 | **Architecture** | ByT5-tiny (T5ForConditionalGeneration), 20.6M params |

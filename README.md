@@ -26,6 +26,27 @@ pip install phone-similarity
 | Cython acceleration | `pip install phone-similarity[dev]` then `python setup.py build_ext --inplace` | Compiled C hot paths |
 | G2P support | `pip install phone-similarity[g2p]` | transformers + ONNX Runtime |
 
+### Charsiu G2P usage policy
+
+The neural CharsiuG2P generator is intended for research usage only.
+Training/evaluation data quality varies significantly by language.
+
+- Dictionary lookup (`.pdict`, `get_phones_from_dict`) is enabled by default.
+- Neural generation (`.generate`) requires explicit opt-in:
+
+```python
+from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
+
+g2p = CharsiuGraphemeToPhonemeGenerator("eng-us", allow_research_g2p=True)
+phones, probs = g2p.generate(("hello",))
+```
+
+You can also opt in via environment variable:
+
+```bash
+export PHONE_SIM_ALLOW_RESEARCH_G2P=1
+```
+
 ### From source
 
 ```bash
