@@ -6,6 +6,7 @@ import sys
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from collections.abc import Sequence
 from typing import Union
 
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
@@ -248,6 +249,51 @@ class CharsiuGraphemeToPhonemeGenerator:
 
         phones = self._tokenizer.batch_decode(sequences_preds.tolist(), skip_special_tokens=True)
         return phones, sequences_probs  # type: ignore
+
+    def generate_batched(
+        self,
+        words: Sequence[str],
+        *,
+        batch_size: int = 16,
+        **generation_kwargs,
+    ) -> tuple[list[Union[str, tuple[str, ...]]], list[float]]:
+        """Generate phones for many words in fixed-size batches.
+
+        This is a throughput-oriented wrapper over :meth:`generate` for
+        large word lists. It preserves input order and aggregates per-batch
+        outputs.
+
+        Parameters
+        ----------
+        words : sequence of str
+            Input words to decode.
+        batch_size : int
+            Number of words per model call (default 16).
+        **generation_kwargs : dict
+            Forwarded to :meth:`generate`.
+
+        Returns
+        -------
+        tuple[list, list]
+            ``(phones, probs)`` aggregated across all batches.
+        """
+        if batch_size <= 0:
+            raise ValueError(f"batch_size must be > 0 (got {batch_size})")
+
+        word_list = list(words)
+        if not word_list:
+            return [], []
+
+        all_phones: list[Union[str, tuple[str, ...]]] = []
+        all_probs: list[float] = []
+
+        for start in range(0, len(word_list), batch_size):
+            batch_words = tuple(word_list[start : start + batch_size])
+            phones, probs = self.generate(batch_words, **generation_kwargs)
+            all_phones.extend(phones)
+            all_probs.extend(float(p) for p in probs)
+
+        return all_phones, all_probs
 
     def get_phones_from_dict(self, word: str) -> str:
         """get phonemes from a pronunciations dictionary"""

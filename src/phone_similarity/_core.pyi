@@ -113,3 +113,83 @@ def prange_batch_dictionary_scan(
     Returns list of ``(word, ipa, distance)`` sorted by ascending distance.
     """
     ...
+
+def beam_expand_candidates(
+    source_idx_arr: object,
+    source_len: int,
+    consumed: int,
+    pre_tokenized: object,
+    all_tgt_idx_arr: object,
+    dist_flat_arr: object,
+    matrix_dim: int,
+    max_seg_distance: float = 0.50,
+    max_len_ratio: float = 3.0,
+    min_target_tokens: int = 1,
+) -> list[tuple[str, str, int, float]]:
+    """Cython beam-expansion kernel over pre-tokenized dictionaries.
+
+    Returns candidate expansions as ``(word, ipa, n_tok, seg_cost)``.
+    """
+    ...
+
+def beam_expand_candidates_ids(
+    source_idx_arr: object,
+    source_len: int,
+    consumed: int,
+    pre_tokenized: object,
+    all_tgt_idx_arr: object,
+    dist_flat_arr: object,
+    matrix_dim: int,
+    max_seg_distance: float = 0.50,
+    max_len_ratio: float = 3.0,
+    min_target_tokens: int = 1,
+) -> list[tuple[int, float, int]]:
+    """Cython beam-expansion kernel returning compact entry ids.
+
+    Returns candidate expansions as ``(n_tok, seg_cost, entry_id)``.
+    """
+    ...
+
+def beam_state_search(
+    candidates_by_consumed: list[list[tuple[int, float, int]]],
+    source_len: int,
+    beam_width: int = 10,
+    max_words: int = 4,
+    max_distance: float = 0.50,
+    prune_ratio: float = 2.0,
+) -> tuple[
+    list[int],
+    list[int],
+    list[float],
+    list[float],
+    list[int],
+]:
+    """Run beam search with struct-of-arrays node storage.
+
+    Returns ``(node_parent, node_entry, node_raw, node_score, complete_nodes)``.
+    """
+    ...
+
+def beam_collect_complete_paths(
+    node_parent: list[int],
+    node_entry: list[int],
+    node_raw: list[float],
+    node_score: list[float],
+    complete_nodes: list[int],
+    max_candidates: int = 0,
+) -> list[tuple[float, tuple[int, ...], float]]:
+    """Assemble and deduplicate complete beam paths from node arrays."""
+    ...
+
+def beam_rescore_paths(
+    source_idx_arr: object,
+    source_len: int,
+    packed_paths: list[tuple[float, tuple[int, ...], float]],
+    pre_tokenized: object,
+    all_tgt_idx_arr: object,
+    dist_flat_arr: object,
+    matrix_dim: int,
+    max_distance: float = 0.50,
+) -> list[tuple[float, tuple[int, ...], float]]:
+    """Rescore complete paths against source indices in Cython."""
+    ...

@@ -118,16 +118,20 @@ for word, ipa, dist in matches:
 ### Multi-word beam search
 
 ```python
-from phone_similarity import beam_search_segmentation
+from phone_similarity import beam_search_segmentation, build_beam_search_resources
 from phone_similarity.language import LANGUAGES
 
 eng_spec = LANGUAGES.build_spec("eng_us")
 eng = LANGUAGES["eng_us"]
 source_tokens = eng_spec.ipa_tokenizer("mɛɹikɹɪsməs")
+resources = build_beam_search_resources(
+    source_features=eng.PHONEME_FEATURES,
+    target_ptd=ptd,
+    target_features=fra.PHONEME_FEATURES,
+)
 
 results = beam_search_segmentation(
     source_tokens,
-    source_spec=eng_spec,
     source_features=eng.PHONEME_FEATURES,
     target_ptd=ptd,
     target_spec=fra_spec,
@@ -135,9 +139,38 @@ results = beam_search_segmentation(
     beam_width=10,
     top_k=3,
     max_distance=0.40,
+    resources=resources,
 )
 for r in results:
     print(f"  {' + '.join(r.words):30s}  /{r.glued_ipa}/  d={r.distance:.3f}")
+```
+
+### Batched neural G2P
+
+```python
+from phone_similarity.g2p.charsiu.generator import CharsiuGraphemeToPhonemeGenerator
+
+g2p = CharsiuGraphemeToPhonemeGenerator("eng-us", allow_research_g2p=True)
+phones, probs = g2p.generate_batched(
+    ["hello", "world", "phonology", "pun"],
+    batch_size=16,
+)
+```
+
+### Optional GPU rescoring interface
+
+```python
+from phone_similarity.gpu_rescore import (
+    available_gpu_rescore_backends,
+    benchmark_gpu_rescore_backends,
+    gpu_rescore_paths,
+)
+
+print(available_gpu_rescore_backends())
+# {'cpp': True/False, 'cython': True, 'cupy': True/False, 'numba': True/False}
+
+# In beam_search internals this is called with backend="auto".
+# You can explicitly benchmark backends on a prepared packed-path workload.
 ```
 
 ### Feature-vector inversion
@@ -193,6 +226,18 @@ With Cython compiled:
 | Dictionary scan (Dutch, 148K entries) | ~9 ms |
 | Feature edit distance vs pure Python | ~4x faster |
 | Memory delta over repeated scans | +0.001 MB |
+
+Recent beam-search optimizations (same hardware, French 245K dictionary):
+
+| Benchmark | Time |
+|-----------|------|
+| Beam segmentation, no precomputed resources | ~1.72 s |
+| Beam segmentation, with precomputed resources | ~0.46 s |
+| Speedup | ~3.73x |
+
+Optional C++ beam-state extension (`phone_similarity._beam_cpp`) is now built by
+default when a C++17 compiler is available. Runtime dispatch prefers C++ state
+expansion, then Cython, then Python fallback.
 
 ## G2P Model
 

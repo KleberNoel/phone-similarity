@@ -240,3 +240,9 @@ pod.yaml
 find_multiword.py
 multiword_heatmap.py
 *.png
+
+# Data artifacts (keep only language feature bundle)
+*.json
+*.jsonl
+*.ipynb
+!src/phone_similarity/language/_data.json

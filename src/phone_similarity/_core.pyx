@@ -1146,6 +1146,567 @@ def prange_batch_dictionary_scan(
     return candidates[:top_n]
 
 
+def beam_expand_candidates(
+    object source_idx_arr,
+    Py_ssize_t source_len,
+    Py_ssize_t consumed,
+    object pre_tokenized,
+    object all_tgt_idx_arr,
+    object dist_flat_arr,
+    Py_ssize_t matrix_dim,
+    double max_seg_distance = 0.50,
+    double max_len_ratio = 3.0,
+    int min_target_tokens = 1,
+) -> list:
+    """Expand beam-segmentation candidates with a Cython scan kernel.
+
+    Computes candidate segment expansions for one ``consumed`` position,
+    equivalent to Python ``_trie_expand`` semantics but using the
+    pre-tokenized numpy-backed dictionary representation.
+
+    Parameters
+    ----------
+    source_idx_arr : numpy.ndarray[intp]
+        Source phoneme indices (already mapped to the distance-matrix space).
+    source_len : int
+        ``len(source_idx_list)``.
+    consumed : int
+        Number of source tokens already consumed by the partial hypothesis.
+    pre_tokenized : PreTokenizedDictionary-like object
+        Must expose ``token_indices``, ``offsets``, ``words``, ``ipas``.
+    all_tgt_idx_arr : numpy.ndarray[intp]
+        Pre-translated target token indices (same length/order as
+        ``pre_tokenized.token_indices``).
+    dist_flat_arr : numpy.ndarray[float64]
+        Flat row-major distance matrix (``matrix_dim * matrix_dim``).
+    matrix_dim : int
+        Distance matrix dimension.
+    max_seg_distance : float
+        Segment-level normalised distance threshold.
+    max_len_ratio : float
+        Maximum target-token length ratio against remaining source tokens.
+    min_target_tokens : int
+        Minimum target-token length.
+
+    Returns
+    -------
+    list of (word, ipa, n_tok, seg_cost)
+    """
+    if consumed >= source_len:
+        return []
+
+    if not (hasattr(pre_tokenized, 'token_indices') and
+            hasattr(pre_tokenized, 'offsets') and
+            hasattr(pre_tokenized, 'words') and
+            hasattr(pre_tokenized, 'ipas')):
+        return []
+
+    cdef Py_ssize_t remaining = source_len - consumed
+    if remaining <= 0:
+        return []
+
+    cdef Py_ssize_t max_depth = <Py_ssize_t>(remaining * max_len_ratio) + 1
+    if max_depth < min_target_tokens:
+        return []
+
+    cdef list words = pre_tokenized.words
+    cdef list ipas = pre_tokenized.ipas
+    cdef Py_ssize_t n_entries = len(words)
+
+    off_arr = pre_tokenized.offsets
+    cdef const cnp.int32_t[:] off_view = off_arr
+
+    cdef Py_ssize_t total_tokens = off_view[n_entries]
+
+    cdef const cnp.intp_t[:] src_idx_view = source_idx_arr
+    cdef const cnp.intp_t[:] all_tgt_idx_view = all_tgt_idx_arr
+    cdef const cnp.float64_t[:] dist_view = dist_flat_arr
+    cdef const Py_ssize_t* src_idx
+    cdef const Py_ssize_t* all_tgt_idx
+    cdef const double* c_dist_matrix
+
+    cdef Py_ssize_t i
+    cdef Py_ssize_t t_start, t_end, tgt_len, src_comp_len, denom
+    cdef double raw, norm
+    cdef Py_ssize_t len_diff
+    cdef list candidates = []
+
+    if len(src_idx_view) != source_len:
+        raise ValueError("source_idx_arr length must equal source_len")
+    if len(all_tgt_idx_view) < total_tokens:
+        raise ValueError("all_tgt_idx_arr shorter than token_indices")
+    if len(dist_view) != matrix_dim * matrix_dim:
+        raise ValueError("dist_flat_arr length does not match matrix_dim")
+
+    src_idx = <const Py_ssize_t*>&src_idx_view[0]
+    all_tgt_idx = <const Py_ssize_t*>&all_tgt_idx_view[0]
+    c_dist_matrix = <const double*>&dist_view[0]
+
+    for i in range(n_entries):
+        t_start = off_view[i]
+        t_end = off_view[i + 1]
+        tgt_len = t_end - t_start
+
+        if tgt_len < min_target_tokens or tgt_len > max_depth:
+            continue
+
+        if tgt_len < remaining:
+            src_comp_len = tgt_len
+        else:
+            src_comp_len = remaining
+
+        if src_comp_len <= 0:
+            continue
+
+        denom = src_comp_len if src_comp_len >= tgt_len else tgt_len
+        len_diff = src_comp_len - tgt_len if src_comp_len >= tgt_len else tgt_len - src_comp_len
+        if denom > 0 and (<double>len_diff) / (<double>denom) > max_seg_distance:
+            continue
+
+        raw = _dp_edit_distance_nogil(
+            &src_idx[consumed],
+            src_comp_len,
+            &all_tgt_idx[t_start],
+            tgt_len,
+            c_dist_matrix,
+            matrix_dim,
+        )
+        if raw < 0.0:
+            continue
+
+        if denom <= 0:
+            continue
+
+        norm = raw / (<double>denom)
+        if norm <= max_seg_distance:
+            candidates.append((words[i], ipas[i], tgt_len, raw))
+
+    return candidates
+
+
+def beam_expand_candidates_ids(
+    object source_idx_arr,
+    Py_ssize_t source_len,
+    Py_ssize_t consumed,
+    object pre_tokenized,
+    object all_tgt_idx_arr,
+    object dist_flat_arr,
+    Py_ssize_t matrix_dim,
+    double max_seg_distance = 0.50,
+    double max_len_ratio = 3.0,
+    int min_target_tokens = 1,
+) -> list:
+    """Expand beam candidates returning compact entry-id tuples.
+
+    Returns tuples ``(n_tok, seg_cost, entry_id)`` for the given consumed
+    position. This avoids Python-side word->id mapping in native beam paths.
+    """
+    if consumed >= source_len:
+        return []
+
+    if not (hasattr(pre_tokenized, 'token_indices') and
+            hasattr(pre_tokenized, 'offsets') and
+            hasattr(pre_tokenized, 'words') and
+            hasattr(pre_tokenized, 'ipas')):
+        return []
+
+    cdef Py_ssize_t remaining = source_len - consumed
+    if remaining <= 0:
+        return []
+
+    cdef Py_ssize_t max_depth = <Py_ssize_t>(remaining * max_len_ratio) + 1
+    if max_depth < min_target_tokens:
+        return []
+
+    cdef Py_ssize_t n_entries = len(pre_tokenized.words)
+
+    off_arr = pre_tokenized.offsets
+    cdef const cnp.int32_t[:] off_view = off_arr
+
+    cdef Py_ssize_t total_tokens = off_view[n_entries]
+
+    cdef const cnp.intp_t[:] src_idx_view = source_idx_arr
+    cdef const cnp.intp_t[:] all_tgt_idx_view = all_tgt_idx_arr
+    cdef const cnp.float64_t[:] dist_view = dist_flat_arr
+    cdef const Py_ssize_t* src_idx
+    cdef const Py_ssize_t* all_tgt_idx
+    cdef const double* c_dist_matrix
+
+    cdef Py_ssize_t i
+    cdef Py_ssize_t t_start, t_end, tgt_len, src_comp_len, denom
+    cdef double raw, norm
+    cdef Py_ssize_t len_diff
+    cdef list candidates = []
+
+    if len(src_idx_view) != source_len:
+        raise ValueError("source_idx_arr length must equal source_len")
+    if len(all_tgt_idx_view) < total_tokens:
+        raise ValueError("all_tgt_idx_arr shorter than token_indices")
+    if len(dist_view) != matrix_dim * matrix_dim:
+        raise ValueError("dist_flat_arr length does not match matrix_dim")
+
+    src_idx = <const Py_ssize_t*>&src_idx_view[0]
+    all_tgt_idx = <const Py_ssize_t*>&all_tgt_idx_view[0]
+    c_dist_matrix = <const double*>&dist_view[0]
+
+    for i in range(n_entries):
+        t_start = off_view[i]
+        t_end = off_view[i + 1]
+        tgt_len = t_end - t_start
+
+        if tgt_len < min_target_tokens or tgt_len > max_depth:
+            continue
+
+        if tgt_len < remaining:
+            src_comp_len = tgt_len
+        else:
+            src_comp_len = remaining
+
+        if src_comp_len <= 0:
+            continue
+
+        denom = src_comp_len if src_comp_len >= tgt_len else tgt_len
+        len_diff = src_comp_len - tgt_len if src_comp_len >= tgt_len else tgt_len - src_comp_len
+        if denom > 0 and (<double>len_diff) / (<double>denom) > max_seg_distance:
+            continue
+
+        raw = _dp_edit_distance_nogil(
+            &src_idx[consumed],
+            src_comp_len,
+            &all_tgt_idx[t_start],
+            tgt_len,
+            c_dist_matrix,
+            matrix_dim,
+        )
+        if raw < 0.0:
+            continue
+
+        if denom <= 0:
+            continue
+
+        norm = raw / (<double>denom)
+        if norm <= max_seg_distance:
+            candidates.append((tgt_len, raw, i))
+
+    return candidates
+
+
+def beam_state_search(
+    list candidates_by_consumed,
+    Py_ssize_t source_len,
+    int beam_width = 10,
+    int max_words = 4,
+    double max_distance = 0.50,
+    double prune_ratio = 2.0,
+) -> tuple:
+    """Run beam search using struct-of-arrays node storage.
+
+    Parameters
+    ----------
+    candidates_by_consumed : list
+        Indexed by consumed position, each item is a list of candidate tuples
+        ``(n_tok, seg_cost, entry_id)``.
+    source_len : int
+        Number of source tokens.
+    beam_width : int
+        Maximum frontier width.
+    max_words : int
+        Maximum words in a segmentation.
+    max_distance : float
+        Distance threshold used to initialize pruning ceiling.
+    prune_ratio : float
+        Pruning ratio for tightening with best complete score.
+
+    Returns
+    -------
+    tuple
+        ``(node_parent, node_entry, node_raw, node_score, complete_nodes)``.
+    """
+    cdef list node_parent = [-1]
+    cdef list node_entry = [-1]
+    cdef list node_consumed = [0]
+    cdef list node_raw = [0.0]
+    cdef list node_score = [0.0]
+    cdef list node_depth = [0]
+
+    cdef list beam = [0]
+    cdef list complete_nodes = []
+
+    cdef double best_complete_score = 1e300
+    cdef double score_ceil = max_distance * prune_ratio
+
+    cdef Py_ssize_t round_i, bi, ci
+    cdef Py_ssize_t node_idx, consumed, depth
+    cdef Py_ssize_t new_idx
+    cdef Py_ssize_t new_consumed, n_tok
+    cdef int entry_id
+    cdef double raw_cost, seg_cost, new_raw, new_score
+    cdef list next_beam_nodes
+    cdef list cands
+    cdef list pairs
+    cdef tuple cand
+
+    if source_len <= 0:
+        return (node_parent, node_entry, node_raw, node_score, complete_nodes)
+
+    for round_i in range(max_words):
+        if not beam:
+            break
+
+        next_beam_nodes = []
+
+        for bi in range(len(beam)):
+            node_idx = <Py_ssize_t>beam[bi]
+            consumed = <Py_ssize_t>node_consumed[node_idx]
+            if consumed >= source_len:
+                continue
+
+            raw_cost = <double>node_raw[node_idx]
+            depth = <Py_ssize_t>node_depth[node_idx]
+            cands = candidates_by_consumed[consumed]
+
+            for ci in range(len(cands)):
+                cand = cands[ci]
+                n_tok = <Py_ssize_t>cand[0]
+                seg_cost = <double>cand[1]
+                entry_id = <int>cand[2]
+
+                new_consumed = consumed + n_tok
+                if new_consumed > source_len:
+                    new_consumed = source_len
+
+                new_raw = raw_cost + seg_cost
+                if new_consumed > 0:
+                    new_score = new_raw / (<double>new_consumed)
+                else:
+                    new_score = new_raw
+
+                if new_score > score_ceil:
+                    continue
+
+                node_parent.append(node_idx)
+                node_entry.append(entry_id)
+                node_consumed.append(new_consumed)
+                node_raw.append(new_raw)
+                node_score.append(new_score)
+                node_depth.append(depth + 1)
+
+                new_idx = len(node_parent) - 1
+
+                if new_consumed >= source_len:
+                    complete_nodes.append(new_idx)
+                    if new_score < best_complete_score:
+                        best_complete_score = new_score
+                        score_ceil = best_complete_score * prune_ratio
+                elif (<Py_ssize_t>node_depth[new_idx]) < max_words:
+                    next_beam_nodes.append(new_idx)
+
+        if len(next_beam_nodes) > beam_width:
+            # Stable score ordering; keep best beam_width.
+            pairs = [(node_score[idx], idx) for idx in next_beam_nodes]
+            pairs.sort()
+            beam = [pairs[i][1] for i in range(beam_width)]
+        else:
+            beam = next_beam_nodes
+
+    return (node_parent, node_entry, node_raw, node_score, complete_nodes)
+
+
+def beam_collect_complete_paths(
+    list node_parent,
+    list node_entry,
+    list node_raw,
+    list node_score,
+    list complete_nodes,
+    int max_candidates = 0,
+) -> list:
+    """Assemble unique complete paths from beam node arrays.
+
+    Parameters
+    ----------
+    node_parent, node_entry, node_raw, node_score : list
+        Parallel node arrays returned by :func:`beam_state_search`.
+    complete_nodes : list[int]
+        Node indices that fully consumed the source sequence.
+    max_candidates : int
+        Optional cap on pre-dedup complete nodes considered (0 = all).
+
+    Returns
+    -------
+    list
+        Sorted list of tuples:
+        ``(score, entry_ids_tuple, raw_cost)``.
+    """
+    cdef list ordered
+    cdef dict seen = {}
+    cdef Py_ssize_t i, idx, cur
+    cdef list rev_entries
+    cdef tuple key
+    cdef object existing
+    cdef double score, raw_cost
+    cdef list out
+
+    if not complete_nodes:
+        return []
+
+    ordered = sorted(complete_nodes, key=lambda nidx: node_score[nidx])
+    if max_candidates > 0 and len(ordered) > max_candidates:
+        ordered = ordered[:max_candidates]
+
+    for i in range(len(ordered)):
+        idx = <Py_ssize_t>ordered[i]
+        score = <double>node_score[idx]
+        raw_cost = <double>node_raw[idx]
+
+        rev_entries = []
+        cur = idx
+        while cur > 0:
+            rev_entries.append(node_entry[cur])
+            cur = <Py_ssize_t>node_parent[cur]
+
+        rev_entries.reverse()
+        key = tuple(rev_entries)
+
+        existing = seen.get(key)
+        if existing is None or score < existing[0]:
+            seen[key] = (score, tuple(rev_entries), raw_cost)
+
+    out = sorted(seen.values(), key=lambda t: t[0])
+    if max_candidates > 0 and len(out) > max_candidates:
+        out = out[:max_candidates]
+    return out
+
+
+def beam_rescore_paths(
+    object source_idx_arr,
+    Py_ssize_t source_len,
+    list packed_paths,
+    object pre_tokenized,
+    object all_tgt_idx_arr,
+    object dist_flat_arr,
+    Py_ssize_t matrix_dim,
+    double max_distance = 0.50,
+) -> list:
+    """Rescore complete beam paths using Cython DP against source indices.
+
+    Parameters
+    ----------
+    source_idx_arr : numpy.ndarray[intp]
+        Source phoneme indices in matrix space.
+    source_len : int
+        Number of source tokens.
+    packed_paths : list
+        Output of :func:`beam_collect_complete_paths`.
+    pre_tokenized : PreTokenizedDictionary-like object
+        Must expose ``offsets``.
+    all_tgt_idx_arr : numpy.ndarray[intp]
+        Pre-translated target token indices.
+    dist_flat_arr : numpy.ndarray[float64]
+        Flat distance matrix.
+    matrix_dim : int
+        Matrix dimension.
+    max_distance : float
+        Maximum allowed normalised distance.
+
+    Returns
+    -------
+    list
+        ``[(distance, entry_ids_tuple, raw_cost), ...]`` sorted by distance.
+    """
+    cdef const cnp.intp_t[:] src_view = source_idx_arr
+    cdef const cnp.intp_t[:] tgt_all_view = all_tgt_idx_arr
+    cdef const cnp.float64_t[:] dist_view = dist_flat_arr
+    cdef const cnp.int32_t[:] off_view = pre_tokenized.offsets
+
+    cdef const Py_ssize_t* src_idx
+    cdef const Py_ssize_t* tgt_all
+    cdef const double* c_dist
+
+    cdef Py_ssize_t n_entries = len(pre_tokenized.words)
+    cdef Py_ssize_t i, j, k, eid
+    cdef tuple p
+    cdef tuple entry_ids
+    cdef double raw_cost, dist, raw
+    cdef Py_ssize_t total_len, start, end, seg_len, write_pos, denom, len_diff
+    cdef Py_ssize_t* tgt_buf = NULL
+    cdef list out = []
+
+    if source_len <= 0:
+        return []
+    if len(src_view) != source_len:
+        raise ValueError("source_idx_arr length must equal source_len")
+    if len(dist_view) != matrix_dim * matrix_dim:
+        raise ValueError("dist_flat_arr length does not match matrix_dim")
+
+    src_idx = <const Py_ssize_t*>&src_view[0]
+    tgt_all = <const Py_ssize_t*>&tgt_all_view[0]
+    c_dist = <const double*>&dist_view[0]
+
+    for i in range(len(packed_paths)):
+        p = packed_paths[i]
+        entry_ids = p[1]
+        raw_cost = <double>p[2]
+
+        total_len = 0
+        for j in range(len(entry_ids)):
+            eid = <Py_ssize_t>entry_ids[j]
+            if eid < 0 or eid >= n_entries:
+                total_len = 0
+                break
+            start = off_view[eid]
+            end = off_view[eid + 1]
+            seg_len = end - start
+            if seg_len <= 0:
+                continue
+            total_len += seg_len
+
+        if total_len <= 0:
+            continue
+
+        denom = source_len if source_len >= total_len else total_len
+        len_diff = source_len - total_len if source_len >= total_len else total_len - source_len
+        if denom > 0 and (<double>len_diff) / (<double>denom) > max_distance:
+            continue
+
+        tgt_buf = <Py_ssize_t*>malloc(total_len * sizeof(Py_ssize_t))
+        if tgt_buf == NULL:
+            raise MemoryError("Could not allocate target buffer for beam rescoring")
+
+        try:
+            write_pos = 0
+            for j in range(len(entry_ids)):
+                eid = <Py_ssize_t>entry_ids[j]
+                if eid < 0 or eid >= n_entries:
+                    continue
+                start = off_view[eid]
+                end = off_view[eid + 1]
+                for k in range(start, end):
+                    tgt_buf[write_pos] = tgt_all[k]
+                    write_pos += 1
+
+            raw = _dp_edit_distance_nogil(
+                src_idx,
+                source_len,
+                tgt_buf,
+                total_len,
+                c_dist,
+                matrix_dim,
+            )
+        finally:
+            free(tgt_buf)
+            tgt_buf = NULL
+
+        if raw < 0.0:
+            continue
+
+        dist = raw / (<double>denom)
+        if dist <= max_distance:
+            out.append((dist, entry_ids, raw_cost))
+
+    out.sort(key=lambda t: t[0])
+    return out
+
+
 
 cdef Py_ssize_t _split_cluster_nogil(
     const int* son,

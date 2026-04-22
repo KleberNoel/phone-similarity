@@ -77,6 +77,15 @@ else:
     omp_compile = []
     omp_link = []
 
+
+def _cpp_compile_args() -> list[str]:
+    if platform.system() == "Windows":
+        return ["/O2", "/std:c++17"]
+    return ["-O3", "-std=c++17"]
+
+
+cpp_compile = _cpp_compile_args()
+
 extensions = [
     Extension(
         "phone_similarity._core",
@@ -85,6 +94,12 @@ extensions = [
         define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         extra_compile_args=omp_compile,
         extra_link_args=omp_link,
+    ),
+    Extension(
+        "phone_similarity._beam_cpp",
+        sources=["src/phone_similarity/_beam_cpp.cpp"],
+        language="c++",
+        extra_compile_args=cpp_compile,
     ),
 ]
 

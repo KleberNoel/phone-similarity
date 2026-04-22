@@ -67,7 +67,12 @@ except PackageNotFoundError:
 
 # Map public name → (module, attribute)
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "BeamSearchResources": ("phone_similarity.beam_search", "BeamSearchResources"),
     "BeamResult": ("phone_similarity.beam_search", "BeamResult"),
+    "build_beam_search_resources": (
+        "phone_similarity.beam_search",
+        "build_beam_search_resources",
+    ),
     "beam_search_phrases": ("phone_similarity.beam_search", "beam_search_phrases"),
     "beam_search_segmentation": ("phone_similarity.beam_search", "beam_search_segmentation"),
     "PRESERVE_ALL": ("phone_similarity.clean_phones", "PRESERVE_ALL"),
@@ -109,6 +114,15 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         "phone_similarity.pretokenize",
         "cached_pretokenize_dictionary",
     ),
+    "available_gpu_rescore_backends": (
+        "phone_similarity.gpu_rescore",
+        "available_gpu_rescore_backends",
+    ),
+    "benchmark_gpu_rescore_backends": (
+        "phone_similarity.gpu_rescore",
+        "benchmark_gpu_rescore_backends",
+    ),
+    "gpu_rescore_paths": ("phone_similarity.gpu_rescore", "gpu_rescore_paths"),
     "pretokenize_dictionary": ("phone_similarity.pretokenize", "pretokenize_dictionary"),
     "batch_pairwise_hamming": ("phone_similarity.primitives", "batch_pairwise_hamming"),
     "feature_edit_distance": ("phone_similarity.primitives", "feature_edit_distance"),
@@ -158,6 +172,7 @@ __all__ = [
     "PRESERVE_STRESS",
     "STRIP_ALL",
     "BeamResult",
+    "BeamSearchResources",
     "CleanConfig",
     "CoarticulationRule",
     "DefaultCoarticulationModel",
@@ -173,7 +188,10 @@ __all__ = [
     "batch_syllabify",
     "beam_search_phrases",
     "beam_search_segmentation",
+    "build_beam_search_resources",
     "cached_pretokenize_dictionary",
+    "available_gpu_rescore_backends",
+    "benchmark_gpu_rescore_backends",
     "clean_phones",
     "coarticulated_feature_edit_distance",
     "coarticulated_phoneme_distance",
@@ -185,6 +203,7 @@ __all__ = [
     "hamming_similarity",
     "invert_features",
     "invert_ipa",
+    "gpu_rescore_paths",
     "merge_inventories",
     "normalised_coarticulated_feature_edit_distance",
     "normalised_feature_edit_distance",
