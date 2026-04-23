@@ -12,9 +12,9 @@ def test_generate_batched_invalid_batch_size():
     g2p = CharsiuGraphemeToPhonemeGenerator("eng-us")
     try:
         g2p.generate_batched(["hello"], batch_size=0)
-        assert False, "Expected ValueError for batch_size=0"
     except ValueError:
-        pass
+        return
+    raise AssertionError("Expected ValueError for batch_size=0")
 
 
 def test_generate_batched_reuses_generate(monkeypatch):

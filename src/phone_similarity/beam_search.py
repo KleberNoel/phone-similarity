@@ -48,8 +48,8 @@ from phone_similarity._dispatch import (
     cy_beam_state_search,
     cy_build_phoneme_dist_matrix,
 )
-from phone_similarity.gpu_rescore import gpu_rescore_paths
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
+from phone_similarity.gpu_rescore import gpu_rescore_paths
 from phone_similarity.pretokenize import PreTokenizedDictionary
 from phone_similarity.primitives import normalised_feature_edit_distance, phoneme_feature_distance
 

@@ -16,9 +16,9 @@ from phone_similarity.beam_search import (
     BeamResult,
     BeamSearchResources,
     _Hypothesis,
-    build_beam_search_resources,
     beam_search_phrases,
     beam_search_segmentation,
+    build_beam_search_resources,
 )
 from phone_similarity.pretokenize import PreTokenizedDictionary
 

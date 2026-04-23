@@ -13,9 +13,9 @@ exact distance computation to the native exact kernel.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import statistics
 import time
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np

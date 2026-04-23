@@ -1,5 +1,3 @@
-import os
-
 import pytest
 
 from phone_similarity.g2p.charsiu.generator import (

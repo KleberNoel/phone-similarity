@@ -246,3 +246,6 @@ multiword_heatmap.py
 *.jsonl
 *.ipynb
 !src/phone_similarity/language/_data.json
+
+# Stash PR-excluded local scripts
+scripts/

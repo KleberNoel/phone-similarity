@@ -3,10 +3,10 @@ import math
 import os
 import pickle
 import sys
+from collections.abc import Sequence
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from collections.abc import Sequence
 from typing import Union
 
 from phone_similarity.g2p.charsiu import LANGUAGE_CODES_CHARSIU, load_dictionary
