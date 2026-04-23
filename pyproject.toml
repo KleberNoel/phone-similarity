@@ -54,6 +54,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "phone_similarity" = ["*.pyx", "*.pxd", "*.pyi", "*.cpp", "py.typed"]
+"phone_similarity.language" = ["_data.json"]
 
 # ---------------------------------------------------------------------------
 # Ruff
