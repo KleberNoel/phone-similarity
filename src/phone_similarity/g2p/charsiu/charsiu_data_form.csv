@@ -1,0 +1,99 @@
+index,Language,Code,Accent.Dialect,Dicts,Wikipron,espeak.ng,entries,data_license,citation
+1,Adyghe,ady,,y,y,,4895,U/K,sigmorphon
+2,Afrikaans,afr,,,,y,48811,GPL version 3,espeak
+3,Albanian,sqi,,,,y,59662,GPL version 3,espeak
+4,Amharic,amh,,,,y,4085,GPL version 3,espeak
+5,Arabic,ara,,y,,,857159,MIT,ipa-dict
+6,Aragonese,arg,,,,y,4393,GPL version 3,espeak
+7,Armenian,arm-e,East Armenian,,y,,14177,Apache 2.0,wikipron
+8,Armenian,arm-w,West Armenian,,y,,14040,Apache 2.0,wikipron
+9,Azerbaijani,aze,,,,y,78714,GPL version 3,espeak
+10,Bashkir,bak,,,,y,24940,GPL version 3,espeak
+11,Basque,eus,,,,y,30816,GPL version 3,espeak
+12,Belarussian,bel,,,,y,84862,GPL version 3,espeak
+13,Bengali,ben,,,y,,NA,Apache 2.0,wikipron
+14,Bosnian,bos,,,,y,39677,GPL version 3,espeak
+15,Bulgarian,bul,,y,y,,31782,U/K,sigmorphon
+16,Burmese,bur,,,y,,4631,Apache 2.0,wikipron
+17,Catalan,cat,,,y,,55829,Apache 2.0,wikipron
+18,Chinese,yue,Cantonese,y,,,56189,MIT,ipa-dict
+19,Chinese,zho-t,Mandarin (traditional),y,,,48239,MIT,ipa-dict
+20,Chinese,zho-s,Mandarin (simplified),y,,,44779,MIT,ipa-dict
+21,Chinese,min,Min Nan,,y,,NA,Apache 2.0,wikipron
+22,Czech,cze,,,y,,26778,Apache 2.0,wikipron
+23,Danish,dan,,,y,,7972,Apache 2.0,wikipron
+24,Dutch,dut,,,y,,33570,Apache 2.0,wikipron
+25,English,eng-uk,British,y,,,67327,"MIT, MIT","britfone, ipa-dict"
+26,English,eng-us,American,y,,,125924,MIT,ipa-dict
+27,Esperanto,epo,,y,,,23304,MIT,ipa-dict
+28,Estonian,est,,,,y,87552,GPL version 3,espeak
+29,Finnish,fin,,y,,,92835,MIT,ipa-dict
+30,French,fra,France,y,,,245756,"U/K, MIT","sigmorphon, ipa-dict"
+31,French,fra-qu,Quebec,y,,,245955,MIT,ipa-dict
+32,Gaelic,gla,Scottish,,y,,NA,Apache 2.0,wikipron
+33,Georgian,geo,,,y,,15123,Apache 2.0,wikipron
+34,German,ger,,,y,,278849,Apache 2.0,wikipron
+35,Greek,gre,Modern,,y,,10547,Apache 2.0,wikipron
+36,Greek,grc,Ancient,,y,,90222,Apache 2.0,wikipron
+37,Guarani,grn,,,,y,NA,GPL version 3,espeak
+38,Gujarati,guj,,,,y,NA,GPL version 3,espeak
+39,Hindi,hin,,y,y,,9563,U/K,sigmorphon
+40,Hungarian,hun,,y,y,,55533,U/K,sigmorphon
+41,Ido,ido,,,y,,6382,Apache 2.0,wikipron
+42,Indonesian,ind,,,,y,96808,GPL version 3,espeak
+43,Interlingua,ina,,,,y,5164,GPL version 3,espeak
+44,Italian,ita,,,y,,52920,Apache 2.0,wikipron
+45,Jamaican Creole,jam,,y,,,NA,MIT,ipa-dict
+46,Japanese,jpn,,y,,,221788,"U/K, MIT","sigmorphon, ipa-dict"
+47,Kazakh,kaz,,,,y,62393,GPL version 3,espeak
+48,Khmer,khm,,y,,,3260,MIT,ipa-dict
+49,Korean,kor,,y,,,NA,"U/K, MIT","sigmorphon, ipa-dict"
+50,Kurdish,kur,,y,,,8592,"U/K, MIT","veisi2020toward, ahmadi2019rule"
+51,Latin,lat-clas,classic,,y,,32715,Apache 2.0,wikipron
+52,Latin,lat-eccl,Ecclesiastical,,y,,31750,Apache 2.0,wikipron
+53,Lithuanian,lit,,y,y,,12676,U/K,sigmorphon
+54,Luxembourgish,ltz,,,,y,49767,GPL version 3,espeak
+55,Macedonian,mac,,,y,,6878,Apache 2.0,wikipron
+56,Maltese,mlt,,,,y,23337,GPL version 3,espeak
+57,Noethestern Thai,tts,,y,,,2182,MIT,ipa-dict
+58,Norwegian Bokm?l,nob,,y,,,10167,MIT,ipa-dict
+59,Oriya,ori,,,,y,6215,MIT,ipa-dict
+60,Papiamento,pap,,,,y,8005,GPL version 3,espeak
+61,Persian,fas,,y,,,7699,MIT,ipa-dict
+62,Polish,pol,,,y,,71863,Apache 2.0,wikipron
+63,Portuguese,por-po,Portugal,,y,,9800,Apache 2.0,wikipron
+64,Portuguese,por-bz,Brazillian,,y,,11331,Apache 2.0,wikipron
+65,Romanian,ron,,y,,,72680,"U/K, MIT","sigmorphon, ipa-dict"
+66,Russian,rus,,,y,,402586,Apache 2.0,wikipron
+67,Sanskrit,san,,,y,,6839,Apache 2.0,wikipron
+68,Serbian,srp,,,,y,88590,GPL version 3,espeak
+69,Serbo-Croatian,hbs-latn,Latin,,y,,23517,Apache 2.0,wikipron
+70,Serbo-Croatian,hbs-cyrl,Cryrillc,,y,,22543,Apache 2.0,wikipron
+71,Sindhi,snd,,,,y,10496,GPL version 3,espeak
+72,Slovak,slo,,,y,,3620,Apache 2.0,wikipron
+73,Slovenian,slv,,,y,,4390,Apache 2.0,wikipron
+74,Spanish,spa,Spain,y,,,595884,MIT,ipa-dict
+75,Spanish,spa-latin,Latin American,y,,,91118,Apache 2.0,sandiago-spanish
+76,Spanish,spa-me,Mexico,y,,,595884,MIT,ipa-dict
+77,Swahili,swa,,y,,,48307,MIT,ipa-dict
+78,Swedish,swe,,y,,,822742,CC0,Sprakbanken_Swe
+79,Tagalog,tgl,,,y,,7824,Apache 2.0,wikipron
+80,Tamil,tam,,,y,,2386,Apache 2.0,wikipron
+81,Tatar,tat,,,,y,63390,GPL version 3,espeak
+82,Thai,tha,,y,,,13608,Apache 2.0,thai-g2p
+83,Turkish,tur,,,,y,81928,GPL version 3,espeak
+84,Turkmen,tuk,,,,y,13843,GPL version 3,espeak
+85,Ukrainian,ukr,,,y,,10563,Apache 2.0,wikipron
+86,Vietnamese,vie-n,Northern Vietnam,y,,,70901,MIT,ipa-dict
+87,Vietnamese,vie-c,Central Vietnam,y,,,70901,MIT,ipa-dict
+88,Vietnamese,vie-s,Southern Vietnam,y,,,70901,MIT,ipa-dict
+89,Welsh,wel-nw,North Wales,,y,,8473,Apache 2.0,wikipron
+90,Welsh,wel-sw,South Wales,,y,,9925,Apache 2.0,wikipron
+91,Icelandic,ice,,,y,,9524,Apache 2.0,wikipron
+92,Old English,ang,,,y,,8854,Apache 2.0,wikipron
+93,Irish,gle,,,y,,7328,Apache 2.0,wikipron
+94,Middle English,enm,,,y,,6855,Apache 2.0,wikipron
+95,Classical Syriac,syc,,,y,,5947,Apache 2.0,wikipron
+96,Galician,glg,,,y,,4887,Apache 2.0,wikipron
+97,Northern Sami,sme,,,y,,3387,Apache 2.0,wikipron
+98,Egyptian,egy,,,y,,3403,Apache 2.0,wikipron

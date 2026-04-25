@@ -14,9 +14,11 @@ import pytest
 
 from phone_similarity.beam_search import (
     BeamResult,
+    BeamSearchResources,
     _Hypothesis,
     beam_search_phrases,
     beam_search_segmentation,
+    build_beam_search_resources,
 )
 from phone_similarity.pretokenize import PreTokenizedDictionary
 
@@ -455,3 +457,159 @@ class TestBeamSearchIntegration:
         assert len(results) > 0
         assert results[0].words == ("cat",)
         assert results[0].distance == pytest.approx(0.0)
+
+
+class TestBeamSearchResources:
+    def test_precomputed_resources_match_default_path(self, mock_spec, small_ptd):
+        source = ["k", "æ", "t"]
+        baseline = beam_search_segmentation(
+            source,
+            FEATURES,
+            small_ptd,
+            mock_spec,
+            FEATURES,
+            beam_width=10,
+            top_k=5,
+            max_distance=1.0,
+            min_target_tokens=1,
+        )
+
+        resources = build_beam_search_resources(
+            FEATURES,
+            small_ptd,
+            FEATURES,
+            min_target_tokens=1,
+        )
+        assert isinstance(resources, BeamSearchResources)
+
+        precomputed = beam_search_segmentation(
+            source,
+            FEATURES,
+            small_ptd,
+            mock_spec,
+            FEATURES,
+            beam_width=10,
+            top_k=5,
+            max_distance=1.0,
+            min_target_tokens=1,
+            resources=resources,
+        )
+
+        assert [r.words for r in precomputed] == [r.words for r in baseline]
+        assert [r.distance for r in precomputed] == pytest.approx([r.distance for r in baseline])
+
+    def test_min_target_tokens_mismatch_raises(self, mock_spec, small_ptd):
+        resources = build_beam_search_resources(
+            FEATURES,
+            small_ptd,
+            FEATURES,
+            min_target_tokens=2,
+        )
+        with pytest.raises(ValueError):
+            beam_search_segmentation(
+                ["k", "æ", "t"],
+                FEATURES,
+                small_ptd,
+                mock_spec,
+                FEATURES,
+                min_target_tokens=1,
+                resources=resources,
+            )
+
+    def test_cython_state_toggle_parity(self, monkeypatch, mock_spec, small_ptd):
+        source = ["k", "æ", "t", "s", "æ", "t"]
+        resources = build_beam_search_resources(
+            FEATURES,
+            small_ptd,
+            FEATURES,
+            min_target_tokens=1,
+        )
+
+        import phone_similarity.beam_search as beam_mod
+
+        original_state = beam_mod.HAS_CYTHON_BEAM_STATE
+
+        try:
+            monkeypatch.setattr(beam_mod, "HAS_CYTHON_BEAM_STATE", False)
+            py_results = beam_search_segmentation(
+                source,
+                FEATURES,
+                small_ptd,
+                mock_spec,
+                FEATURES,
+                beam_width=20,
+                top_k=5,
+                max_words=4,
+                max_distance=0.5,
+                min_target_tokens=1,
+                resources=resources,
+            )
+
+            monkeypatch.setattr(beam_mod, "HAS_CYTHON_BEAM_STATE", original_state)
+            cy_results = beam_search_segmentation(
+                source,
+                FEATURES,
+                small_ptd,
+                mock_spec,
+                FEATURES,
+                beam_width=20,
+                top_k=5,
+                max_words=4,
+                max_distance=0.5,
+                min_target_tokens=1,
+                resources=resources,
+            )
+        finally:
+            monkeypatch.setattr(beam_mod, "HAS_CYTHON_BEAM_STATE", original_state)
+
+        assert [r.words for r in cy_results] == [r.words for r in py_results]
+        assert [r.distance for r in cy_results] == pytest.approx([r.distance for r in py_results])
+
+    def test_cpp_state_toggle_parity(self, monkeypatch, mock_spec, small_ptd):
+        source = ["k", "æ", "t", "s", "æ", "t"]
+        resources = build_beam_search_resources(
+            FEATURES,
+            small_ptd,
+            FEATURES,
+            min_target_tokens=1,
+        )
+
+        import phone_similarity.beam_search as beam_mod
+
+        original_cpp = beam_mod.HAS_CPP_BEAM_STATE
+
+        try:
+            monkeypatch.setattr(beam_mod, "HAS_CPP_BEAM_STATE", False)
+            py_results = beam_search_segmentation(
+                source,
+                FEATURES,
+                small_ptd,
+                mock_spec,
+                FEATURES,
+                beam_width=20,
+                top_k=5,
+                max_words=4,
+                max_distance=0.5,
+                min_target_tokens=1,
+                resources=resources,
+            )
+
+            monkeypatch.setattr(beam_mod, "HAS_CPP_BEAM_STATE", original_cpp)
+            cpp_results = beam_search_segmentation(
+                source,
+                FEATURES,
+                small_ptd,
+                mock_spec,
+                FEATURES,
+                beam_width=20,
+                top_k=5,
+                max_words=4,
+                max_distance=0.5,
+                min_target_tokens=1,
+                resources=resources,
+            )
+        finally:
+            monkeypatch.setattr(beam_mod, "HAS_CPP_BEAM_STATE", original_cpp)
+
+        assert [r.words for r in cpp_results] == [r.words for r in py_results]
+        assert [r.distance for r in cpp_results] == pytest.approx([r.distance for r in py_results])

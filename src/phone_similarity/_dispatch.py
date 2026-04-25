@@ -29,6 +29,23 @@ from typing import Any
 
 _UNAVAILABLE: Any = None
 
+# Level 0: Optional C++ beam-state extension
+try:
+    from phone_similarity._beam_cpp import (
+        beam_rescore_paths_cpp as cpp_beam_rescore_paths,
+    )
+    from phone_similarity._beam_cpp import (
+        beam_state_search_cpp as cpp_beam_state_search,
+    )
+
+    HAS_CPP_BEAM_STATE = True
+    HAS_CPP_BEAM_RESCORE = True
+except ImportError:
+    HAS_CPP_BEAM_STATE = False
+    HAS_CPP_BEAM_RESCORE = False
+    cpp_beam_state_search = _UNAVAILABLE
+    cpp_beam_rescore_paths = _UNAVAILABLE
+
 # Level 1: Core Cython (hamming, edit distance, batch pairwise)
 try:
     from phone_similarity._core import (
@@ -115,3 +132,37 @@ try:
 except ImportError:
     HAS_CYTHON_DIST_MATRIX = False
     cy_build_phoneme_dist_matrix = _UNAVAILABLE
+
+# Level 8: Cython beam expansion kernel
+try:
+    from phone_similarity._core import (
+        beam_expand_candidates as cy_beam_expand_candidates,
+    )
+    from phone_similarity._core import (
+        beam_expand_candidates_ids as cy_beam_expand_candidates_ids,
+    )
+
+    HAS_CYTHON_BEAM_EXPAND = True
+except ImportError:
+    HAS_CYTHON_BEAM_EXPAND = False
+    cy_beam_expand_candidates = _UNAVAILABLE
+    cy_beam_expand_candidates_ids = _UNAVAILABLE
+
+# Level 9: Cython beam-state kernels
+try:
+    from phone_similarity._core import (
+        beam_collect_complete_paths as cy_beam_collect_complete_paths,
+    )
+    from phone_similarity._core import (
+        beam_rescore_paths as cy_beam_rescore_paths,
+    )
+    from phone_similarity._core import (
+        beam_state_search as cy_beam_state_search,
+    )
+
+    HAS_CYTHON_BEAM_STATE = True
+except ImportError:
+    HAS_CYTHON_BEAM_STATE = False
+    cy_beam_state_search = _UNAVAILABLE
+    cy_beam_collect_complete_paths = _UNAVAILABLE
+    cy_beam_rescore_paths = _UNAVAILABLE
