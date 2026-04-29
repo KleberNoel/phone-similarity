@@ -19,6 +19,38 @@ Computes feature-weighted edit distances between IPA transcriptions, scans forei
 pip install phone-similarity
 ```
 
+#### Quick Start
+
+```python
+import onnxruntime as ort
+from optimum.onnxruntime import ORTModelForSeq2SeqLM
+from transformers import AutoTokenizer
+
+# Configure for optimal performance
+so = ort.SessionOptions()
+so.intra_op_num_threads = 8   # ~cores/4
+so.inter_op_num_threads = 1
+
+# Load the G2P model
+model = ORTModelForSeq2SeqLM.from_pretrained(
+    "klebster/g2p_multilingual_byT5_tiny_onnx",
+    provider="CPUExecutionProvider",
+    session_options=so,
+)
+tokenizer = AutoTokenizer.from_pretrained("klebster/g2p_multilingual_byT5_tiny_onnx")
+
+# Convert text to IPA
+inputs = tokenizer("<eng-us>: hello", padding=True, add_special_tokens=False, return_tensors="pt")
+preds = model.generate(**inputs, num_beams=1, max_length=50)
+print(tokenizer.decode(preds[0], skip_special_tokens=True))
+# Output: ˈhɛɫoʊ
+```
+
+**Input format:** `<language_code>: word` (e.g. `<fra>: bonjour`, `<ger>: Straße`)
+
+**Supported language codes:** See [CharsiuG2P](https://github.com/lingjzhu/CharsiuG2P/tree/main/dicts) for all ~100 language codes.
+
+
 ### Optional extras
 
 | Extra | Command | Adds |
@@ -245,8 +277,24 @@ Uses an ONNX-exported ByT5-tiny model from [CharsiuG2P](https://github.com/lingj
 
 ## Attribution
 
-- Mortensen, D. R., Dalmia, S., & Littell, P. (2018). Epitran: Precision G2P for many languages. *LREC 2018*. [GitHub](https://github.com/dmort27/panphon)
-- Zhu, J., Zhang, C., & Jurgens, D. (2022). ByT5 model for massively multilingual grapheme-to-phoneme conversion. *INTERSPEECH 2022*. [GitHub](https://github.com/lingjzhu/CharsiuG2P)
+- **PanPhon feature vectors:** Mortensen, D. R. (2017). *PanPhon: A resource for mapping IPA segments to articulatory feature vectors.* [GitHub](https://github.com/dmort27/panphon)
+- **CharsiuG2P dictionaries and multilingual G2P model:** Zhu, J., Zhang, C., & Jurgens, D. (2022). *ByT5 model for massively multilingual grapheme-to-phoneme conversion.* *INTERSPEECH 2022*. [Paper](https://arxiv.org/abs/2204.03067) | [GitHub](https://github.com/lingjzhu/CharsiuG2P)
+- **ONNX export used by this package:** Noel, K. (2026). *Multilingual G2P ByT5 Tiny - ONNX export.* [Hugging Face](https://huggingface.co/klebster/g2p_multilingual_byT5_tiny_onnx)
+
+## Citation
+
+If you use the ONNX G2P backend, cite the exported model as well:
+
+```bibtex
+@misc{noel2025g2pmultilingualbyT5tinyonnx,
+      title={Multilingual G2P ByT5 Tiny - ONNX export},
+      author={Kleber Noel},
+      year={2026},
+      month={apr},
+      note={Published 2026-04-07},
+      url={https://huggingface.co/klebster/g2p_multilingual_byT5_tiny_onnx},
+}
+```
 
 ## License
 
