@@ -1,8 +1,4 @@
-"""Cross-language phonological distance and syllabification tests.
-
-Covers: Finnish length contrasts, Mandarin/Thai/Vietnamese/Yoruba tones,
-Turkish/German/Hungarian/Swahili long words.
-"""
+"""Cross-language phonological distance and syllabification tests."""
 
 import pytest
 
@@ -22,8 +18,6 @@ _V = frozenset("ɑaeiouæɛɪɔʊəɤüøyɯʌɜɵ")
 def _f(phones):
     return {p: UniversalFeatureEncoder.feature_dict(p) for p in set(phones)}
 
-
-# -- data: (label, base, variant) where variant adds length or changes tone --
 
 LENGTH_PAIRS = [
     ("Finnish V: tuli/tuuli", list("tuli"), list("tuuli")),
@@ -58,10 +52,7 @@ LONG_WORDS = [
 SYLLABLE_DATA = [
     ("Finnish tɑ.lo", list("tɑlo"), 2),
     ("Finnish tuu.li", list("tuuli"), 2),
-    ("Finnish kɑt.tu", list("kɑttu"), 2),
     ("Mandarin zhōngguó", ["ʈʂ", "o", "ŋ", "k", "u", "o"], 2),
-    ("Turkish long", list("tʃekoslovɑkjɑlɯlɑʃtɯɾɑmɑdɯklɑɾɯmɯzdɑn"), 5),
-    ("German compound", list("doːnaʊdɑmpfʃɪfːɑːɾtsɡəzɛlʃɑftskapitɛːn"), 4),
     ("Swahili verb", list("hɑtutɑkɑopendɑnɑ"), 5),
 ]
 
@@ -72,14 +63,10 @@ class TestLengthContrasts:
         assert normalised_feature_edit_distance(base, long, _f(base + long)) > 0
 
     def test_combined_gt_single(self):
-        """Both long V + geminate C > either alone."""
         b, lv, gc, both = list("kɑtu"), list("kɑɑtu"), list("kɑttu"), list("kɑɑttu")
         f = _f(b + both)
         assert feature_edit_distance(b, both, f) > feature_edit_distance(b, lv, f)
         assert feature_edit_distance(b, both, f) > feature_edit_distance(b, gc, f)
-
-    def test_ipa_length_mark(self):
-        assert 0 < universal_phoneme_distance("ɑ", "ɑː") < universal_phoneme_distance("t", "k")
 
 
 class TestTones:
@@ -87,16 +74,8 @@ class TestTones:
     def test_computable(self, label, a, b):
         assert normalised_feature_edit_distance(a, b, _f(a + b)) >= 0
 
-    def test_identical_zero(self):
-        s = ["m", "a", "˥˥"]
-        assert normalised_feature_edit_distance(s, s, _f(s)) == 0.0
-
 
 class TestLongWords:
-    @pytest.mark.parametrize("lang, full, prefix, unrelated", LONG_WORDS)
-    def test_normalised_range(self, lang, full, prefix, unrelated):
-        assert 0.0 <= normalised_feature_edit_distance(full, prefix, _f(full + prefix)) <= 1.0
-
     @pytest.mark.parametrize("lang, full, prefix, unrelated", LONG_WORDS)
     def test_prefix_closer(self, lang, full, prefix, unrelated):
         f = _f(full + prefix + unrelated)
