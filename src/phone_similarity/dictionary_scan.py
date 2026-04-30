@@ -165,6 +165,7 @@ def parallel_dictionary_scan(
         All matches across all languages, unsorted.
     """
     import multiprocessing
+    import sys
     from concurrent.futures import ProcessPoolExecutor, as_completed
 
     if max_workers is None:
@@ -193,9 +194,19 @@ def parallel_dictionary_scan(
         for item in work_items:
             all_results.extend(_scan_one_language(item))
     else:
-        # Use 'spawn' context to avoid fork-safety issues with Cython
-        # extensions, numpy, and ONNX runtime internal locks.
-        ctx = multiprocessing.get_context("spawn")
+        # Process-start method selection:
+        #   - 'forkserver' (Linux/macOS): a single clean server process is
+        #     forked *before* any Cython/numpy/ONNX state is loaded, then
+        #     all workers are forked from that server.  This is both fork-safe
+        #     and faster than 'spawn' because Python + all C extensions are
+        #     imported only once in the server, not once per worker.
+        #   - 'spawn' (Windows, or Linux fallback): fully safe but slower;
+        #     each worker re-imports everything from scratch.
+        if sys.platform != "win32":
+            start_method = "forkserver"
+        else:
+            start_method = "spawn"
+        ctx = multiprocessing.get_context(start_method)
         with ProcessPoolExecutor(max_workers=max_workers, mp_context=ctx) as pool:
             futures = [pool.submit(_scan_one_language, item) for item in work_items]
             for future in as_completed(futures):

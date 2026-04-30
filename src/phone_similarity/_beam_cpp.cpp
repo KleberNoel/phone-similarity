@@ -496,11 +496,16 @@ PyObject* beam_rescore_paths_cpp(PyObject* /*self*/, PyObject* args, PyObject* k
 
 PyMethodDef ModuleMethods[] = {
     {"beam_state_search_cpp",
-     reinterpret_cast<PyCFunction>(beam_state_search_cpp),
+     // Double-cast through void(*)() suppresses MSVC C4191 "unsafe function
+     // pointer conversion" warning.  Both functions take (self, args, kwargs)
+     // and are registered with METH_VARARGS|METH_KEYWORDS, which instructs
+     // CPython to call them as PyCFunctionWithKeywords regardless of the
+     // PyCFunction type in the table entry.
+     (PyCFunction)(void (*)(void))beam_state_search_cpp,
      METH_VARARGS | METH_KEYWORDS,
      "C++ beam state search."},
     {"beam_rescore_paths_cpp",
-     reinterpret_cast<PyCFunction>(beam_rescore_paths_cpp),
+     (PyCFunction)(void (*)(void))beam_rescore_paths_cpp,
      METH_VARARGS | METH_KEYWORDS,
      "C++ beam rescoring kernel."},
     {nullptr, nullptr, 0, nullptr},

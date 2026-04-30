@@ -18,6 +18,8 @@ from pathlib import Path
 
 import numpy as np
 
+from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER as _HAS_CYTHON_TOKENIZER
+from phone_similarity._dispatch import cy_batch_ipa_tokenize as _cy_batch_ipa_tokenize
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 
 logger = logging.getLogger(__name__)
@@ -51,7 +53,6 @@ def pretokenize_dictionary(
     -------
     list of (word, ipa_str, tokens)
     """
-    from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER, cy_batch_ipa_tokenize
     from phone_similarity.clean_phones import clean_phones as _clean
 
     words: list[str] = []
@@ -62,10 +63,10 @@ def pretokenize_dictionary(
             words.append(word)
             ipas.append(ipa)
 
-    if HAS_CYTHON_TOKENIZER and hasattr(spec, "_phones_sorted"):
+    if _HAS_CYTHON_TOKENIZER and hasattr(spec, "_phones_sorted"):
         phone_set = frozenset(spec._phones_sorted)
         max_phoneme_size = max((len(p) for p in phone_set), default=1)
-        all_tokens = cy_batch_ipa_tokenize(ipas, phone_set, max_phoneme_size, min_tokens)
+        all_tokens = _cy_batch_ipa_tokenize(ipas, phone_set, max_phoneme_size, min_tokens)
         result: list[tuple[str, str, list[str]]] = []
         for i in range(len(words)):
             toks = all_tokens[i]

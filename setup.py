@@ -78,12 +78,49 @@ else:
     omp_link = []
 
 
-def _cpp_compile_args() -> list[str]:
+def _native_compile_args() -> list[str]:
+    """Return platform-appropriate flags for maximum optimisation.
+
+    ``-O3`` enables all standard optimisations (loop unrolling, auto-
+    vectorisation, inlining).  ``-march=native`` emits SIMD instructions
+    (AVX2/AVX-512 on modern x86, NEON on ARM) tailored to the build host.
+    Both are skipped on Windows (MSVC uses /O2 instead).
+
+    Note: wheels built with ``-march=native`` are not portable across
+    microarchitectures.  For distributable wheels, remove ``-march=native``
+    and rely on ``-O3`` alone (the CI build matrix sets CFLAGS explicitly).
+    """
+    is_ci = os.environ.get("CIBUILDWHEEL") or os.environ.get("CI")
     if platform.system() == "Windows":
-        return ["/O2", "/std:c++17"]
-    return ["-O3", "-std=c++17"]
+        # MSVC: /O2 = full optimisation; /arch:AVX2 enables 256-bit SIMD
+        # (equivalent of -march=native on GCC/Clang for modern x86).
+        # Omit /arch:AVX2 on CI to keep distributable wheels portable.
+        flags = ["/O2"]
+        if not is_ci:
+            flags.append("/arch:AVX2")
+        return flags
+    flags = ["-O3"]
+    # -march=native is only meaningful for local dev / benchmarking builds.
+    # Skip on CI (detected via environment) to keep wheels portable.
+    if not is_ci:
+        flags.append("-march=native")
+    return flags
 
 
+def _cpp_compile_args() -> list[str]:
+    is_ci = os.environ.get("CIBUILDWHEEL") or os.environ.get("CI")
+    if platform.system() == "Windows":
+        flags = ["/O2", "/std:c++17"]
+        if not is_ci:
+            flags.append("/arch:AVX2")
+        return flags
+    base = ["-O3", "-std=c++17"]
+    if not is_ci:
+        base.append("-march=native")
+    return base
+
+
+native_compile = _native_compile_args()
 cpp_compile = _cpp_compile_args()
 
 extensions = [
@@ -92,7 +129,7 @@ extensions = [
         sources=["src/phone_similarity/_core.pyx"],
         include_dirs=[np.get_include()],
         define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
-        extra_compile_args=omp_compile,
+        extra_compile_args=native_compile + omp_compile,
         extra_link_args=omp_link,
     ),
     Extension(
