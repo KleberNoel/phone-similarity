@@ -2118,3 +2118,43 @@ def coarticulated_feature_edit_distance_c(
         free(curr_row)
 
     return result
+
+
+# Level 10: Cython IPA cleaning
+
+cpdef str cy_clean_phones(str ipa, bint strip_stress=True, bint strip_length=True,
+                           bint strip_liaison=True, bint nfkd=True):
+    """Strip suprasegmental markers from an IPA string using codepoint comparison."""
+    import unicodedata as _ud
+    if nfkd:
+        ipa = _ud.normalize("NFKD", ipa)
+    cdef list out = []
+    cdef Py_UCS4 c
+    for ch in ipa:
+        c = ord(ch)
+        if strip_stress and (c == 0x02C8 or c == 0x02CC):
+            continue
+        if strip_length and (c == 0x02D0 or c == 0x02D1):
+            continue
+        if strip_liaison and c == 0x203F:
+            continue
+        out.append(ch)
+    return ''.join(out)
+
+
+cpdef list cy_extract_stress_marks(str ipa):
+    """Return [(clean_index, 'primary'|'secondary')] for stress markers in ipa."""
+    import unicodedata as _ud
+    ipa = _ud.normalize("NFKD", ipa)
+    cdef list marks = []
+    cdef int clean_idx = 0
+    cdef Py_UCS4 c
+    for ch in ipa:
+        c = ord(ch)
+        if c == 0x02C8:
+            marks.append((clean_idx, "primary"))
+        elif c == 0x02CC:
+            marks.append((clean_idx, "secondary"))
+        else:
+            clean_idx += 1
+    return marks

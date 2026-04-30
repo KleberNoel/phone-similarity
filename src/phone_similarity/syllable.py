@@ -1,54 +1,8 @@
 """
 Syllable segmentation with Maximum Onset Principle.
 
-Provides language-aware syllabification using a sonority hierarchy
-derived from universal phonological features.  Follows the **Strategy**
-pattern for extensibility — the default :class:`MaxOnsetSegmenter` can
-be replaced with language-specific implementations.
-
-Design
-------
-* **Single Responsibility**: each class has one job — ``SonorityScale``
-  maps phonemes to sonority ranks, ``MaxOnsetSegmenter`` applies the
-  splitting algorithm, and :func:`syllabify` is the high-level facade.
-* **Open/Closed**: new segmentation strategies can be added by
-  implementing :class:`SyllabificationStrategy`` without modifying
-  existing code.
-* **Dependency Inversion**: the module depends on the abstract
-  ``SyllabificationStrategy`` protocol, not on concrete segmenters.
-
-Stress preservation
--------------------
-:class:`Syllable` carries an optional ``stress`` field (``"primary"``,
-``"secondary"``, or ``None``).  When *ipa_with_stress* is passed to
-:func:`syllabify`, stress markers ``ˈ``/``ˌ`` are extracted before
-segmentation and then assigned to the syllable whose onset or nucleus
-they precede.  Helper functions :func:`stressed_syllable` and
-:func:`stress_pattern` provide quick access to prosodic structure.
-
-Cython acceleration
--------------------
-When the ``_core`` extension is available, :func:`syllabify` and
-:func:`batch_syllabify` dispatch to C-level implementations that avoid
-per-phoneme Python dict lookups.
-
-Usage::
-
-    from phone_similarity.syllable import syllabify, Syllable
-    from phone_similarity.language import LANGUAGES
-
-    lang = LANGUAGES["eng_us"]
-    tokens = ["s", "t", "r", "ɪ", "ŋ", "z"]
-    syllables = syllabify(tokens, vowels=lang.VOWELS_SET)
-    # [Syllable(onset=('s', 't', 'r'), nucleus=('ɪ',), coda=('ŋ', 'z'))]
-
-    # Stress-aware syllabification:
-    syllables = syllabify(
-        ["h", "ɛ", "l", "oʊ"],
-        vowels=lang.VOWELS_SET,
-        stress_marks=[(0, "primary")],  # stress on first syllable
-    )
-    # syllables[0].stress == "primary"
+Provides language-aware syllabification using a sonority hierarchy derived from
+universal phonological features.  Dispatches to Cython when available.
 """
 
 from __future__ import annotations
@@ -75,26 +29,7 @@ RANK_UNKNOWN = 0
 # Syllable data class
 @dataclasses.dataclass(frozen=True)
 class Syllable:
-    """A syllable decomposed into onset, nucleus, and coda.
-
-    All three structural fields are tuples of IPA phoneme strings.  An
-    empty tuple means the component is absent (e.g. a vowel-initial
-    syllable has an empty onset).
-
-    Parameters
-    ----------
-    onset : tuple of str
-        Consonant phonemes before the nucleus.
-    nucleus : tuple of str
-        Vowel phoneme(s) forming the syllable peak.
-    coda : tuple of str
-        Consonant phonemes after the nucleus.
-    stress : str or None
-        ``"primary"``, ``"secondary"``, or ``None``.  Populated when
-        :func:`syllabify` is called with *stress_marks* or when the
-        input IPA string contains stress markers and
-        ``preserve_stress=True`` was used.
-    """
+    """A syllable decomposed into onset, nucleus, and coda (all tuples of IPA strings)."""
 
     onset: tuple[str, ...]
     nucleus: tuple[str, ...]
@@ -120,24 +55,8 @@ class Syllable:
         return len(self.onset) + len(self.nucleus) + len(self.coda)
 
 
-class SonorityScale:  # TODO: check this isn't already available in panphon..? FIXME
-    """Maps IPA phonemes to integer sonority ranks via universal features.
-
-    Ranks (highest to lowest):
-        6  vowel       (syl=+1)
-        5  glide       (son=+1, cons=-1, syl=-1)
-        4  liquid      (son=+1, cons=+1, nas=-1)
-        3  nasal       (son=+1, nas=+1)
-        2  fricative   (son=-1, cont=+1)
-        1  stop/affr.  (son=-1, cont=-1)
-        0  unknown
-
-    Parameters
-    ----------
-    extra_ranks : dict, optional
-        Manual overrides ``{phoneme: rank}``.  Useful for phonemes
-        absent from the Panphon table or for language-specific tweaks.
-    """
+class SonorityScale:
+    """Maps IPA phonemes to integer sonority ranks via universal features."""
 
     _cache: ClassVar[dict[str, int]] = {}
 
@@ -213,21 +132,7 @@ class SyllabificationStrategy(Protocol):
 
 
 class MaxOnsetSegmenter:
-    """Syllabification using the Maximum Onset Principle (MOP).
-
-    For each inter-vocalic consonant cluster, assigns as many consonants
-    as possible to the *onset* of the following syllable, subject to the
-    Sonority Sequencing Principle (SSP): onsets must have rising
-    sonority towards the nucleus.
-
-    Parameters
-    ----------
-    sibilant_appendix : bool
-        If *True* (default), allow a sibilant (rank 2) to attach to
-        the left of an onset even when it would violate the SSP.  This
-        covers the well-known /s/-exception in English ``str-``, ``sp-``,
-        ``sk-`` clusters.
-    """
+    """Syllabification using the Maximum Onset Principle (MOP) with SSP-compliant onset extension."""
 
     def __init__(self, sibilant_appendix: bool = True) -> None:
         self._sibilant_appendix = sibilant_appendix
@@ -238,21 +143,7 @@ class MaxOnsetSegmenter:
         vowels: frozenset[str],
         sonority: Sequence[int],
     ) -> list[Syllable]:
-        """Segment *tokens* into syllables.
-
-        Parameters
-        ----------
-        tokens : sequence of str
-            IPA phoneme tokens (from an IPA tokeniser).
-        vowels : frozenset of str
-            The vowel inventory of the language.
-        sonority : sequence of int
-            Pre-computed sonority rank for each token position.
-
-        Returns
-        -------
-        list of Syllable
-        """
+        """Segment *tokens* into syllables."""
         n = len(tokens)
         if n == 0:
             return []
@@ -389,38 +280,7 @@ def syllabify(
     sonority_scale: SonorityScale | None = None,
     stress_marks: Sequence[tuple[int, str]] | None = None,
 ) -> list[Syllable]:
-    """Segment IPA tokens into syllables.
-
-    This is the main entry point.  It computes sonority ranks from
-    universal features and delegates to the chosen strategy (default:
-    :class:`MaxOnsetSegmenter`).
-
-    When the Cython extension is available the hot path is dispatched to
-    C for ~3-5x speedup on batch workloads.
-
-    Parameters
-    ----------
-    tokens : sequence of str
-        IPA phoneme tokens (stress markers should already be stripped;
-        use *stress_marks* to carry stress information through).
-    vowels : set or frozenset of str
-        The vowel inventory.
-    encoder : UniversalFeatureEncoder, optional
-        Feature encoder for sonority derivation.
-    strategy : SyllabificationStrategy, optional
-        Segmentation algorithm (default: MOP with sibilant appendix).
-    sonority_scale : SonorityScale, optional
-        Pre-built sonority scale.
-    stress_marks : sequence of (int, str), optional
-        Stress positions as ``(token_index, kind)`` pairs, where *kind*
-        is ``"primary"`` or ``"secondary"``.  Obtained from
-        :func:`~phone_similarity.clean_phones.extract_stress_marks` or
-        manually specified.
-
-    Returns
-    -------
-    list of Syllable
-    """
+    """Segment IPA tokens into syllables using the configured strategy (default: MOP)."""
     scale = sonority_scale or _DEFAULT_SCALE
     seg = strategy or _DEFAULT_SEGMENTER
     vowel_fs = frozenset(vowels) if not isinstance(vowels, frozenset) else vowels
@@ -452,27 +312,7 @@ def batch_syllabify(
     strategy: SyllabificationStrategy | None = None,
     stress_marks_list: Sequence[Sequence[tuple[int, str]] | None] | None = None,
 ) -> list[list[Syllable]]:
-    """Syllabify a batch of token lists.
-
-    When the Cython extension is available the entire batch is processed
-    in one C call, avoiding per-word Python overhead.
-
-    Parameters
-    ----------
-    token_lists : sequence of sequence of str
-        Each inner sequence is a tokenised IPA word.
-    vowels : set or frozenset of str
-        The vowel inventory.
-    sonority_scale : SonorityScale, optional
-    strategy : SyllabificationStrategy, optional
-    stress_marks_list : sequence of (marks or None), optional
-        Per-word stress marks.  If supplied, must have the same length
-        as *token_lists*.  ``None`` entries mean no stress for that word.
-
-    Returns
-    -------
-    list of list of Syllable
-    """
+    """Syllabify a batch of token lists, dispatching to Cython when available."""
     scale = sonority_scale or _DEFAULT_SCALE
     seg = strategy or _DEFAULT_SEGMENTER
     vowel_fs = frozenset(vowels) if not isinstance(vowels, frozenset) else vowels
@@ -513,20 +353,7 @@ def stressed_syllable(
     syllables: Sequence[Syllable],
     kind: str = "primary",
 ) -> Syllable | None:
-    """Return the first syllable with the given stress kind.
-
-    Parameters
-    ----------
-    syllables : sequence of Syllable
-        Output of :func:`syllabify`.
-    kind : str
-        ``"primary"`` (default) or ``"secondary"``.
-
-    Returns
-    -------
-    Syllable or None
-        The stressed syllable, or ``None`` if no match.
-    """
+    """Return the first syllable with stress *kind* (``"primary"`` or ``"secondary"``), or None."""
     for syl in syllables:
         if syl.stress == kind:
             return syl
@@ -534,32 +361,7 @@ def stressed_syllable(
 
 
 def stress_pattern(syllables: Sequence[Syllable]) -> str:
-    """Return a numeric stress pattern string.
-
-    Each syllable is represented by one character:
-    * ``"1"`` — primary stress
-    * ``"2"`` — secondary stress
-    * ``"0"`` — unstressed
-
-    Parameters
-    ----------
-    syllables : sequence of Syllable
-        Output of :func:`syllabify`.
-
-    Returns
-    -------
-    str
-        E.g. ``"100"`` for a three-syllable word with initial stress.
-
-    Examples
-    --------
-    >>> stress_pattern([
-    ...     Syllable(("b",), ("ɪ",), (), stress="secondary"),
-    ...     Syllable(("n",), ("æ",), (), stress=None),
-    ...     Syllable(("n",), ("ə",), (), stress="primary"),
-    ... ])
-    '201'
-    """
+    """Return a numeric stress string: ``"1"`` primary, ``"2"`` secondary, ``"0"`` unstressed per syllable."""
     codes = {"primary": "1", "secondary": "2"}
     return "".join(codes.get(syl.stress, "0") for syl in syllables)  # type: ignore[arg-type]
 

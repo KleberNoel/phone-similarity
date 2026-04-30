@@ -1,11 +1,4 @@
-"""
-Single- and multi-language dictionary scanning.
-
-Provides :func:`reverse_dictionary_lookup` for scanning a single
-pre-tokenized dictionary, :func:`_scan_one_language` as the worker for
-parallel scans, and :func:`parallel_dictionary_scan` for fanning out
-scans across multiple target languages.
-"""
+"""Single- and multi-language dictionary scanning."""
 
 import logging
 from typing import Union
@@ -29,12 +22,8 @@ MIN_OVERLAP_RATIO: float = 0.20
 logger = logging.getLogger(__name__)
 
 
-def _scan_one_language(args):
-    """Worker function for parallel_dictionary_scan.
-
-    Runs in a child process.  Accepts a single tuple to be compatible
-    with ``Pool.map``.
-    """
+def _scan_one_language(args: tuple) -> list[tuple[str, str, str, str, float]]:
+    """Worker process for parallel_dictionary_scan; accepts a single tuple for Pool.map."""
     (
         phrases,  # List[(phrase_key, ipa_str)]
         source_spec,
@@ -93,7 +82,7 @@ def _scan_one_language(args):
                 if target_len == 0:
                     continue
                 ratio = max(source_len, target_len) / min(source_len, target_len)
-                if ratio > MAX_LENGTH_RATIO:  # FIXME: why are we doing this?
+                if ratio > MAX_LENGTH_RATIO:
                     continue
                 # Phoneme-set overlap pre-filter (matches Cython path)
                 target_set = set(target_tokens)
@@ -136,33 +125,7 @@ def parallel_dictionary_scan(
 ) -> list[tuple[str, str, str, str, float]]:
     """Scan multiple phrases against multiple languages in parallel.
 
-    Fans out one worker per target language using
-    ``concurrent.futures.ProcessPoolExecutor``.  Each worker scans *all*
-    phrases against its assigned language's pre-tokenized dictionary.
-
-    Parameters
-    ----------
-    phrases : list of (phrase_key, ipa_str)
-        English phrases to search for. ``phrase_key`` is an arbitrary
-        string identifier returned in the results.
-    source_spec : BaseBitArraySpecification
-        Specification for the source (English) phoneme inventory.
-    source_features : dict
-        ``PHONEME_FEATURES`` of the source language.
-    targets : dict
-        ``{lang_code: (spec, features, pre_tokenized_dict)}`` for each
-        target language.
-    top_n : int
-        Return at most this many matches per phrase per language.
-    max_distance : float
-        Distance threshold.
-    max_workers : int or None
-        Maximum parallel workers (default: number of target languages).
-
-    Returns
-    -------
-    list of (phrase_key, lang, word, ipa, distance)
-        All matches across all languages, unsorted.
+    Uses ``concurrent.futures.ProcessPoolExecutor`` with one worker per target language.
     """
     import multiprocessing
     import sys
@@ -230,51 +193,7 @@ def reverse_dictionary_lookup(
     pre_tokenized: list[tuple[str, str, list[str]]] | None = None,
     num_threads: int = 0,
 ) -> list[tuple[str, str, float]]:
-    """Find dictionary words in a target language closest to a source IPA string.
-
-    For each entry in *target_dictionary*, tokenises its IPA and computes
-    the normalised feature edit distance against *source_ipa*.  Returns
-    the *top_n* closest words.
-
-    Parameters
-    ----------
-    source_ipa : str
-        Compressed IPA of the source phrase.
-    source_lang_code : str
-        Language code of the source (used only for logging).
-    source_spec : BaseBitArraySpecification
-        Specification for tokenising *source_ipa*.
-    source_phoneme_features : dict
-        ``PHONEME_FEATURES`` of the source language.
-    target_lang_code : str
-        Language code of the target (used only for logging).
-    target_spec : BaseBitArraySpecification
-        Specification for tokenising target dictionary IPA.
-    target_phoneme_features : dict
-        ``PHONEME_FEATURES`` of the target language.
-    target_dictionary : dict
-        ``{word: ipa_transcription}`` from the target language's G2P
-        dictionary.  Values may contain commas (multiple pronunciations);
-        only the first pronunciation is used.  Ignored when
-        *pre_tokenized* is provided.
-    top_n : int
-        Return at most this many words (default 10).
-    max_distance : float
-        Ignore words with distance above this threshold (default 0.50).
-    pre_tokenized : list of (word, ipa, tokens), optional
-        Pre-tokenized dictionary entries.  When provided the function
-        skips tokenization entirely, giving a large speed-up on repeated
-        calls against the same dictionary.
-    num_threads : int
-        Number of OpenMP threads for parallel DP computation.
-        0 (default) lets OpenMP choose.  1 forces sequential execution.
-        Only effective when the Cython prange extension is available.
-
-    Returns
-    -------
-    list of (word, ipa, distance)
-        Target-language words sorted by ascending distance.
-    """
+    """Find dictionary words in a target language closest to a source IPA string."""
     merged_feats = {**target_phoneme_features, **source_phoneme_features}
     source_tokens = source_spec.ipa_tokenizer(source_ipa)
     source_len = len(source_tokens)
@@ -329,7 +248,7 @@ def reverse_dictionary_lookup(
 
         # Quick length-ratio filter
         ratio = max(source_len, target_len) / min(source_len, target_len)
-        if ratio > MAX_LENGTH_RATIO:  # TODO FIXME: Why are we doing this??
+        if ratio > MAX_LENGTH_RATIO:
             continue
 
         # Phoneme-set overlap pre-filter (matches Cython path)

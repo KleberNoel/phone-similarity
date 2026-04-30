@@ -1,15 +1,9 @@
-"""
-High-level Distance class for phonological comparison.
-
-Wraps a :class:`BitArraySpecification` and phoneme feature dictionaries
-to provide convenient methods for Hamming similarity, feature-weighted
-edit distance, and pairwise matrices.
-"""
+"""High-level Distance class for phonological comparison."""
 
 from collections.abc import Sequence
 from typing import Union
 
-from phone_similarity.bit_array_specification import BitArraySpecification
+from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.primitives import (
     batch_pairwise_hamming,
     feature_edit_distance,
@@ -19,82 +13,30 @@ from phone_similarity.primitives import (
 
 
 class Distance:
-    """Compute phonological distances between words across languages.
+    """Compute phonological distances between words.
 
-    This class wraps a ``BitArraySpecification`` (for bitarray-level
-    Hamming metrics) and the language's ``PHONEME_FEATURES`` (for
-    feature-weighted edit distance).
-
-    Parameters
-    ----------
-    spec : BitArraySpecification
-        The specification for encoding IPA into bitarrays.
-    phoneme_features : dict, optional
-        Mapping of phoneme -> articulatory features.  If ``None``, the
-        features from ``spec._phoneme_features`` are used.
-
-    Examples
-    --------
-    >>> from phone_similarity.language import LANGUAGES
-    >>> lang = LANGUAGES["eng_us"]
-    >>> spec = BitArraySpecification(
-    ...     vowels=lang.VOWELS_SET,
-    ...     consonants=set(lang.PHONEME_FEATURES) - lang.VOWELS_SET,
-    ...     features=lang.FEATURES,
-    ...     features_per_phoneme=lang.PHONEME_FEATURES,
-    ... )
-    >>> dist = Distance(spec)
-    >>> dist.hamming("hɛloʊ", "hɛlp")  # doctest: +SKIP
-    0.85
+    Wraps a :class:`BaseBitArraySpecification` and phoneme feature dictionaries
+    to provide Hamming similarity, feature-weighted edit distance, and pairwise matrices.
     """
 
     def __init__(
         self,
-        spec: BitArraySpecification,
+        spec: BaseBitArraySpecification,
         phoneme_features: dict[str, dict[str, Union[bool, str]]] | None = None,
     ):
         self._spec = spec
-        self._phoneme_features: dict[
-            str, dict[str, Union[bool, str]]
-        ] = (  # TODO: ensure types are correct FIXME
+        self._phoneme_features: dict[str, dict[str, Union[bool, str]]] = (
             phoneme_features if phoneme_features is not None else spec._phoneme_features
         )
 
     def hamming(self, ipa_a: str, ipa_b: str, max_syllables: int = 6) -> float:
-        """Hamming similarity between two IPA strings' bitarray encodings.
-
-        Parameters
-        ----------
-        ipa_a, ipa_b : str
-            IPA-transcribed strings.
-        max_syllables : int
-            Fixed-width syllable count for bitarray encoding.
-
-        Returns
-        -------
-        float
-            Similarity in ``[0.0, 1.0]``.
-        """
+        """Hamming similarity between two IPA strings' bitarray encodings."""
         arr_a = self._spec.ipa_to_bitarray(ipa_a, max_syllables)
         arr_b = self._spec.ipa_to_bitarray(ipa_b, max_syllables)
         return hamming_similarity(arr_a, arr_b)
 
     def edit_distance(self, ipa_a: str, ipa_b: str) -> float:
-        """Feature-weighted edit distance between two IPA strings.
-
-        Tokenises both strings into phoneme sequences, then runs
-        ``feature_edit_distance`` with gradient substitution cost.
-
-        Parameters
-        ----------
-        ipa_a, ipa_b : str
-            IPA-transcribed strings.
-
-        Returns
-        -------
-        float
-            Raw edit distance (not normalised).
-        """
+        """Feature-weighted edit distance between two IPA strings."""
         tokens_a = self._spec.ipa_tokenizer(ipa_a)
         tokens_b = self._spec.ipa_tokenizer(ipa_b)
         return feature_edit_distance(tokens_a, tokens_b, self._phoneme_features)
@@ -108,36 +50,12 @@ class Distance:
     def pairwise_hamming(
         self, ipa_strings: Sequence[str], max_syllables: int = 6
     ) -> list[list[float]]:
-        """Pairwise Hamming similarity matrix for a list of IPA strings.
-
-        Parameters
-        ----------
-        ipa_strings : sequence of str
-            IPA-transcribed strings.
-        max_syllables : int
-            Fixed-width syllable count for encoding.
-
-        Returns
-        -------
-        list[list[float]]
-            Symmetric ``N x N`` similarity matrix.
-        """
+        """Pairwise Hamming similarity matrix for a list of IPA strings."""
         arrays = [self._spec.ipa_to_bitarray(s, max_syllables) for s in ipa_strings]
         return batch_pairwise_hamming(arrays)
 
     def pairwise_edit_distance(self, ipa_strings: Sequence[str]) -> list[list[float]]:
-        """Pairwise normalised feature edit distance matrix.
-
-        Parameters
-        ----------
-        ipa_strings : sequence of str
-            IPA-transcribed strings.
-
-        Returns
-        -------
-        list[list[float]]
-            Symmetric ``N x N`` distance matrix (0 = identical).
-        """
+        """Pairwise normalised feature edit distance matrix."""
         token_seqs = [self._spec.ipa_tokenizer(s) for s in ipa_strings]
         n = len(token_seqs)
         result = [[0.0] * n for _ in range(n)]

@@ -1,5 +1,7 @@
 # pylint: disable=missing-docstring
-from typing import Literal
+from __future__ import annotations
+
+from typing import Literal, Union
 
 from phone_similarity.bit_array_specification import BitArraySpecification
 from phone_similarity.intersecting_bit_array_specification import (
@@ -18,49 +20,32 @@ def compare_cross_language(  # pylint: disable=too-many-locals
     word_ipa_by_lang: dict[str, str],
     specs_by_lang: dict[str, BitArraySpecification],
     features_by_lang: dict[str, dict[str, dict]],
-    metric: str = "edit",
+    metric: Literal["edit", "hamming"] = "edit",
 ) -> dict[tuple[str, str], float]:
     """Compare a word's pronunciation across multiple languages.
 
-    Parameters
-    ----------
-    word_ipa_by_lang : dict
-        ``{lang_code: ipa_transcription}`` for the same word.
-    specs_by_lang : dict
-        ``{lang_code: BitArraySpecification}`` per language.
-    features_by_lang : dict
-        ``{lang_code: PHONEME_FEATURES}`` per language.
-    metric : ``"edit"`` | ``"hamming"``
-        Which metric to use.
-
-    Returns
-    -------
-    dict
-        ``{(lang_a, lang_b): distance}`` for every unordered pair.
+    Returns ``{(lang_a, lang_b): distance}`` for every unordered pair.
     """
-
     langs = sorted(word_ipa_by_lang)
     results: dict[tuple[str, str], float] = {}
 
     def bit_union(
-        lang_a,
-        lang_b,
+        lang_a: str,
+        lang_b: str,
         spec: dict[str, BitArraySpecification],
         features_part: Literal["consonant", "vowel"],
-    ):
+    ) -> set[str]:
         return set(spec[lang_a].features[features_part]) | set(
             spec[lang_b].features[features_part]
         )
 
-    # TODO: improve with collections library e.g. do pairwise comparison using
-    # -> product or combinations...  # pylint: disable=fixme
     for i, lang_a in enumerate(langs):
         for lang_b in langs[i + 1 :]:
             if metric == "hamming":
                 merged = IntersectingBitArraySpecification(
                     [specs_by_lang[lang_a], specs_by_lang[lang_b]]
                 )
-                merged_bit = BitArraySpecification(  # Merging=comparison btwn bitarray lang specs
+                merged_bit = BitArraySpecification(
                     vowels=merged.vowels,
                     consonants=merged.consonants,
                     features_per_phoneme=merged.phoneme_features,
@@ -72,12 +57,8 @@ def compare_cross_language(  # pylint: disable=too-many-locals
                     },
                 )
 
-                arr_a = merged_bit.ipa_to_bitarray(
-                    word_ipa_by_lang[lang_a],
-                    max_syllables=6,  #  TODO: FIXME - reassess this number of syllables (is it good for all languages?) - parameterize if needed...
-                )
+                arr_a = merged_bit.ipa_to_bitarray(word_ipa_by_lang[lang_a], max_syllables=6)
                 arr_b = merged_bit.ipa_to_bitarray(word_ipa_by_lang[lang_b], max_syllables=6)
-
                 results[(lang_a, lang_b)] = hamming_similarity(arr_a, arr_b)
             else:
                 merged_feats = UniversalFeatureEncoder.merge_inventories(

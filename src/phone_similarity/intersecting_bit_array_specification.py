@@ -1,44 +1,17 @@
-"""
-Merged (union) bitarray specification for cross-language comparisons.
-
-Combines the vowel, consonant, and feature inventories of multiple
-:class:`BitArraySpecification` instances so phonemes from diff
-langs are encoded into a shared bitarray space.
-
-When multiple specifications define the same phoneme with different
-feature dicts, the universal Panphon 24-feature representation is used
-to ensure a single, consistent encoding for each phoneme. (# FIXME - WHERE?)
-"""
+"""Merged (union) bitarray specification for cross-language comparisons."""
 
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 from phone_similarity.universal_features import UniversalFeatureEncoder
 
 
 class IntersectingBitArraySpecification(BaseBitArraySpecification):
-    """A specification that merges multiple :class:`BaseBitArraySpecification` instances.
-
-    Phoneme inventories are combined (union) so that IPA strings from
-    any of the source languages can be tokenised and encoded.  Shared
-    phonemes receive a **universal** feature dict derived from
-    :class:`~phone_similarity.universal_features.UniversalFeatureEncoder`,
-    guaranteeing identical bitarray encodings regardless of which
-    language originally defined the phoneme.
-    """
+    """Merges multiple BaseBitArraySpecification instances into a shared phoneme space."""
 
     def __init__(
         self,
         specifications: list[BaseBitArraySpecification],
         max_syllables_per_text: int = 6,
     ):
-        """Combine multiple specifications into a shared phoneme space.
-
-        Parameters
-        ----------
-        specifications : list of BaseBitArraySpecification
-            Specifications whose inventories will be merged (union).
-        max_syllables_per_text : int
-            Maximum syllables per text chunk (default 6).
-        """
         vowels: set[str] = set()
         consonants: set[str] = set()
 
@@ -60,6 +33,14 @@ class IntersectingBitArraySpecification(BaseBitArraySpecification):
         super().__init__(
             vowels=vowels,
             consonants=consonants,
-            features_per_phoneme=features_per_phoneme,  # TODO fixme (type hint broken)
+            features_per_phoneme=features_per_phoneme,
             max_syllables_per_text=max_syllables_per_text,
         )
+
+    def ipa_to_bitarray(self, ipa: str, max_syllables: int):
+        """Not supported; use a BitArraySpecification for encoding."""
+        raise NotImplementedError("IntersectingBitArraySpecification is for tokenization only")
+
+    def generate(self, text: str):
+        """Not supported; use a BitArraySpecification for encoding."""
+        raise NotImplementedError("IntersectingBitArraySpecification is for tokenization only")
