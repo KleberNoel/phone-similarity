@@ -1,64 +1,9 @@
 """
 Co-articulation model with controlled randomness for phonological distance.
 
-In natural speech, phonemes are not produced in isolation.  Adjacent sounds
-influence each other through **co-articulation**: anticipatory (look-ahead)
-and carryover (perseverative) effects that shift articulatory features.
-This module models those effects as feature perturbations on the 24-feature
-Panphon vectors, with optional stochastic jitter.
-
-Co-articulation effects modelled
----------------------------------
-1. **Anticipatory vowel-to-consonant**: consonants shift features toward a
-   following vowel (palatalization, lip rounding, backing).
-2. **Carryover consonant-to-vowel**: vowels shift features due to a
-   preceding consonant (nasalization, backing, rounding).
-3. **Consonant cluster assimilation**: voicing and place assimilation in
-   adjacent consonant sequences.
-4. **Syllable boundary attenuation**: effects are stronger within a syllable
-   than across syllable boundaries (configurable decay factor).
-5. **Fricative-specific weighting**: :class:`FricativeConfig` controls how
-   frication-related features (``cont``, ``strid``) are weighted in distance
-   computation, and optionally models frication noise spreading to adjacent
-   segments.
-
-Design
-------
-* **Strategy pattern**: :class:`CoarticulationStrategy` is the abstract
-  protocol; :class:`DefaultCoarticulationModel` is the concrete strategy.
-  Custom models (e.g. language-specific) can be plugged in.
-* **Single Responsibility**: this module handles only co-articulation
-  perturbation.  Distance computation remains in :mod:`primitives`.
-* **Open/Closed**: new co-articulation rules can be added by subclassing
-  :class:`DefaultCoarticulationModel` without modifying existing code.
-
-Usage::
-
-    from phone_similarity.coarticulation import (
-        DefaultCoarticulationModel,
-        FricativeConfig,
-        coarticulated_feature_edit_distance,
-    )
-    from phone_similarity.universal_features import UniversalFeatureEncoder
-
-    model = DefaultCoarticulationModel(jitter=0.3, seed=42)
-    tokens = ["k", "æ", "t"]
-    perturbed = model.perturb_sequence(tokens)
-    # perturbed[i] is a 24-float tuple representing the co-articulated features
-
-    # Or use the high-level distance function directly:
-    dist = coarticulated_feature_edit_distance(
-        ["k", "æ", "t"], ["k", "æ", "b"],
-        jitter=0.3,
-    )
-
-    # With custom fricative weighting (penalise frication differences 2x):
-    fc = FricativeConfig(fricative_weight=2.0, sibilant_weight=1.5)
-    model = DefaultCoarticulationModel(fricative_config=fc)
-    dist = coarticulated_feature_edit_distance(
-        ["s", "æ", "t"], ["θ", "æ", "t"],
-        model=model,
-    )
+Models anticipatory vowel-to-consonant, carryover consonant-to-vowel,
+cluster assimilation, and syllable-boundary attenuation effects as feature
+perturbations on 24-feature Panphon vectors.
 """
 
 from __future__ import annotations
@@ -115,37 +60,7 @@ def _cached_encode(phoneme: str) -> tuple[int, ...]:
 # FricativeConfig dataclass
 @dataclasses.dataclass(frozen=True)
 class FricativeConfig:
-    """Configuration for fricative-specific weighting in distance computation.
-
-    Fricatives are identified by ``[son=-1, cont=+1]``.  Sibilants (the
-    *strident* subset — /s z ʃ ʒ/) additionally have ``[strid=+1]``, while
-    non-sibilant fricatives (/f v θ ð/) have ``[strid=-1]``.
-
-    This config lets the user amplify or attenuate the contribution of
-    frication-related features (``cont`` and ``strid``) in the distance
-    computation.  A ``fricative_weight`` of 2.0 means that when **either**
-    phoneme in a comparison is a fricative, differences on ``cont`` and
-    ``strid`` count twice as heavily as usual.
-
-    Parameters
-    ----------
-    fricative_weight : float
-        Multiplier applied to ``cont`` feature differences when at least one
-        phoneme is a fricative.  Default 1.0 (no change).  Values >1.0
-        penalise frication differences more heavily.
-    sibilant_weight : float
-        Multiplier applied to ``strid`` feature differences when at least one
-        phoneme is a sibilant (strident fricative).  Default 1.0.  Separate
-        from ``fricative_weight`` so users can independently weight the
-        sibilant/non-sibilant distinction (e.g. /s/ vs /θ/).
-    frication_spread : bool
-        When True, enable co-articulation rules that model frication noise
-        spreading to adjacent segments (partial devoicing of following
-        vowels, partial frication bleed into neighbouring consonants).
-    spread_magnitude : float
-        Magnitude of frication spread effects in [0.0, 1.0].  Only used
-        when ``frication_spread`` is True.  Default 0.30.
-    """
+    """Fricative-specific feature weights for distance computation."""
 
     fricative_weight: float = 1.0
     sibilant_weight: float = 1.0
@@ -169,25 +84,7 @@ _DEFAULT_FRICATIVE_CONFIG = FricativeConfig()
 # Co-articulation rule dataclass
 @dataclasses.dataclass(frozen=True)
 class CoarticulationRule:
-    """A single co-articulation perturbation rule.
-
-    Parameters
-    ----------
-    name : str
-        Human-readable rule name (for debugging / logging).
-    target_feature : int
-        Index into the 24-feature vector to perturb.
-    direction : float
-        Target shift direction: +1.0 (toward +1) or -1.0 (toward -1).
-    magnitude : float
-        Maximum shift amount in [0.0, 1.0].  The actual perturbation is
-        ``direction * magnitude * activation``.
-    base_probability : float
-        Probability that this rule fires at all (before jitter scaling).
-    within_syllable_only : bool
-        If True, the rule only fires when source and target are in the
-        same syllable.
-    """
+    """A single co-articulation perturbation rule (feature index, direction, magnitude)."""
 
     name: str
     target_feature: int
@@ -212,26 +109,7 @@ class CoarticulationStrategy(Protocol):
 
 # Default co-articulation model
 class DefaultCoarticulationModel:
-    """Co-articulation model with deterministic rules and stochastic jitter.
-
-    The model applies established phonological co-articulation effects to
-    sequences of IPA phonemes, producing perturbed feature vectors that
-    reflect how phonemes are actually realized in connected speech.
-
-    Parameters
-    ----------
-    jitter : float
-        Controls the amount of stochastic perturbation.  0.0 means
-        deterministic (all rules fire at full ``base_probability``);
-        1.0 means maximum randomness (rules fire probabilistically and
-        magnitudes are randomly scaled).  Values in between interpolate.
-    seed : int or None
-        Random seed for reproducibility.  ``None`` means non-deterministic.
-    cross_syllable_decay : float
-        Multiplicative decay for co-articulation effects that cross a
-        syllable boundary.  Default 0.4 means effects are 40% as strong
-        across boundaries as within a syllable.
-    """
+    """Co-articulation model with deterministic rules and optional stochastic jitter."""
 
     # Anticipatory rules: consonant features shift toward following vowel
     # Keyed by trigger condition for O(1) lookup instead of linear scan.
@@ -416,22 +294,7 @@ class DefaultCoarticulationModel:
         tokens: Sequence[str],
         syllable_boundaries: Sequence[int] | None = None,
     ) -> list[tuple[float, ...]]:
-        """Compute co-articulated feature vectors for a phoneme sequence.
-
-        Parameters
-        ----------
-        tokens : sequence of str
-            IPA phoneme tokens.
-        syllable_boundaries : sequence of int, optional
-            Syllable index for each token position.  If provided, effects
-            are attenuated across syllable boundaries.  Generate this from
-            :func:`~phone_similarity.syllable.syllabify` output.
-
-        Returns
-        -------
-        list of tuple of float
-            Perturbed 24-float feature vectors, one per token.
-        """
+        """Return perturbed 24-float feature vectors for each token in the sequence."""
         n = len(tokens)
         if n == 0:
             return []
@@ -544,19 +407,7 @@ class DefaultCoarticulationModel:
     def syllable_boundary_map(
         syllables: Sequence[object],
     ) -> list[int]:
-        """Convert a list of Syllable objects to a per-token syllable index.
-
-        Parameters
-        ----------
-        syllables : sequence of Syllable
-            Output from :func:`~phone_similarity.syllable.syllabify`.
-
-        Returns
-        -------
-        list of int
-            ``boundaries[i]`` is the syllable index that token ``i``
-            belongs to.
-        """
+        """Convert Syllable list to a per-token syllable index list."""
         boundaries: list[int] = []
         for syl_idx, syl in enumerate(syllables):
             boundaries.extend([syl_idx] * len(syl))
@@ -584,35 +435,7 @@ def coarticulated_phoneme_distance(
     *,
     _fric_flags: tuple[bool, bool] | None = None,
 ) -> float:
-    """Distance between two co-articulated feature vectors, normalised to [0, 1].
-
-    Uses the same logic as ``universal_phoneme_distance`` but operates on
-    float vectors (because co-articulation produces continuous values).
-    Features where either vector has value 0.0 are excluded.
-
-    When a :class:`FricativeConfig` is provided and at least one of the
-    phonemes is a fricative, the ``cont`` and ``strid`` feature differences
-    are multiplied by the configured weights, giving the user fine-grained
-    control over how much frication matters in comparisons.
-
-    Parameters
-    ----------
-    vec_a, vec_b : tuple of float
-        24-float co-articulated feature vectors.
-    fricative_config : FricativeConfig, optional
-        If provided, apply weighted distances for frication-related features
-        when at least one phoneme is a fricative.
-    _fric_flags : tuple of (bool, bool), optional
-        Pre-computed ``(either_fricative, either_sibilant)`` flags.  Internal
-        optimisation to avoid re-classifying vectors when the caller already
-        knows the flags (e.g. the DP loop pre-computes them).
-
-    Returns
-    -------
-    float
-        Normalised distance in [0.0, 1.0] (may exceed 1.0 with very high
-        weights, though in practice it stays close to [0, 1]).
-    """
+    """Distance between two co-articulated float feature vectors, normalised to [0, 1]."""
     fc = fricative_config or _DEFAULT_FRICATIVE_CONFIG
     if _fric_flags is not None:
         either_fric, either_sib = _fric_flags
@@ -648,39 +471,14 @@ def coarticulated_feature_edit_distance(
     seq_a: Sequence[str],
     seq_b: Sequence[str],
     *,
-    model: DefaultCoarticulationModel | None = None,
+    model: CoarticulationStrategy | None = None,
     fricative_config: FricativeConfig | None = None,
     syl_boundaries_a: Sequence[int] | None = None,
     syl_boundaries_b: Sequence[int] | None = None,
     insert_cost: float = 1.0,
     delete_cost: float = 1.0,
 ) -> float:
-    """Feature edit distance with co-articulation perturbation.
-
-    Like :func:`~phone_similarity.primitives.feature_edit_distance`, but
-    substitution costs are computed on co-articulated feature vectors
-    that account for phonetic context.
-
-    Parameters
-    ----------
-    seq_a, seq_b : sequence of str
-        IPA phoneme sequences.
-    model : DefaultCoarticulationModel, optional
-        Co-articulation model.  Defaults to a deterministic model
-        (jitter=0.0).
-    fricative_config : FricativeConfig, optional
-        Fricative-specific weighting.  If ``None``, uses the model's
-        ``fricative_config`` attribute (which defaults to no weighting).
-    syl_boundaries_a, syl_boundaries_b : sequence of int, optional
-        Per-token syllable indices for each sequence.
-    insert_cost, delete_cost : float
-        Indel costs (default 1.0).
-
-    Returns
-    -------
-    float
-        Minimum-cost alignment distance.
-    """
+    """Feature edit distance with co-articulation perturbation applied before alignment."""
     m = model or _DEFAULT_MODEL
     fc = fricative_config or m.fricative_config
     vecs_a = m.perturb_sequence(seq_a, syl_boundaries_a)
@@ -742,17 +540,14 @@ def normalised_coarticulated_feature_edit_distance(
     seq_a: Sequence[str],
     seq_b: Sequence[str],
     *,
-    model: DefaultCoarticulationModel | None = None,
+    model: CoarticulationStrategy | None = None,
     fricative_config: FricativeConfig | None = None,
     syl_boundaries_a: Sequence[int] | None = None,
     syl_boundaries_b: Sequence[int] | None = None,
     insert_cost: float = 1.0,
     delete_cost: float = 1.0,
 ) -> float:
-    """Co-articulated feature edit distance normalised to [0, 1].
-
-    Returns 0.0 when both sequences are empty.
-    """
+    """Co-articulated feature edit distance normalised to [0, 1]; returns 0.0 for empty inputs."""
     max_len = max(len(seq_a), len(seq_b))
     if max_len == 0:
         return 0.0

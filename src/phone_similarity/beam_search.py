@@ -1,33 +1,9 @@
 """
 Beam search for multi-word phonological segmentation.
 
-Given a target phoneme sequence (e.g. from an English phrase) and a foreign
-language's pre-tokenized dictionary, find the top-K segmentations into
-foreign words that minimise total phonological distance.
-
-This replaces the greedy per-word "glue" approach in the example script with
-a principled search over the combinatorial space of segmentations.
-
-Algorithm
----------
-Maintain a beam of width *B* partial hypotheses, each represented as::
-
-    (consumed, words, ipas, raw_cost, n_words)
-
-where *consumed* is the number of source phonemes explained so far.  At each
-step, expand every hypothesis by trying all dictionary entries whose token
-length is compatible with the remaining unconsumed segment, compute the
-feature edit distance for the sub-sequence alignment, and keep the top-B
-expansions.  Complete hypotheses (consumed == len(source)) are scored by
-``raw_cost / consumed`` (length-normalised) and collected separately.
-
-Pruning
--------
-* **Admissible bound** -- discard partial hypotheses whose normalised cost
-  already exceeds ``prune_ratio × best_complete_score`` (default 2.0).
-* **Max words** -- discard hypotheses that exceed *max_words* (default 4).
-* **Length ratio** -- skip dictionary entries whose token count differs from
-  the remaining source sub-sequence by more than ``max_len_ratio`` (default 3.0).
+Maintains a beam of partial hypotheses, expanding each by trying dictionary entries
+whose token length is compatible with the remaining source sub-sequence.  Complete
+hypotheses are length-normalised and re-scored end-to-end.
 """
 
 from collections.abc import Sequence
@@ -57,14 +33,7 @@ from phone_similarity.primitives import normalised_feature_edit_distance, phonem
 def _build_dist_matrix(
     merged: dict[str, dict],
 ) -> tuple[dict[str, int], list[float], int]:
-    """Build a flat distance matrix for all phonemes in *merged*.
-
-    Returns
-    -------
-    ph_to_idx : dict mapping phoneme str -> int index
-    dist_flat : flat list of floats (dim * dim), row-major
-    dim : matrix dimension (number of phonemes + 1 for UNK)
-    """
+    """Build a flat phoneme distance matrix for all phonemes in *merged*."""
     if HAS_CYTHON_DIST_MATRIX:
         return cy_build_phoneme_dist_matrix(merged)
 
@@ -139,21 +108,7 @@ def _trie_expand(
     dist_flat: list[float],
     dim: int,
 ) -> list[tuple[str, str, int, float]]:
-    """Search the trie for entries matching source_tokens[consumed:].
-
-    Walks the trie depth-first, maintaining one column of the edit-distance
-    DP matrix at each level.  When the minimum value in a column exceeds
-    the cost ceiling, the entire subtree is pruned.
-
-    Uses a pre-computed flat distance matrix (*dist_flat*) for O(1)
-    phoneme-pair distance lookups instead of per-cell function calls.
-
-    Returns
-    -------
-    list of (word, ipa, n_tok, seg_cost)
-        Entries whose per-segment normalised feature edit distance is
-        within *max_seg_distance*.
-    """
+    """Walk trie depth-first returning entries within *max_seg_distance* of source_tokens[consumed:]."""
     source_len = len(source_tokens)
     remaining = source_len - consumed
     if remaining <= 0:
@@ -355,26 +310,7 @@ def _build_source_idx(
 
 @dataclass()
 class BeamResult:
-    """A single complete segmentation from beam search.
-
-    Attributes
-    ----------
-    words : tuple of str
-        Foreign words comprising the segmentation.
-    ipas : tuple of str
-        IPA transcriptions of each foreign word.
-    glued_ipa : str
-        Concatenated IPA of all foreign words.
-    distance : float
-        Length-normalised feature edit distance of the *entire* glued
-        foreign IPA against the *entire* source IPA.  This is the "true"
-        end-to-end score, recomputed after beam search finishes (not
-        the sum of per-segment costs).
-    segment_cost : float
-        Sum of per-segment feature edit distances (the cost that the beam
-        search optimised).  Useful for diagnostics but ``distance`` is the
-        canonical quality metric.
-    """
+    """A single complete segmentation from beam search."""
 
     words: tuple[str, ...]
     ipas: tuple[str, ...]
@@ -399,50 +335,7 @@ def beam_search_segmentation(
     min_target_tokens: int = 1,
     resources: BeamSearchResources | None = None,
 ) -> list[BeamResult]:
-    """Find the best multi-word foreign segmentations for a source phoneme sequence.
-
-    Parameters
-    ----------
-    source_tokens : sequence of str
-        Tokenised IPA of the source phrase (e.g. English).
-    source_features : dict
-        ``PHONEME_FEATURES`` of the source language.
-    target_ptd : PreTokenizedDictionary
-        Pre-tokenized foreign dictionary to segment into.
-    target_spec : BaseBitArraySpecification
-        Specification for the target language (used for tokenising the
-        glued IPA in end-to-end re-scoring).
-    target_features : dict
-        ``PHONEME_FEATURES`` of the target language.
-    beam_width : int
-        Number of partial hypotheses to keep at each expansion step.
-    top_k : int
-        Return at most this many complete segmentations.
-    max_words : int
-        Maximum number of foreign words per segmentation.
-    max_distance : float
-        Discard final segmentations whose end-to-end normalised distance
-        exceeds this threshold.
-    prune_ratio : float
-        Prune partial hypotheses whose normalised cost exceeds
-        ``prune_ratio * best_complete_normalised_cost``.
-    max_len_ratio : float
-        Skip dictionary entries whose token count differs from the
-        remaining source sub-sequence by more than this ratio.
-    min_target_tokens : int
-        Minimum token count for a dictionary entry to be considered
-        (default 1; set to 2 to avoid single-phoneme words).
-    resources : BeamSearchResources or None
-        Optional precomputed trie + phoneme-distance matrix. Pass the result
-        of :func:`build_beam_search_resources` to avoid rebuilding heavy
-        structures on every call.
-
-    Returns
-    -------
-    list of BeamResult
-        Up to *top_k* complete segmentations sorted by ascending
-        ``distance`` (end-to-end normalised feature edit distance).
-    """
+    """Find the best multi-word foreign segmentations for a source phoneme sequence."""
     source_len = len(source_tokens)
     if source_len == 0:
         return []
@@ -722,33 +615,7 @@ def beam_search_phrases(
     max_len_ratio: float = 3.0,
     min_target_tokens: int = 1,
 ) -> list[tuple[str, str, BeamResult]]:
-    """Run beam search segmentation for multiple phrases across multiple languages.
-
-    This is the batch entry point, analogous to
-    :func:`~phone_similarity.dictionary_scan.parallel_dictionary_scan` but
-    for multi-word segmentation.
-
-    Parameters
-    ----------
-    phrases : list of (phrase_key, ipa_str)
-        Source phrases.  *phrase_key* is an arbitrary identifier returned
-        in the results; *ipa_str* is the compressed IPA of the phrase.
-    source_spec : BaseBitArraySpecification
-        Specification for the source language.
-    source_features : dict
-        ``PHONEME_FEATURES`` of the source language.
-    targets : dict
-        ``{lang_code: (spec, features, pre_tokenized_dict)}``.
-    beam_width, top_k, max_words, max_distance, prune_ratio,
-    max_len_ratio, min_target_tokens :
-        Forwarded to :func:`beam_search_segmentation`.
-
-    Returns
-    -------
-    list of (phrase_key, lang_code, BeamResult)
-        All results across all phrases and languages, sorted by ascending
-        ``BeamResult.distance``.
-    """
+    """Run beam search segmentation for multiple phrases across multiple languages."""
     all_results: list[tuple[str, str, BeamResult]] = []
 
     target_resources: dict[str, BeamSearchResources] = {}

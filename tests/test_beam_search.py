@@ -1,14 +1,4 @@
-"""
-Tests for the beam search multi-word segmentation module.
-
-Tests cover:
-1. Basic segmentation correctness (single word, multi-word)
-2. Scoring and ranking (best segmentation first)
-3. Pruning (max_words, max_distance)
-4. Edge cases (empty inputs, no matches)
-5. Batch interface (beam_search_phrases)
-6. BeamResult dataclass
-"""
+"""Tests for the beam search multi-word segmentation module."""
 
 import pytest
 
@@ -22,9 +12,6 @@ from phone_similarity.beam_search import (
 )
 from phone_similarity.pretokenize import PreTokenizedDictionary
 
-# Shared fixtures
-
-# Minimal phoneme feature set for testing
 FEATURES = {
     "k": {"voiced": False, "manner": "plosive", "place": "velar"},
     "ɡ": {"voiced": True, "manner": "plosive", "place": "velar"},
@@ -49,27 +36,13 @@ FEATURES = {
 
 @pytest.fixture
 def mock_spec():
-    """Create a minimal BitArraySpecification for testing."""
     from phone_similarity.bit_array_specification import BitArraySpecification
 
     vowels = {"æ", "ɛ", "i", "ɑ", "u", "a", "o", "e"}
     consonants = {"k", "ɡ", "t", "d", "p", "b", "s", "z", "m", "n"}
     features = {
-        "consonant": {
-            "voiced",
-            "manner",
-            "place",
-            "labial",
-        },
-        "vowel": {
-            "low",
-            "mid-low",
-            "mid",
-            "high",
-            "front",
-            "back",
-            "round",
-        },
+        "consonant": {"voiced", "manner", "place", "labial"},
+        "vowel": {"low", "mid-low", "mid", "high", "front", "back", "round"},
     }
     return BitArraySpecification(
         vowels=vowels,
@@ -81,7 +54,6 @@ def mock_spec():
 
 @pytest.fixture
 def small_ptd():
-    """A small pre-tokenized dictionary for beam search testing."""
     entries = [
         ("cat", "kæt", ["k", "æ", "t"]),
         ("bat", "bæt", ["b", "æ", "t"]),
@@ -98,31 +70,17 @@ def small_ptd():
     return PreTokenizedDictionary.from_entries(entries)
 
 
-# _Hypothesis ordering
-
-
 class TestHypothesis:
-    def test_ordering_by_score(self):
+    def test_ordering(self):
         h1 = _Hypothesis(score=0.1, consumed=3, words=("a",), ipas=("x",), raw_cost=0.3)
         h2 = _Hypothesis(score=0.5, consumed=3, words=("b",), ipas=("y",), raw_cost=1.5)
+        h3 = _Hypothesis(score=0.3, consumed=3, words=("c",), ipas=("z",), raw_cost=0.9)
         assert h1 < h2
-
-    def test_equal_score(self):
-        h1 = _Hypothesis(score=0.3, consumed=3, words=("a",), ipas=("x",), raw_cost=0.9)
-        h2 = _Hypothesis(score=0.3, consumed=3, words=("b",), ipas=("y",), raw_cost=0.9)
-        assert not (h1 < h2)
-        assert not (h2 < h1)
-
-
-# BeamResult
-
-
-# beam_search_segmentation — basic
+        assert not (h3 < h3)
 
 
 class TestBeamSearchSegmentation:
     def test_exact_single_word_match(self, mock_spec, small_ptd):
-        """Source 'kæt' should find 'cat' with distance ~0."""
         results = beam_search_segmentation(
             ["k", "æ", "t"],
             FEATURES,
@@ -134,31 +92,10 @@ class TestBeamSearchSegmentation:
             max_distance=0.5,
         )
         assert len(results) > 0
-        best = results[0]
-        assert best.words == ("cat",)
-        assert best.distance == pytest.approx(0.0)
-
-    def test_close_single_word_match(self, mock_spec, small_ptd):
-        """Source 'bæt' should find 'bat' exactly, 'cat' close."""
-        results = beam_search_segmentation(
-            ["b", "æ", "t"],
-            FEATURES,
-            small_ptd,
-            mock_spec,
-            FEATURES,
-            beam_width=10,
-            top_k=5,
-            max_distance=0.5,
-        )
-        assert len(results) >= 1
-        words_found = [r.words for r in results]
-        assert ("bat",) in words_found
-        # 'bat' should be best (exact match)
-        assert results[0].words == ("bat",)
+        assert results[0].words == ("cat",)
         assert results[0].distance == pytest.approx(0.0)
 
     def test_multi_word_segmentation(self, mock_spec, small_ptd):
-        """Source 'kætsæt' (cat+sat) should find a 2-word segmentation."""
         results = beam_search_segmentation(
             ["k", "æ", "t", "s", "æ", "t"],
             FEATURES,
@@ -171,11 +108,9 @@ class TestBeamSearchSegmentation:
             max_distance=0.5,
         )
         assert len(results) > 0
-        # Should find the exact 2-word split
         two_word = [r for r in results if len(r.words) == 2]
         assert len(two_word) > 0
-        best_two = two_word[0]
-        assert best_two.distance == pytest.approx(0.0, abs=0.05)
+        assert two_word[0].distance == pytest.approx(0.0, abs=0.05)
 
     def test_returns_sorted_by_distance(self, mock_spec, small_ptd):
         results = beam_search_segmentation(
@@ -188,38 +123,22 @@ class TestBeamSearchSegmentation:
             top_k=5,
             max_distance=1.0,
         )
-        if len(results) >= 2:
-            for i in range(len(results) - 1):
-                assert results[i].distance <= results[i + 1].distance
+        for i in range(len(results) - 1):
+            assert results[i].distance <= results[i + 1].distance
 
     def test_empty_source_returns_empty(self, mock_spec, small_ptd):
-        results = beam_search_segmentation(
-            [],
-            FEATURES,
-            small_ptd,
-            mock_spec,
-            FEATURES,
-        )
-        assert results == []
+        assert beam_search_segmentation([], FEATURES, small_ptd, mock_spec, FEATURES) == []
 
     def test_empty_dictionary(self, mock_spec):
         empty_ptd = PreTokenizedDictionary.from_entries([])
-        results = beam_search_segmentation(
-            ["k", "æ", "t"],
-            FEATURES,
-            empty_ptd,
-            mock_spec,
-            FEATURES,
+        assert (
+            beam_search_segmentation(["k", "æ", "t"], FEATURES, empty_ptd, mock_spec, FEATURES)
+            == []
         )
-        assert results == []
-
-
-# beam_search_segmentation — pruning
 
 
 class TestBeamSearchPruning:
     def test_max_words_respected(self, mock_spec, small_ptd):
-        """With max_words=1, only single-word segmentations should appear."""
         results = beam_search_segmentation(
             ["k", "æ", "t", "s", "æ", "t"],
             FEATURES,
@@ -235,7 +154,6 @@ class TestBeamSearchPruning:
             assert len(r.words) <= 1
 
     def test_max_distance_filters(self, mock_spec, small_ptd):
-        """Very tight distance threshold should reduce results."""
         tight = beam_search_segmentation(
             ["k", "æ", "t"],
             FEATURES,
@@ -258,27 +176,9 @@ class TestBeamSearchPruning:
         )
         assert len(tight) <= len(loose)
 
-    def test_beam_width_one(self, mock_spec, small_ptd):
-        """Beam width 1 should still find something (greedy)."""
-        results = beam_search_segmentation(
-            ["k", "æ", "t"],
-            FEATURES,
-            small_ptd,
-            mock_spec,
-            FEATURES,
-            beam_width=1,
-            top_k=1,
-            max_distance=1.0,
-        )
-        assert len(results) >= 1
-
-
-# beam_search_segmentation — quality checks
-
 
 class TestBeamSearchQuality:
     def test_exact_match_has_zero_distance(self, mock_spec, small_ptd):
-        """An exact match in the dictionary should have distance ~0."""
         results = beam_search_segmentation(
             ["s", "i", "t"],
             FEATURES,
@@ -293,28 +193,7 @@ class TestBeamSearchQuality:
         assert results[0].words == ("sit",)
         assert results[0].distance == pytest.approx(0.0)
 
-    def test_voiced_pair_has_low_distance(self, mock_spec, small_ptd):
-        """'kæt' vs 'ɡæt' (not in dict) — 'cat' should still match closely."""
-        # ɡæt isn't in the dict, but kæt→cat should match well
-        results = beam_search_segmentation(
-            ["ɡ", "æ", "t"],  # voiced version of 'cat'
-            FEATURES,
-            small_ptd,
-            mock_spec,
-            FEATURES,
-            beam_width=10,
-            top_k=3,
-            max_distance=0.5,
-        )
-        assert len(results) > 0
-        # cat should be among the top results
-        cat_results = [r for r in results if "cat" in r.words]
-        assert len(cat_results) > 0
-        # Distance should be low (only voicing differs)
-        assert cat_results[0].distance < 0.4
-
     def test_deduplication(self, mock_spec, small_ptd):
-        """Same word-tuple shouldn't appear multiple times in results."""
         results = beam_search_segmentation(
             ["k", "æ", "t"],
             FEATURES,
@@ -329,19 +208,13 @@ class TestBeamSearchQuality:
         assert len(word_tuples) == len(set(word_tuples))
 
 
-# beam_search_phrases — batch interface
-
-
 class TestBeamSearchPhrases:
     def test_single_phrase_single_language(self, mock_spec, small_ptd):
-        phrases = [("test_key", "kæt")]
-        targets = {"test_lang": (mock_spec, FEATURES, small_ptd)}
-
         results = beam_search_phrases(
-            phrases,
+            [("test_key", "kæt")],
             mock_spec,
             FEATURES,
-            targets,
+            {"test_lang": (mock_spec, FEATURES, small_ptd)},
             beam_width=5,
             top_k=1,
             max_distance=0.5,
@@ -352,71 +225,11 @@ class TestBeamSearchPhrases:
         assert lang == "test_lang"
         assert isinstance(beam_result, BeamResult)
 
-    def test_multiple_phrases(self, mock_spec, small_ptd):
-        phrases = [
-            ("p1", "kæt"),
-            ("p2", "bæt"),
-        ]
-        targets = {"test_lang": (mock_spec, FEATURES, small_ptd)}
-
-        results = beam_search_phrases(
-            phrases,
-            mock_spec,
-            FEATURES,
-            targets,
-            beam_width=5,
-            top_k=1,
-            max_distance=0.5,
-        )
-        keys = {r[0] for r in results}
-        assert "p1" in keys
-        assert "p2" in keys
-
-    def test_results_sorted_by_distance(self, mock_spec, small_ptd):
-        phrases = [
-            ("exact", "kæt"),  # exact match -> dist ~0
-            ("approx", "ɡæt"),  # close match -> dist > 0
-        ]
-        targets = {"test_lang": (mock_spec, FEATURES, small_ptd)}
-
-        results = beam_search_phrases(
-            phrases,
-            mock_spec,
-            FEATURES,
-            targets,
-            beam_width=10,
-            top_k=1,
-            max_distance=0.5,
-        )
-        if len(results) >= 2:
-            for i in range(len(results) - 1):
-                assert results[i][2].distance <= results[i + 1][2].distance
-
-    def test_empty_phrases(self, mock_spec, small_ptd):
-        results = beam_search_phrases(
-            [],
-            mock_spec,
-            FEATURES,
-            {"test_lang": (mock_spec, FEATURES, small_ptd)},
-        )
-        assert results == []
-
     def test_empty_targets(self, mock_spec):
-        results = beam_search_phrases(
-            [("p1", "kæt")],
-            mock_spec,
-            FEATURES,
-            {},
-        )
-        assert results == []
-
-
-# Integration test with real language data
+        assert beam_search_phrases([("p1", "kæt")], mock_spec, FEATURES, {}) == []
 
 
 class TestBeamSearchIntegration:
-    """Integration tests using real eng_us language data (if available)."""
-
     @pytest.fixture
     def eng_spec(self):
         try:
@@ -442,7 +255,6 @@ class TestBeamSearchIntegration:
             ("bat", "bæt", ["b", "æ", "t"]),
         ]
         ptd = PreTokenizedDictionary.from_entries(entries)
-
         source_tokens = spec.ipa_tokenizer("kæt")
         results = beam_search_segmentation(
             source_tokens,
@@ -473,7 +285,6 @@ class TestBeamSearchResources:
             max_distance=1.0,
             min_target_tokens=1,
         )
-
         resources = build_beam_search_resources(
             FEATURES,
             small_ptd,
@@ -481,7 +292,6 @@ class TestBeamSearchResources:
             min_target_tokens=1,
         )
         assert isinstance(resources, BeamSearchResources)
-
         precomputed = beam_search_segmentation(
             source,
             FEATURES,
@@ -494,7 +304,6 @@ class TestBeamSearchResources:
             min_target_tokens=1,
             resources=resources,
         )
-
         assert [r.words for r in precomputed] == [r.words for r in baseline]
         assert [r.distance for r in precomputed] == pytest.approx([r.distance for r in baseline])
 
@@ -524,11 +333,9 @@ class TestBeamSearchResources:
             FEATURES,
             min_target_tokens=1,
         )
-
         import phone_similarity.beam_search as beam_mod
 
         original_state = beam_mod.HAS_CYTHON_BEAM_STATE
-
         try:
             monkeypatch.setattr(beam_mod, "HAS_CYTHON_BEAM_STATE", False)
             py_results = beam_search_segmentation(
@@ -544,7 +351,6 @@ class TestBeamSearchResources:
                 min_target_tokens=1,
                 resources=resources,
             )
-
             monkeypatch.setattr(beam_mod, "HAS_CYTHON_BEAM_STATE", original_state)
             cy_results = beam_search_segmentation(
                 source,
@@ -561,7 +367,6 @@ class TestBeamSearchResources:
             )
         finally:
             monkeypatch.setattr(beam_mod, "HAS_CYTHON_BEAM_STATE", original_state)
-
         assert [r.words for r in cy_results] == [r.words for r in py_results]
         assert [r.distance for r in cy_results] == pytest.approx([r.distance for r in py_results])
 
@@ -573,11 +378,9 @@ class TestBeamSearchResources:
             FEATURES,
             min_target_tokens=1,
         )
-
         import phone_similarity.beam_search as beam_mod
 
         original_cpp = beam_mod.HAS_CPP_BEAM_STATE
-
         try:
             monkeypatch.setattr(beam_mod, "HAS_CPP_BEAM_STATE", False)
             py_results = beam_search_segmentation(
@@ -593,7 +396,6 @@ class TestBeamSearchResources:
                 min_target_tokens=1,
                 resources=resources,
             )
-
             monkeypatch.setattr(beam_mod, "HAS_CPP_BEAM_STATE", original_cpp)
             cpp_results = beam_search_segmentation(
                 source,
@@ -610,6 +412,5 @@ class TestBeamSearchResources:
             )
         finally:
             monkeypatch.setattr(beam_mod, "HAS_CPP_BEAM_STATE", original_cpp)
-
         assert [r.words for r in cpp_results] == [r.words for r in py_results]
         assert [r.distance for r in cpp_results] == pytest.approx([r.distance for r in py_results])

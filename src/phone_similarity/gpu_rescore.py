@@ -1,15 +1,4 @@
-"""Optional GPU/accelerated rescoring backends for beam search.
-
-This module provides a single interface that can use:
-
-- native C++ rescoring (fast default when available)
-- Cython rescoring fallback
-- CuPy-based candidate prefilter + exact native rescoring
-- Numba-based candidate prefilter + exact native rescoring
-
-GPU backends are opt-in and preserve output quality by always delegating final
-exact distance computation to the native exact kernel.
-"""
+"""Optional GPU/accelerated rescoring backends for beam search."""
 
 from __future__ import annotations
 
@@ -44,6 +33,72 @@ except ImportError:
 
 
 RescoreBackend = Literal["auto", "cpp", "cython", "cupy", "numba"]
+
+# ---------------------------------------------------------------------------
+# Strategy registry (OCP): add new backends by inserting into this dict only.
+# ---------------------------------------------------------------------------
+
+
+def _make_exact(exact_backend: Literal["cpp", "cython"]):
+    """Return a rescore strategy that delegates directly to an exact kernel."""
+
+    def _strategy(
+        *,
+        source_idx_arr,
+        source_len,
+        packed_paths,
+        pre_tokenized,
+        all_tgt_idx_arr,
+        dist_flat_arr,
+        matrix_dim,
+        max_distance,
+    ):
+        return _rescore_exact(
+            exact_backend,
+            source_idx_arr=source_idx_arr,
+            source_len=source_len,
+            packed_paths=packed_paths,
+            pre_tokenized=pre_tokenized,
+            all_tgt_idx_arr=all_tgt_idx_arr,
+            dist_flat_arr=dist_flat_arr,
+            matrix_dim=matrix_dim,
+            max_distance=max_distance,
+        )
+
+    return _strategy
+
+
+def _make_prefilter(prefilter_fn):
+    """Return a rescore strategy that prefilters then delegates to best exact kernel."""
+
+    def _strategy(
+        *,
+        source_idx_arr,
+        source_len,
+        packed_paths,
+        pre_tokenized,
+        all_tgt_idx_arr,
+        dist_flat_arr,
+        matrix_dim,
+        max_distance,
+    ):
+        filtered = prefilter_fn(
+            source_len, packed_paths, np.asarray(pre_tokenized.offsets), max_distance
+        )
+        exact = "cpp" if HAS_CPP_BEAM_RESCORE else "cython"
+        return _rescore_exact(
+            exact,
+            source_idx_arr=source_idx_arr,
+            source_len=source_len,
+            packed_paths=filtered,
+            pre_tokenized=pre_tokenized,
+            all_tgt_idx_arr=all_tgt_idx_arr,
+            dist_flat_arr=dist_flat_arr,
+            matrix_dim=matrix_dim,
+            max_distance=max_distance,
+        )
+
+    return _strategy
 
 
 @dataclass(frozen=True)
@@ -226,6 +281,15 @@ def _rescore_exact(
     )
 
 
+# Module-level registry — add new backends here without touching gpu_rescore_paths.
+_BACKEND_REGISTRY: dict[str, object] = {
+    "cpp": _make_exact("cpp"),
+    "cython": _make_exact("cython"),
+    "numba": _make_prefilter(_prefilter_paths_numba),
+    "cupy": _make_prefilter(_prefilter_paths_cupy),
+}
+
+
 def gpu_rescore_paths(
     *,
     source_idx_arr: np.ndarray,
@@ -238,84 +302,27 @@ def gpu_rescore_paths(
     max_distance: float = 0.50,
     backend: RescoreBackend = "auto",
 ) -> list[tuple[float, tuple[int, ...], float]]:
-    """Rescore packed beam paths with optional GPU-prefilter backends.
-
-    ``cupy`` and ``numba`` backends apply a fast length-ratio prefilter before
-    delegating exact distance computation to ``cpp``/``cython`` kernels.
-    """
+    """Rescore packed beam paths with optional GPU-prefilter backends."""
     if not packed_paths:
         return []
 
     if backend == "auto":
         backend = "cpp" if HAS_CPP_BEAM_RESCORE else "cython"
 
-    if backend == "cpp":
-        return _rescore_exact(
-            "cpp",
-            source_idx_arr=source_idx_arr,
-            source_len=source_len,
-            packed_paths=packed_paths,
-            pre_tokenized=pre_tokenized,
-            all_tgt_idx_arr=all_tgt_idx_arr,
-            dist_flat_arr=dist_flat_arr,
-            matrix_dim=matrix_dim,
-            max_distance=max_distance,
-        )
+    strategy = _BACKEND_REGISTRY.get(backend)
+    if strategy is None:
+        raise ValueError(f"Unknown backend: {backend}")
 
-    if backend == "cython":
-        return _rescore_exact(
-            "cython",
-            source_idx_arr=source_idx_arr,
-            source_len=source_len,
-            packed_paths=packed_paths,
-            pre_tokenized=pre_tokenized,
-            all_tgt_idx_arr=all_tgt_idx_arr,
-            dist_flat_arr=dist_flat_arr,
-            matrix_dim=matrix_dim,
-            max_distance=max_distance,
-        )
-
-    if backend == "numba":
-        filtered = _prefilter_paths_numba(
-            source_len,
-            packed_paths,
-            np.asarray(pre_tokenized.offsets),
-            max_distance,
-        )
-        exact = "cpp" if HAS_CPP_BEAM_RESCORE else "cython"
-        return _rescore_exact(
-            exact,
-            source_idx_arr=source_idx_arr,
-            source_len=source_len,
-            packed_paths=filtered,
-            pre_tokenized=pre_tokenized,
-            all_tgt_idx_arr=all_tgt_idx_arr,
-            dist_flat_arr=dist_flat_arr,
-            matrix_dim=matrix_dim,
-            max_distance=max_distance,
-        )
-
-    if backend == "cupy":
-        filtered = _prefilter_paths_cupy(
-            source_len,
-            packed_paths,
-            np.asarray(pre_tokenized.offsets),
-            max_distance,
-        )
-        exact = "cpp" if HAS_CPP_BEAM_RESCORE else "cython"
-        return _rescore_exact(
-            exact,
-            source_idx_arr=source_idx_arr,
-            source_len=source_len,
-            packed_paths=filtered,
-            pre_tokenized=pre_tokenized,
-            all_tgt_idx_arr=all_tgt_idx_arr,
-            dist_flat_arr=dist_flat_arr,
-            matrix_dim=matrix_dim,
-            max_distance=max_distance,
-        )
-
-    raise ValueError(f"Unknown backend: {backend}")
+    return strategy(
+        source_idx_arr=source_idx_arr,
+        source_len=source_len,
+        packed_paths=packed_paths,
+        pre_tokenized=pre_tokenized,
+        all_tgt_idx_arr=all_tgt_idx_arr,
+        dist_flat_arr=dist_flat_arr,
+        matrix_dim=matrix_dim,
+        max_distance=max_distance,
+    )
 
 
 def benchmark_gpu_rescore_backends(

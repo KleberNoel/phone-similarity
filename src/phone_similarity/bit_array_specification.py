@@ -32,30 +32,7 @@ class BitArraySpecification(BaseBitArraySpecification):
         return self._features
 
     def ipa_to_bitarray(self, ipa: str, max_syllables: int) -> "bitarray":
-        """Converts an IPA string into a bitarray representation.
-
-        This method processes an IPA string, breaks it down into syllables,
-        and then converts each syllable into a bitarray based on its onset, nucleus,
-        and coda. The resulting bitarrays are concatenated and padded to a fixed length.
-
-        Parameters
-        ----------
-        ipa : str
-            The Input IPA string to convert.
-        max_syllables : int
-            The maximum number of syllables to process from the end of the string.
-
-        Returns
-        -------
-        bitarray
-            The final bitarray representing the IPA string.
-
-        Raises
-        ------
-        Exception
-            Propagates exceptions from padding, indicating a potential issue in length calculation.
-
-        """
+        """Convert an IPA string into a padded fixed-width bitarray."""
         arr = bitarray()
         for idx, _arr_parts in enumerate(self.ipa_to_syllable(ipa)[::-1], start=1):
             for key in sorted(_arr_parts.keys(), reverse=True):
@@ -72,37 +49,7 @@ class BitArraySpecification(BaseBitArraySpecification):
         return arr
 
     def ipa_to_syllable(self, ipa_str: str) -> list[dict[str, "bitarray"]]:
-        """Decomposes an IPA string into a list of syllables.
-
-        This method follows a naive approach to syllabification:
-        Scan for:
-        - Vowels to identify nucleus of a syllable, and group features in a bitarray (0s and 1s).
-        - Consonants preceding a vowel are grouped in a bitarray (0s and 1s) as the onset.
-        - Consonants following a vowel are grouped in a bitarray (0s and 1s) as the coda.
-
-        This implementation treats consonant clusters as single units and may merge
-        a previous syllable's coda with the current syllable's onset if they are adjacent.
-
-        Steps:
-        1. Gather onset (initial consonants until a vowel)
-        2. Check if current token is final. If so, merge onset with previous coda.
-           else if prev, merge prev coda with current onset and delete prev coda
-        3. tokens[i] is vowel / nucleus; extract until vowels have been exhausted
-        4. Gather coda (all consonants after the vowel until next vowel or end)
-        5. Combine onset + coda and store result for syllable
-
-        Parameters
-        ----------
-        ipa_str : str
-            The IPA string to be syllabified.
-
-        Returns
-        -------
-        List[Dict[str, "bitarray"]]
-            A list of dictionaries, where each dictionary represents a syllable
-            and contains bitarray representations for its 'onset', 'nucleus', and 'coda'.
-
-        """
+        """Decompose an IPA string into onset/nucleus/coda bitarray dicts per syllable."""
         tokens = self.ipa_tokenizer(ipa_str)
         n: int = len(tokens)
         i: int = 0
@@ -185,23 +132,7 @@ class BitArraySpecification(BaseBitArraySpecification):
         return results
 
     def generate(self, text: str) -> "bitarray":
-        """Generates a bitarray for a given text.
-
-        This is the main entry point for converting a text string into its bitarray representation.
-        It orchestrates the process of syllabification and bitarray conversion based on the
-        configured parameters for syllable count and length.
-
-        Parameters
-        ----------
-        text : str
-            The input string to be converted, expected to be in IPA format.
-
-        Returns
-        -------
-        bitarray
-            The resulting bitarray representation of the input text.
-
-        """
+        """Convert a text string into its bitarray representation."""
         return self.ipa_to_bitarray(
             ipa=text,
             max_syllables=self._max_syllables_per_text_chunk,
@@ -210,28 +141,7 @@ class BitArraySpecification(BaseBitArraySpecification):
     def update_array_segment(
         self, phoneme: str, current_segment: "bitarray", feature_type: str
     ) -> "bitarray":
-        """Updates a bitarray segment by adding the features of a new phoneme.
-
-        This method takes an existing bitarray segment and performs an element-wise
-        addition with the bitarray of a new phoneme. This is used to cumulate
-        features within a syllable component (e.g., onset, coda).
-
-        Parameters
-        ----------
-        phoneme : str
-            The phoneme to add to the segment.
-        current_segment : bitarray
-            The current bitarray segment to be updated.
-        feature_type : str
-            The type of features to consider ('consonant' or 'vowel'), which
-            determines the columns for bitarray conversion.
-
-        Returns
-        -------
-        bitarray
-            The updated bitarray segment.
-
-        """
+        """OR a phoneme's feature bitarray into an existing syllable-component segment."""
         features = self.get_phoneme_features(phoneme=phoneme)
         return current_segment | self.features_to_bitarray(
             feature_dict=features,
@@ -239,30 +149,11 @@ class BitArraySpecification(BaseBitArraySpecification):
         )
 
     def empty_vector(self, feature_type: str) -> "bitarray":
-        """Creates a zeroed bitarray for a given feature type.
-
-        This method generates a bitarray of a specific length corresponding to the
-        number of features for a given type ('consonant' or 'vowel').  A fresh
-        bitarray is returned on every call so callers can safely mutate it.
-
-        Parameters
-        ----------
-        feature_type : str
-            The type of features ('consonant' or 'vowel') for which to create
-            the empty vector.
-
-        Returns
-        -------
-        bitarray
-            A bitarray of the correct length, initialized with all zeros.
-
-        """
+        """Return a zeroed bitarray sized for the given feature type."""
         return bitarray(len(self._features[feature_type]))
 
     def fold(self, arr: "bitarray"):
-        """
-        Fold bitarray syllables into the 'rich-format' space of a single syllable
-        """
+        """XOR-fold all syllable bitarray slices into a single syllable-length vector."""
         new_arr = bitarray(self.max_syllable_length)
         for syllable_bit_idx in range(
             0,

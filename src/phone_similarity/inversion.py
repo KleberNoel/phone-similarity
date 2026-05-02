@@ -21,31 +21,7 @@ def invert_features(
     top_n: int = 0,
     max_distance: float = 1.0,
 ) -> list[tuple[str, float]]:
-    """Find phonemes in a target inventory closest to a feature vector.
-
-    This is the *reverse* of the normal lookup: instead of
-    ``phoneme -> features``, we go ``features -> ranked phonemes``.
-
-    Parameters
-    ----------
-    feature_vector : dict
-        A single phoneme's feature dictionary (e.g.
-        ``{"voiced": True, "place": "alveolar", "manner": "plosive"}``).
-    target_phoneme_features : dict
-        The target language's ``PHONEME_FEATURES`` mapping
-        ``{phoneme: {feature: value, ...}, ...}``.
-    top_n : int, optional
-        If > 0, return only the *top_n* closest phonemes.  0 (default)
-        means return all phonemes within *max_distance*.
-    max_distance : float, optional
-        Exclude phonemes whose distance exceeds this value (default 1.0,
-        i.e. keep everything).
-
-    Returns
-    -------
-    list of (phoneme, distance)
-        Phonemes sorted by ascending distance from *feature_vector*.
-    """
+    """Rank target-inventory phonemes by distance from a feature vector."""
     if HAS_CYTHON_EXT:
         return cy_invert_features(feature_vector, target_phoneme_features, top_n, max_distance)
     ranked: list[tuple[str, float]] = []
@@ -68,37 +44,7 @@ def invert_ipa(
     top_n: int = 3,
     max_distance: float = 0.6,
 ) -> list[tuple[str, list[tuple[str, float]]]]:
-    """Map each phoneme in a source IPA string to its closest target-language phonemes.
-
-    Tokenises *source_ipa* using *source_spec*, looks up each token's
-    features in *source_phoneme_features*, then calls
-    :func:`invert_features` against the *target_phoneme_features* inventory.
-
-    Deduplicates tokens so each unique phoneme is inverted only once
-    against the target inventory, then reuses the cached result for
-    repeated tokens.
-
-    Parameters
-    ----------
-    source_ipa : str
-        IPA transcription in the source language.
-    source_spec : BaseBitArraySpecification
-        Specification for tokenising *source_ipa*.
-    source_phoneme_features : dict
-        ``PHONEME_FEATURES`` of the source language.
-    target_phoneme_features : dict
-        ``PHONEME_FEATURES`` of the target language.
-    top_n : int
-        Max candidates per source phoneme (default 3).
-    max_distance : float
-        Ignore target phonemes further than this (default 0.6).
-
-    Returns
-    -------
-    list of (source_phoneme, [(target_phoneme, distance), ...])
-        One entry per token in *source_ipa*, each with a ranked list of
-        target-language candidates.
-    """
+    """Map each phoneme in a source IPA string to its closest target-language phonemes."""
     tokens = source_spec.ipa_tokenizer(source_ipa)
 
     # Deduplicate: invert each unique token only once

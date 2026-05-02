@@ -1,29 +1,4 @@
-"""
-Cython dispatch infrastructure.
-
-Centralises the detection of Cython extension modules into a single
-location, eliminating the duplicated ``try/except ImportError`` blocks
-that were scattered across ``primitives.py``, ``dictionary_scan.py``,
-and other modules.
-
-Design Pattern
---------------
-**Chain of Responsibility** — each capability level (core, extended,
-prange) is probed once at import time.  Downstream modules query the
-flags and function references from here.
-
-Usage::
-
-    from phone_similarity._dispatch import (
-        HAS_CYTHON, HAS_CYTHON_EXT, HAS_PRANGE,
-        cy_hamming_distance, cy_feature_edit_distance, ...
-    )
-
-    if HAS_CYTHON:
-        result = cy_feature_edit_distance(...)
-    else:
-        result = _python_fallback(...)
-"""
+"""Cython extension dispatch: probe capability levels once at import time."""
 
 from typing import Any
 
@@ -166,3 +141,14 @@ except ImportError:
     cy_beam_state_search = _UNAVAILABLE
     cy_beam_collect_complete_paths = _UNAVAILABLE
     cy_beam_rescore_paths = _UNAVAILABLE
+
+# Level 10: Cython IPA cleaning
+try:
+    from phone_similarity._core import cy_clean_phones as cy_clean_phones
+    from phone_similarity._core import cy_extract_stress_marks as cy_extract_stress_marks
+
+    HAS_CYTHON_CLEAN = True
+except ImportError:
+    HAS_CYTHON_CLEAN = False
+    cy_clean_phones = _UNAVAILABLE
+    cy_extract_stress_marks = _UNAVAILABLE

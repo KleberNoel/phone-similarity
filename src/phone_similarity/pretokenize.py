@@ -18,6 +18,8 @@ from pathlib import Path
 
 import numpy as np
 
+from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER as _HAS_CYTHON_TOKENIZER
+from phone_similarity._dispatch import cy_batch_ipa_tokenize as _cy_batch_ipa_tokenize
 from phone_similarity.base_bit_array_specification import BaseBitArraySpecification
 
 logger = logging.getLogger(__name__)
@@ -28,30 +30,7 @@ def pretokenize_dictionary(
     spec: BaseBitArraySpecification,
     min_tokens: int = 2,
 ) -> list[tuple[str, str, list[str]]]:
-    """Pre-tokenize a G2P dictionary for use with :func:`reverse_dictionary_lookup`.
-
-    Cleans each IPA entry (strips stress marks, takes first pronunciation),
-    tokenizes it, and returns a list of ``(word, cleaned_ipa, tokens)``
-    tuples.  Entries that fail to tokenize or are shorter than *min_tokens*
-    are silently dropped.
-
-    When the Cython batch tokenizer is available, all IPA strings are
-    tokenized in a single Cython call for reduced Python overhead.
-
-    Parameters
-    ----------
-    dictionary : dict
-        ``{word: raw_ipa}`` from a G2P generator's ``.pdict``.
-    spec : BaseBitArraySpecification
-        Specification whose ``ipa_tokenizer`` will be used.
-    min_tokens : int
-        Minimum number of tokens to keep an entry (default 2).
-
-    Returns
-    -------
-    list of (word, ipa_str, tokens)
-    """
-    from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER, cy_batch_ipa_tokenize
+    """Tokenize a G2P dictionary into (word, cleaned_ipa, tokens) tuples."""
     from phone_similarity.clean_phones import clean_phones as _clean
 
     words: list[str] = []
@@ -62,10 +41,10 @@ def pretokenize_dictionary(
             words.append(word)
             ipas.append(ipa)
 
-    if HAS_CYTHON_TOKENIZER and hasattr(spec, "_phones_sorted"):
+    if _HAS_CYTHON_TOKENIZER and hasattr(spec, "_phones_sorted"):
         phone_set = frozenset(spec._phones_sorted)
         max_phoneme_size = max((len(p) for p in phone_set), default=1)
-        all_tokens = cy_batch_ipa_tokenize(ipas, phone_set, max_phoneme_size, min_tokens)
+        all_tokens = _cy_batch_ipa_tokenize(ipas, phone_set, max_phoneme_size, min_tokens)
         result: list[tuple[str, str, list[str]]] = []
         for i in range(len(words)):
             toks = all_tokens[i]
@@ -234,35 +213,7 @@ def cached_pretokenize_dictionary(
     use_cache: bool = True,
     cache_dir: Path | None = None,
 ) -> PreTokenizedDictionary:
-    """Pre-tokenize a G2P dictionary with fast on-disk caching.
-
-    On repeat runs the raw G2P dictionary is **never loaded** -- the
-    cache file contains everything needed.  Cache invalidation is
-    automatic based on the G2P pickle file's modification time and size.
-
-    Parameters
-    ----------
-    dict_or_factory : dict or callable
-        Either a ``{word: raw_ipa}`` dictionary or a zero-argument
-        callable that returns one (e.g. ``lambda: g2p.pdict``).  The
-        callable form avoids loading the raw dict when the cache hits.
-    spec : BaseBitArraySpecification
-        Specification whose ``ipa_tokenizer`` will be used.
-    lang : str
-        Language code for the cache filename (e.g. ``"fra"``).
-    min_tokens : int
-        Minimum number of tokens to keep an entry (default 2).
-    use_cache : bool
-        If *False*, always re-tokenize (useful for benchmarking).
-    cache_dir : Path or None
-        Override the default cache directory.
-
-    Returns
-    -------
-    PreTokenizedDictionary
-        Compact pre-tokenized dictionary supporting ``len``, ``[]``,
-        and iteration over ``(word, ipa, tokens)`` tuples.
-    """
+    """Pre-tokenize a G2P dictionary with transparent on-disk caching."""
     if cache_dir is None:
         cache_dir = _DEFAULT_CACHE_DIR
 

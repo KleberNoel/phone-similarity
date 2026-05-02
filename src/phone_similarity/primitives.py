@@ -41,37 +41,14 @@ _HAS_PRANGE = HAS_PRANGE
 
 
 def hamming_distance(a: bitarray, b: bitarray) -> int:
-    """Count the number of differing bits between two equal-length bitarrays.
-
-    Parameters
-    ----------
-    a, b : bitarray
-        Must be the same length.
-
-    Returns
-    -------
-    int
-        Number of positions where the bits differ.
-    """
+    """Count differing bits between two equal-length bitarrays."""
     if len(a) != len(b):
         raise ValueError(f"Bitarrays must have equal length (got {len(a)} vs {len(b)})")
     return (a ^ b).count()
 
 
 def hamming_similarity(a: bitarray, b: bitarray) -> float:
-    """Normalised bit-match ratio (1.0 = identical, 0.0 = maximally different).
-
-    Parameters
-    ----------
-    a, b : bitarray
-        Must be the same length.
-
-    Returns
-    -------
-    float
-        ``1 - hamming_distance(a, b) / len(a)``.  Returns 1.0 for empty
-        arrays.
-    """
+    """Normalised bit-match ratio: ``1 - hamming_distance(a, b) / len(a)``. Returns 1.0 for empty arrays."""
     if HAS_CYTHON:
         return _c_hamming_similarity(a, b)
     n = len(a)
@@ -84,24 +61,7 @@ def phoneme_feature_distance(
     features_a: dict[str, Union[bool, str]],
     features_b: dict[str, Union[bool, str]],
 ) -> float:
-    """Normalised feature distance between two phonemes.
-
-    Computes the fraction of feature dimensions on which the two phonemes
-    disagree.  Features present in one dict but absent in the other count
-    as a mismatch.
-
-    Delegates to Cython when the extended module is available.
-
-    Parameters
-    ----------
-    features_a, features_b : dict
-        Feature dictionaries as stored in ``PHONEME_FEATURES``.
-
-    Returns
-    -------
-    float
-        Value in ``[0.0, 1.0]``.  0 means identical feature sets.
-    """
+    """Normalised feature distance between two phonemes (fraction of disagreeing dimensions)."""
     if _HAS_CYTHON_EXT:
         return _c_phoneme_feature_distance(features_a, features_b)
     all_keys = set(features_a) | set(features_b)
@@ -118,34 +78,7 @@ def feature_edit_distance(
     insert_cost: float = 1.0,
     delete_cost: float = 1.0,
 ) -> float:
-    """Feature-weighted edit distance between two phoneme sequences.
-
-    Standard Levenshtein DP, but the *substitution cost* for replacing
-    phoneme ``p`` with phoneme ``q`` is
-    ``phoneme_feature_distance(features[p], features[q])`` -- a value in
-    ``[0, 1]`` -- rather than a flat 1.0.  This makes the metric sensitive
-    to *how different* two sounds are, not just *whether* they differ.
-
-    Delegates to the Cython implementation when available (approx. 4x faster).
-
-    Parameters
-    ----------
-    seq_a, seq_b : sequence of str
-        Phoneme sequences (e.g. from an IPA tokeniser).
-    phoneme_features : dict
-        Mapping of phoneme -> feature dict.  Phonemes not found in this
-        dict are treated as having an empty feature set (maximum distance
-        from anything else).
-    insert_cost : float
-        Cost of inserting a phoneme (default 1.0).
-    delete_cost : float
-        Cost of deleting a phoneme (default 1.0).
-
-    Returns
-    -------
-    float
-        The minimum-cost alignment distance.
-    """
+    """Levenshtein edit distance with per-phoneme feature-distance substitution costs."""
     if _HAS_CYTHON:
         return _c_feature_edit_distance(seq_a, seq_b, phoneme_features, insert_cost, delete_cost)
     m, n = len(seq_a), len(seq_b)
@@ -192,19 +125,7 @@ def normalised_feature_edit_distance(
 def batch_pairwise_hamming(
     arrays: Sequence[bitarray],
 ) -> list[list[float]]:
-    """Pairwise Hamming similarity matrix for a list of bitarrays.
-
-    Parameters
-    ----------
-    arrays : sequence of bitarray
-        All must be the same length.
-
-    Returns
-    -------
-    list of list of float
-        Symmetric ``N x N`` matrix where ``result[i][j]`` is the Hamming
-        similarity between ``arrays[i]`` and ``arrays[j]``.
-    """
+    """Symmetric N×N Hamming similarity matrix for a list of equal-length bitarrays."""
     if HAS_CYTHON:
         return _c_batch_pairwise_hamming(list(arrays))
     n = len(arrays)

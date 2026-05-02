@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import logging
 from functools import lru_cache
@@ -8,10 +10,16 @@ from bitarray import bitarray
 from phone_similarity._dispatch import HAS_CYTHON_TOKENIZER, cy_ipa_tokenizer
 
 
-class BaseBitArraySpecification(abc.ABC):  # noqa: B024
-    """
-    Base Abstract class that maps from character based phonological units to bitarray representation
-    """
+class BaseBitArraySpecification(abc.ABC):
+    """Abstract base mapping phonological units to bitarray representations."""
+
+    @abc.abstractmethod
+    def ipa_to_bitarray(self, ipa: str, max_syllables: int) -> "bitarray":
+        """Convert an IPA string into a padded fixed-width bitarray."""
+
+    @abc.abstractmethod
+    def generate(self, text: str) -> "bitarray":
+        """Convert a text string into its bitarray representation."""
 
     def __init__(
         self,
@@ -19,7 +27,7 @@ class BaseBitArraySpecification(abc.ABC):  # noqa: B024
         consonants: set[str],
         features_per_phoneme: dict[str, dict[str, bool]],
         max_syllables_per_text: int = 6,
-    ):
+    ) -> None:
         self._vowels = vowels
         self._consonants = consonants
         self._phoneme_features = features_per_phoneme
@@ -42,100 +50,52 @@ class BaseBitArraySpecification(abc.ABC):  # noqa: B024
         self._max_phoneme_size = max(len(p) for p in self._phones_sorted)
 
     @property
-    def vowels(self):  # TODO: return type
-        """
-        Vowels associated with the bitarray
-        """
+    def vowels(self) -> set[str]:
+        """Vowel set for this specification."""
         return self._vowels
 
     @property
-    def consonants(self):  # TODO: return type
-        """
-        Consonants associated with the bitarray
-        """
+    def consonants(self) -> set[str]:
+        """Consonant set for this specification."""
         return self._consonants
 
     @property
-    def phoneme_features(self):  # TODO: return type
-        """
-        Return entire set of phoneme features (dict)
-        """
+    def phoneme_features(self) -> dict[str, dict[str, bool]]:
+        """Full phoneme-feature mapping."""
         return self._phoneme_features
 
     @staticmethod
     def sort_features(
         features: dict[str, set[str]],
-    ) -> dict[str, tuple[str]]:
-        """Sorts features for consistent ordering.
-
-        Parameters
-        ----------
-        features : Dict[str, Set[str]]
-            A dictionary where keys are feature names and values are sets of strings.
-
-        Returns
-        -------
-        Dict[str, Tuple[str]]
-            A new dictionary with the same keys but with values as sorted tuples.
-
-        """
-        _features = {}
-        for feat, feat_set in features.items():
-            _features.update({feat: tuple(sorted(feat_set))})
-        return _features
+    ) -> dict[str, tuple[str, ...]]:
+        """Return *features* with each value set replaced by a sorted tuple."""
+        return {feat: tuple(sorted(feat_set)) for feat, feat_set in features.items()}
 
     @lru_cache(maxsize=128)
-    def get_phoneme_features(self, phoneme: str) -> tuple | dict[str, dict[str, bool]]:
-        """Retrieves the feature set for a given phoneme.
-
-        Parameters
-        ----------
-        phoneme : str
-            The phoneme for which to retrieve features.
-
-        Returns
-        -------
-        Tuple
-            A tuple of (feature_name, value) pairs.
+    def get_phoneme_features(self, phoneme: str) -> tuple[tuple[str, bool], ...]:
+        """Return ``(feature, value)`` pairs for *phoneme*.
 
         Raises
         ------
         ValueError
-            If the phoneme is not found in the feature set.
-
+            If *phoneme* is not in the feature set.
         """
         if phoneme in self._phoneme_features:
             return tuple(self._phoneme_features[phoneme].items())
         raise ValueError(f"Unknown Phoneme input '{phoneme}'")
 
-    @lru_cache(128)  # TODO: optimize for maxsize
+    @lru_cache(128)
     def features_to_bitarray(
         self,
-        feature_dict: Union[tuple[tuple[str, bool]], dict[str, bool]],
-        columns: tuple[str],
-    ) -> "bitarray":
-        """Converts a feature dictionary to a bitarray.
-
-        Parameters
-        ----------
-        feature_dict : Union[Tuple[Tuple[str, bool]], Dict[str, bool]]
-            A dictionary of feature names to their boolean values.
-        columns : Tuple[str]
-            An ordered tuple of feature names that determines the bitarray structure.
-
-        Returns
-        -------
-        bitarray
-            The resulting bitarray representation of the phoneme's features.
-
-        """
+        feature_dict: Union[tuple[tuple[str, bool], ...], dict[str, bool]],
+        columns: tuple[str, ...],
+    ) -> bitarray:
+        """Convert a feature dict (or tuple of pairs) to a bitarray."""
         fd = feature_dict if isinstance(feature_dict, dict) else dict(feature_dict)
         bits: list[int] = []
 
         for _, col in enumerate(columns, start=0):
-            # Find feature in column name ('voiced': binary, or values 'place', 'manner')
             if "=" in col:
-                # e.g. "place=alveolar", "height=low"..
                 attr, val = col.split("=")
                 bit = bool(fd.get(attr) == val)
             else:
@@ -148,24 +108,9 @@ class BaseBitArraySpecification(abc.ABC):  # noqa: B024
 
         return bitarray(bits)
 
-    @lru_cache(maxsize=256)  # TODO: optimize for maxsize
+    @lru_cache(maxsize=256)
     def search_phonemes(self, ipa_str: str) -> str | None:
-        """Searches for the longest matching phoneme in the internal list.
-
-        This method iterates through a pre-sorted list of phonemes (longest to shortest)
-        and returns the first one that matches the input string.
-
-        Parameters
-        ----------
-        ipa_str : str
-            The IPA string segment to match against known phonemes.
-
-        Returns
-        -------
-        Optional[str]
-            The matching phoneme string, or None if no match is found.
-
-        """
+        """Return the longest phoneme matching the start of *ipa_str*, or ``None``."""
         for idx in range(len(ipa_str), 0, -1):
             for phone in self._phones_sorted:
                 if ipa_str[:idx] == phone:
@@ -173,38 +118,16 @@ class BaseBitArraySpecification(abc.ABC):  # noqa: B024
         return None
 
     def ipa_tokenizer(self, ipa_str: str) -> list[str]:
-        """Tokenizes an IPA string into a list of recognized phonemes.
+        """Tokenize *ipa_str* into recognized phoneme tokens.
 
-        This method uses a basic parsing strategy that prioritizes longer phoneme
-        matches. It iterates through the input string and identifies the longest
-        possible phoneme at each position.
-
-        When the Cython extension is available, uses a hash-set based lookup
-        (O(max_phoneme_length) per position) instead of the Python linear scan
-        (O(inventory_size) per position).
-
-        Parameters
-        ----------
-        ipa_str : str
-            The IPA string to be tokenized, e.g., 'strɪŋz'.
-
-        Returns
-        -------
-        List[str]
-            A list of phoneme tokens, e.g., ['s', 't', 'r', 'ɪ', 'ŋ', 'z'].
-
-        Raises
-        ------
-        ValueError
-            If a segment of the IPA string cannot be matched to any known phoneme
-            up to the maximum phoneme length.
-
+        Uses the Cython hash-set tokenizer when available; falls back to a
+        Python longest-match scan otherwise.
         """
         if HAS_CYTHON_TOKENIZER:
             logging.debug("Using Cython based tokenizer")
             return cy_ipa_tokenizer(ipa_str, self._phone_set, self._max_phoneme_size)
 
-        tokens = []
+        tokens: list[str] = []
         start = 0
         while start < len(ipa_str):
             end_idx = min(start + self._max_phoneme_size, len(ipa_str))
